@@ -53,3 +53,5 @@ aiken docs
 ## Resources
 
 Find more on the [Aiken's user manual](https://aiken-lang.org).
+
+Simply install latest version of aiken (change version tag) `nix profile install github:aiken-lang/aiken/v1.0.29-alpha#aiken`.

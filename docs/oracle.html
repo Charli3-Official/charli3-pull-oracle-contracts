@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>oracle - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="./favicon.svg"/>
@@ -210,7 +210,7 @@
         
 	  <li><a href="./oracle.html">
 	  
-	  oracle
+	  <strong>oracle</strong>
 	  
 	  </a></li>
         
@@ -247,42 +247,302 @@
         </ul>
 
         
+
+<h2>Types</h2>
+<ul>
+  
+  <li><a href="#MintingRedeemer">MintingRedeemer</a></li>
+  
+  <li><a href="#OracleRedeemer">OracleRedeemer</a></li>
+  
+</ul>
+
+
+
+<h2>Constants</h2>
+<ul>
+  
+  <li><a href="#aggstate_token_name">aggstate_token_name</a></li>
+  
+  <li><a href="#reward_acc_token_name">reward_acc_token_name</a></li>
+  
+  <li><a href="#reward_transport_token_name">reward_transport_token_name</a></li>
+  
+</ul>
+
+
+
+
       </nav>
 
       <main class="content">
         
-<h1>odv-multisig-charli3-oracle-onchain</h1>
-<p>Write validators in the <code>validators</code> folder, and supporting functions in the <code>lib</code> folder using <code>.ak</code> as a file extension.</p>
-<p>For example, as <code>validators/always_true.ak</code></p>
-<pre><code class="language-gleam">validator {
-  fn spend(_datum: Data, _redeemer: Data, _context: Data) -&gt; Bool {
-    True
-  }
-}
-</code></pre>
-<h2>Building</h2>
-<pre><code class="language-sh">aiken build
-</code></pre>
-<h2>Testing</h2>
-<p>You can write tests in any module using the <code>test</code> keyword. For example:</p>
-<pre><code class="language-gleam">test foo() {
-  1 + 1 == 2
-}
-</code></pre>
-<p>To run all tests, simply do:</p>
-<pre><code class="language-sh">aiken check
-</code></pre>
-<p>To run only tests matching the string <code>foo</code>, do:</p>
-<pre><code class="language-sh">aiken check -m foo
-</code></pre>
-<h2>Documentation</h2>
-<p>If you’re writing a library, you might want to generate an HTML documentation for it.</p>
-<p>Use:</p>
-<pre><code class="language-sh">aiken docs
-</code></pre>
-<h2>Resources</h2>
-<p>Find more on the <a href="https://aiken-lang.org">Aiken’s user manual</a>.</p>
-<p>Simply install latest version of aiken (change version tag) <code>nix profile install github:aiken-lang/aiken/v1.0.29-alpha#aiken</code>.</p>
+<h1 id="module-name" class="module-name">
+  <a href="#module-name">oracle</a>
+</h1>
+<ol>
+<li>oracle_nfts - this validator will act as one time policy for RewardAccount
+and as a scaling policy for RewardTransport with AggState,
+each policy id is unique for one trade pair (ticker), or potentially even multiple tickers with same nodes and fee token;</li>
+<li>oracle_manager - main oracle validator, see OracleRedeemer for list of allowed actions.</li>
+</ol>
+
+
+
+<section class="module-members">
+  <h1 id="module-types" class="module-member-kind">
+    <a href="#module-types">Types</a>
+  </h1>
+
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="MintingRedeemer">
+        <a href="#MintingRedeemer">
+	  MintingRedeemer
+        </a>
+      </h2>
+      
+      <!-- TODO: support source linking
+      <a class="member-source" alt="View Source" title="View Source" href="#todo">
+        &lt;/&gt;
+      </a>
+      -->
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"><p>Types of actions for Oracle NFTs (protocol tokens)</p>
+<ul>
+<li>Mint  - Oracle start: one time mint for RewardAccount; any number of mints for RewardTransport and AggState</li>
+<li>Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState</li>
+<li>Burn  - Oracle close: all tokens are burned</li>
+</ul>
+</div>
+      
+      <h3>Constructors</h3>
+      <ul class="constructor-list">
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">Mint</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">Scale</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">Burn</code></pre>
+          </div>
+	  
+        </li>
+        
+      </ul>
+      
+    </div>
+  </div>
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="OracleRedeemer">
+        <a href="#OracleRedeemer">
+	  OracleRedeemer
+        </a>
+      </h2>
+      
+      <!-- TODO: support source linking
+      <a class="member-source" alt="View Source" title="View Source" href="#todo">
+        &lt;/&gt;
+      </a>
+      -->
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"><p>Types of actions for Oracle smart contract</p>
+<ul>
+<li>OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain</li>
+<li>CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO</li>
+<li>NodeCollect - oracle node collects rewards</li>
+<li>PlatformCollect - oracle platform collects rewards</li>
+<li>UpdateSettings - oracle platform changes consensus settings</li>
+<li>SetFeeConfig - oracle platform changes reward fee configuration</li>
+<li>AddNodes - oracle platform adds new nodes</li>
+<li>DelNodes - oracle platform deletes nodes</li>
+<li>ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs</li>
+<li>DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards</li>
+<li>CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards</li>
+<li>RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs</li>
+</ul>
+</div>
+      
+      <h3>Constructors</h3>
+      <ul class="constructor-list">
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">OdvAggregate</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">CalculateRewards</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">NodeCollect</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">PlatformCollect</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">UpdateSettings</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">SetFeeConfig</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">AddNodes</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">DelNodes</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">ScaleDown</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">DismissRewards</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">CloseOracle</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">RemoveOracle</code></pre>
+          </div>
+	  
+        </li>
+        
+      </ul>
+      
+    </div>
+  </div>
+  
+</section>
+
+
+
+<section class="module-members">
+  <h1 id="module-constants" class="module-member-kind">
+    <a href="#module-constants">Constants</a>
+  </h1>
+
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="aggstate_token_name"><pre class="hljs language-aiken">aggstate_token_name: ByteArray = &quot;AggState&quot;</pre></h2>
+      
+      <!-- TODO: support source linking
+      <a class="member-source" alt="View Source" title="View Source" href="#todo">
+        &lt;/&gt;
+      </a>
+      -->
+      
+    </div>
+    <div class="rendered-markdown"></div>
+  </div>
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="reward_acc_token_name"><pre class="hljs language-aiken">reward_acc_token_name: ByteArray = &quot;RewardAcc&quot;</pre></h2>
+      
+      <!-- TODO: support source linking
+      <a class="member-source" alt="View Source" title="View Source" href="#todo">
+        &lt;/&gt;
+      </a>
+      -->
+      
+    </div>
+    <div class="rendered-markdown"></div>
+  </div>
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="reward_transport_token_name"><pre class="hljs language-aiken">reward_transport_token_name: ByteArray = &quot;RewardT&quot;</pre></h2>
+      
+      <!-- TODO: support source linking
+      <a class="member-source" alt="View Source" title="View Source" href="#todo">
+        &lt;/&gt;
+      </a>
+      -->
+      
+    </div>
+    <div class="rendered-markdown"></div>
+  </div>
+  
+</section>
+
+
 
 
       </main>

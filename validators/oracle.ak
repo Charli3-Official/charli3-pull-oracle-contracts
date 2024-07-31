@@ -1,1 +1,540 @@
+//// 1. oracle_nfts - this validator will act as one time policy for RewardAccount
+////    and as a scaling policy for RewardTransport with AggState,
+////    each policy id is unique for one trade pair (ticker), or potentially even multiple tickers with same nodes and fee token;
+//// 2. oracle_manager - main oracle validator, see OracleRedeemer for list of allowed actions.
 
+use aiken/dict
+use aiken/list
+use aiken/math.{abs}
+use aiken/option
+use aiken/transaction.{OutputReference, ScriptContext, Transaction}
+use aiken/transaction as tx
+use aiken/transaction/credential.{ScriptCredential}
+use aiken/transaction/value.{AssetName, ada_policy_id}
+use ext/aiken/transaction/credential.{ScriptHash} as extc
+use ext/aiken/transaction/value.{Asset} as extv
+use oracle/checks.{
+  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
+  find_out_datum_and_value, returns_empty_aggstate_outputs,
+  returns_empty_reward_outputs, spends_reward_acc_utxo,
+}
+use oracle/datum.{
+  AggState, NoRewards, OracleDatum, OracleSettings, RewardAccount,
+  RewardConsensusPending, RewardDatum, RewardTransport, is_oracle_closing,
+}
+use services/nft_based_auth.{auth_by_nft}
+use services/protocol_token.{
+  find_own_protocol_policy_id, spends_protocol_nft_inputs,
+}
+
+pub const reward_acc_token_name: AssetName = "RewardAcc"
+
+pub const reward_transport_token_name: AssetName = "RewardT"
+
+pub const aggstate_token_name: AssetName = "AggState"
+
+/// Types of actions for Oracle NFTs (protocol tokens)
+/// * Mint  - Oracle start: one time mint for RewardAccount; any number of mints for RewardTransport and AggState
+/// * Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState
+/// * Burn  - Oracle close: all tokens are burned
+pub type MintingRedeemer {
+  Mint
+  Scale
+  Burn
+}
+
+/// Types of actions for Oracle smart contract
+/// * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain
+/// * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO
+/// * NodeCollect - oracle node collects rewards
+/// * PlatformCollect - oracle platform collects rewards
+/// * UpdateSettings - oracle platform changes consensus settings
+/// * SetFeeConfig - oracle platform changes reward fee configuration
+/// * AddNodes - oracle platform adds new nodes
+/// * DelNodes - oracle platform deletes nodes
+/// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
+/// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
+/// * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards
+/// * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs
+pub type OracleRedeemer {
+  OdvAggregate
+  CalculateRewards
+  NodeCollect
+  PlatformCollect
+  UpdateSettings
+  SetFeeConfig
+  AddNodes
+  DelNodes
+  ScaleDown
+  DismissRewards
+  CloseOracle
+  RemoveOracle
+}
+
+validator(
+  utxo_ref: OutputReference,
+  settings: OracleSettings,
+  oracle_script_hash: ScriptHash,
+) {
+  fn oracle_nfts(redeemer: MintingRedeemer, context: ScriptContext) -> Bool {
+    let ScriptContext { transaction, purpose } = context
+
+    expect tx.Mint(own_policy_id) = purpose
+
+    let Transaction { mint, inputs, outputs, reference_inputs, .. } =
+      transaction
+
+    let minted_assets =
+      mint
+        |> value.from_minted_value
+        |> value.tokens(own_policy_id)
+    let reward_acc_nft =
+      Asset { policy_id: own_policy_id, name: reward_acc_token_name }
+    let reward_transport_nft =
+      Asset { policy_id: own_policy_id, name: reward_transport_token_name }
+    let aggstate_nft =
+      Asset { policy_id: own_policy_id, name: aggstate_token_name }
+
+    when redeemer is {
+      Mint -> {
+        expect Some(1) = minted_assets |> dict.get(reward_acc_token_name)
+        expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
+        expect Some(m) = minted_assets |> dict.get(aggstate_token_name)
+        let must_mint_some_reward_transport = n > 0
+        let must_mint_same_amount_aggstate = m == n
+
+        expect Some(_input) =
+          list.find(inputs, fn(input) { input.output_reference == utxo_ref })
+
+        expect (RewardAccount(_), _) =
+          find_out_datum_and_value(
+            outputs,
+            oracle_script_hash,
+            reward_acc_nft,
+            ada_policy_id,
+          )
+
+        let must_return_empty_reward_utxos =
+          returns_empty_reward_outputs(
+            oracle_script_hash,
+            reward_transport_nft,
+            ada_policy_id,
+            n,
+            outputs,
+          )
+        let must_return_empty_aggstate_utxos =
+          returns_empty_aggstate_outputs(
+            oracle_script_hash,
+            aggstate_nft,
+            ada_policy_id,
+            m,
+            outputs,
+          )
+
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+      }
+      Scale -> {
+        expect None = minted_assets |> dict.get(reward_acc_token_name)
+        expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
+        expect Some(m) = minted_assets |> dict.get(aggstate_token_name)
+        let must_mint_same_amount_aggstate = m == n
+
+        if n > 0 {
+          trace @"scale up"
+
+          expect RewardAccount(reward_datum) =
+            find_in_datum(reference_inputs, oracle_script_hash, reward_acc_nft)
+
+          let must_return_empty_reward_utxos =
+            returns_empty_reward_outputs(
+              oracle_script_hash,
+              reward_transport_nft,
+              ada_policy_id,
+              n,
+              outputs,
+            )
+          let must_return_empty_aggstate_utxos =
+            returns_empty_aggstate_outputs(
+              oracle_script_hash,
+              aggstate_nft,
+              ada_policy_id,
+              m,
+              outputs,
+            )
+
+          let must_not_be_closing = is_oracle_closing(reward_datum) |> not
+
+          auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_not_be_closing? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+        } else {
+          trace @"scale down"
+
+          let must_spend_reward_transport_inputs =
+            spends_protocol_nft_inputs(
+              oracle_script_hash,
+              reward_transport_nft,
+              abs(n),
+              inputs,
+            )
+          let must_spend_aggstate_inputs =
+            spends_protocol_nft_inputs(
+              oracle_script_hash,
+              aggstate_nft,
+              abs(m),
+              inputs,
+            )
+
+          must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
+        }
+      }
+      Burn -> {
+        expect Some(-1) = minted_assets |> dict.get(reward_acc_token_name)
+        let n =
+          minted_assets
+            |> dict.get(reward_transport_token_name)
+            |> option.or_else(0)
+        let m =
+          minted_assets
+            |> dict.get(aggstate_token_name)
+            |> option.or_else(0)
+        let must_not_mint_reward_transport = n <= 0
+        let must_mint_same_amount_aggstate = m == n
+
+        let must_spend_reward_transport_inputs =
+          spends_protocol_nft_inputs(
+            oracle_script_hash,
+            reward_transport_nft,
+            abs(n),
+            inputs,
+          )
+        let must_spend_aggstate_inputs =
+          spends_protocol_nft_inputs(
+            oracle_script_hash,
+            aggstate_nft,
+            abs(m),
+            inputs,
+          )
+
+        spends_reward_acc_utxo(oracle_script_hash, reward_acc_nft, inputs) && must_not_mint_reward_transport? && must_mint_same_amount_aggstate? && must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
+      }
+    }
+  }
+}
+
+validator(settings: OracleSettings) {
+  fn oracle_manager(
+    in_datum: OracleDatum,
+    redeemer: OracleRedeemer,
+    context: ScriptContext,
+  ) -> Bool {
+    let ScriptContext { transaction, purpose } = context
+
+    expect tx.Spend(own_reference) = purpose
+
+    let Transaction { inputs, outputs, reference_inputs, .. } = transaction
+
+    expect Some(own_input) = tx.find_input(inputs, own_reference)
+    expect ScriptCredential(own_hash) =
+      own_input.output.address.payment_credential
+
+    let in_value = own_input.output.value
+
+    when (redeemer, in_datum) is {
+      // :: OdvAggregate
+      (OdvAggregate, AggState(aggstate)) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, aggstate_token_name)
+        let reward_transport_nft =
+          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+
+        // TODO check expiry_timestamp also
+        let must_not_be_live = option.is_none(aggstate)
+
+        let must_spend_reward_transport_utxo =
+          spends_protocol_nft_inputs(own_hash, reward_transport_nft, 1, inputs)
+
+        must_spend_reward_transport_utxo? && must_not_be_live?
+      }
+      (OdvAggregate, RewardTransport(NoRewards)) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+        let reward_transport_nft =
+          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+        let aggstate_nft =
+          Asset { policy_id: nft_policy_id, name: aggstate_token_name }
+
+        let must_spend_only_one_reward_input =
+          spends_protocol_nft_inputs(own_hash, reward_transport_nft, 1, inputs)
+        let must_spend_only_one_aggstate_input =
+          spends_protocol_nft_inputs(own_hash, aggstate_nft, 1, inputs)
+
+        expect RewardAccount(_reward_datum) =
+          find_in_datum(reference_inputs, own_hash, reward_acc_nft)
+
+        expect (RewardTransport(RewardConsensusPending { .. }), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_transport_nft,
+            settings.fee_token.policy_id,
+          )
+
+        expect (AggState(Some(_aggstate)), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            aggstate_nft,
+            ada_policy_id,
+          )
+
+        // TODO multisig check
+        // TODO median check
+        // TODO timestamp check
+        // TODO should not be closing check
+        // TODO check aggstate expiry and median
+        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input?
+      }
+      // :: CalculateRewards
+      (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs)
+      }
+      (CalculateRewards, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_transport_nft =
+          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        let aggregations =
+          find_in_aggregations(inputs, own_hash, reward_transport_nft)
+        let must_return_empty_reward_utxos =
+          returns_empty_reward_outputs(
+            own_hash,
+            reward_transport_nft,
+            ada_policy_id,
+            list.length(aggregations),
+            outputs,
+          )
+
+        // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
+        // TODO rewards consensus checks
+        must_return_empty_reward_utxos
+      }
+      // :: NodeCollect
+      (NodeCollect, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        // TODO node signature check
+        // TODO node rewards check
+        True
+      }
+      // :: PlatformCollect
+      (PlatformCollect, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        // TODO platform rewards check
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+      }
+      // :: UpdateSettings
+      (UpdateSettings, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        // TODO settings sanity check
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+      }
+      // :: SetFeeConfig
+      (SetFeeConfig, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        // TODO fee config sanity check
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+      }
+      // :: AddNodes
+      (AddNodes, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        // TODO new reward distribution == 0 check
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+      }
+      // :: DelNodes
+      (DelNodes, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        // TODO reward distribution check
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+      }
+      // :: ScaleDown
+      (ScaleDown, RewardTransport(NoRewards)) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+          outputs,
+          nft_policy_id,
+        )
+      }
+      (ScaleDown, AggState(aggstate)) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, aggstate_token_name)
+
+        // TODO check expiry_timestamp also
+        let must_not_be_live = option.is_none(aggstate)
+
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+          outputs,
+          nft_policy_id,
+        ) && must_not_be_live?
+      }
+      // :: DismissRewards
+      (DismissRewards, RewardTransport(RewardConsensusPending { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+        let reward_transport_nft =
+          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+
+        let must_return_empty_reward_utxos =
+          returns_empty_reward_outputs(
+            own_hash,
+            reward_transport_nft,
+            ada_policy_id,
+            1,
+            outputs,
+          )
+
+        // TODO check reward_dismissing_period_length and message.timestamp
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos
+      }
+      // :: CloseOracle
+      (CloseOracle, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        expect (RewardAccount(_), _out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            settings.fee_token.policy_id,
+          )
+
+        // TODO closing period time check
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+      }
+      // :: RemoveOracle
+      (RemoveOracle, RewardTransport(NoRewards)) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs)
+      }
+      (RemoveOracle, AggState(aggstate)) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, aggstate_token_name)
+        let reward_acc_nft =
+          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
+
+        // TODO check expiry_timestamp also
+        let must_not_be_live = option.is_none(aggstate)
+
+        spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs) && must_not_be_live?
+      }
+      (RemoveOracle, RewardAccount(RewardDatum { .. })) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, reward_acc_token_name)
+
+        // TODO closing period time check
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+          outputs,
+          nft_policy_id,
+        )
+      }
+      // ::
+      _other -> fail @"Oracle Script state transition not allowed"
+    }
+  }
+}

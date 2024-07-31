@@ -6,9 +6,565 @@
     "plutusVersion": "v2",
     "compiler": {
       "name": "Aiken",
-      "version": "v1.0.26-alpha+3d06129"
+      "version": "v1.0.29-alpha+16fb02e"
     },
     "license": "Apache-2.0"
   },
-  "validators": []
+  "validators": [
+    {
+      "title": "oracle.oracle_manager",
+      "datum": {
+        "title": "in_datum",
+        "schema": {
+          "$ref": "#/definitions/oracle~1datum~1OracleDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/oracle~1OracleRedeemer"
+        }
+      },
+      "parameters": [
+        {
+          "title": "settings",
+          "schema": {
+            "$ref": "#/definitions/oracle~1datum~1OracleSettings"
+          }
+        }
+      ],
+      "compiledCode": "59137d010000323232323232322232323232323223232322533300e3232325333011300b301237540022646464646464646464a666034602a60366ea80044c8c8c94ccc074c05cc078dd50008991919191919191919191919191919192999816981418171baa0021533302d3029302e3754006264a66605c666600c0226030660646ea4cc01404122108416767537461746500330324c1084752657761726454004bd702400403820022940c034c0c8c0bcdd5001800800899191919192999818981618191baa00615333031302b3032375400e2a666062605860646ea8c0d8c0ccdd500389919191919299981b1818981b9baa3232533303b303e00213253330393035303a3754002264640046066002607c60766ea800458c028c0e8dd5180e981d1baa00116303c00133301102201930203303a375200a6607498010a49526577617264416363004bd70099299981b9818981c1baa00115333037303130383754607860726ea80044c94ccc0e0c0d0c0e4dd50008a99981c1819981c9baa303d303a37540022a666070008200629405858c0f0cccc020088068011221001616303b3333007021019004375c603c60706ea8c028c0e0dd501a8b199980680c00124004046666601802e0049001011180e9981b9ba9002330374c0109484167675374617465004bd70180e1981b1ba9001330364c01084752657761726454004bd7019804009a45075265776172645400001001001132325333032302c3033375400e2a666064605860666ea802054ccc0c8c0b0c0ccdd5181b981a1baa0081333002015301c330363752660120289101075265776172645400330364c10a49526577617264416363004bd700100008008008991919299981a1817181a9baa00915333034302f303537540142646464a66606e606460706ea8c0f0cccc020088068c084cc0ecdd48011981da6010a49526577617264416363004bd701bae301f30393754601660726ea80d84ccccc0140680052210030103300633301202501a00123253330393035303a375400226464a666076606a60786ea80084c94ccc0f0c0d8c0f4dd500089918139982098210009982098211821800998209811181f9baa3022303f375400c97ae0303e37540022c6080607a6ea800858c0cc004c0f8c0ecdd50008b1805181d1baa301d303a37540020442c6040660746ea4004cc0e93001084752657761726454004bd701980600ba450952657761726441636300303930363754014002002264a6660686060606a6ea802454ccc0d0c0bcc0d4dd5005099299981a9818181b1baa303a3333006020018301f3303937526601802e91010952657761726441636300330394c10a49526577617264416363004bd701bae301d303737546012606e6ea80d05288b181c981b1baa00a00100113232323253330373370e9003181c1baa00c1533303730323038375401a264a666070606660726ea8c0f4cccc02408c06cc088cc0f0dd49980780d244109526577617264416363003303c4c10a49526577617264416363004bd701bae3020303a3754601860746ea80dc4ccc00cdd71810181d1baa03702602316303c3039375401a002002264a66606e66e1d2008303837540182a66606e606460706ea80344c94ccc0e0c0ccc0e4dd5181e999980481180d98111981e1ba93300f01a488109526577617264416363003303c4c10a49526577617264416363004bd701bae3020303a3754601860746ea80dc4ccc00cdd71810181d1baa03702602316303c3039375401a002002264a66606e66e1d200a303837540182a66606e606460706ea80344c94ccc0e0c0ccc0e4dd5181e999980481180d98111981e1ba93300f01a488109526577617264416363003303c4c10a49526577617264416363004bd701bae3020303a3754601860746ea80dc4ccc00cdd71810181d1baa03702602316303c3039375401a002002264a66606e66e1d200c303837540182a66606e606460706ea80344c94ccc0e0c0ccc0e4dd5181e999980481180d98111981e1ba93300f01a488109526577617264416363003303c4c10a49526577617264416363004bd701bae3020303a3754601860746ea80dc4ccc00cdd71810181d1baa03702602316303c3039375401a002002264a66606e66e1d200e303837540182a66606e606460706ea80344c94ccc0e0c0ccc0e4dd5181e999980481180d98111981e1ba93300f01a488109526577617264416363003303c4c10a49526577617264416363004bd701bae3020303a3754601860746ea80dc4ccc00cdd71810181d1baa03702602316303c3039375401a00200226464a666070605c60726ea803454ccc0e0c0c8c0e4dd50070a99981c1819981c9baa303d303a375401c264a6660726660086eb8c084c0ecdd501c0138120998018120008a503300f01a48810752657761726454000010010011325333038302e3039375401a2a666070606860726ea80384c8c94ccc0e8ccc014dd71811181e1baa0390280251533303a33004025002100114a02940c064c0f8c0ecdd50079980780d24410841676753746174650000100113253330383370e9009181c9baa00d1533303830323039375401c2a666070606460726ea8c0f4c0e8dd5007099299981c9998021bae3021303b375407004e04820022940ccccc01806cc088cc0f0dd49980780d2450752657761726454003303c4c1084752657761726454004bd70245004800808c0040040044c94ccc0e0cdc3a402860726ea803454ccc0e0c0ccc0e4dd5007099299981c981a181d1baa303e333300a02401c30233303d37526602003691109526577617264416363003303d4c10a49526577617264416363004bd701bae3021303b3754601a60766ea80e04ccc010dd71810981d9baa03802702416303d303a375401c002002264a666070605a60726ea803454ccc0e0c0c8c0e4dd50070a99981c1819981c9baa303d303a375401c26660100366044660786ea4cc03c0692210752657761726454003303c4c10a49526577617264416363004bd70013000800800899299981c1816981c9baa00d1533303830343039375401c264a66607266601203860466607a6ea4cc04006d221084167675374617465003303d4c10a49526577617264416363004bd7001388008a503018303d303a375401c002002264a666070605a60726ea803454ccc0e0c0ccc0e4dd500709919299981d1998029bae3022303c375407205004a26600804a0022940cc04006d2210952657761726441636300303d303a375401c0020022c44a6660766602a0044600a6600c6eacc078c0ecdd50008010a5114a0444646464a666076606c60786ea80044c8c94ccc0f4c0e0c0f8dd500089919299981f99baf302730413754604860826ea8010c09cc104dd500108008a503375e6e98c014dd5981198201baa3023304037540066e98c014dd5981198201baa0013042303f37540022c6604a00a4600a6eacc088c0fcdd50009820181e9baa00116330230042300337566040607a6ea8c080c0f4dd5000919299981d981b181e1baa001137566080607a6ea800458cc01c0040148c014cc01800401094ccc0d4c0c0c0d8dd50008a5114a044646600200200644a666074002298103d87a8000132323232533303b3372200e0042a66607666e3c01c0084c094cc0fcdd3000a5eb80530103d87a8000133006006003375660780066eb8c0e8008c0f8008c0f000488888c8c94ccc0e4cdc398090010020991980080080111299981f0008a51132533303c533303c3037303d3754608200429445280998018018008a50304100114a06600e002464a666074606c60766ea80044c8c94ccc0f0c0d8c0f4dd500109820981f1baa002163034001303f303c37540022c601660766ea8004cccc02800401400c01088c8cc00400400c894ccc0e000452f5c026607260066074002660040046076002444605a601866601c00200600444446464a6660706076004264a66606c6064606e6ea80044c8c8cc0f0008cc0f0c074c0e8dd500225eb80c0c0004c0ecc0e0dd50008b1803981b9baa0011630390013333006004003001002230343035303500122223300e3300e0042325333033302d30343754002266e3c014dd7181c181a9baa00114a0603460686ea8c068c0d0dd5000919baf374e66602064660020026eacc060c0d4dd500111299981b8008a5eb7bdb1804c8c8c8c94ccc0e0cdc8a44100002153330383371e9101000021003100513303c337606ea4008dd3000998030030019bab3039003375c606e0046076004607200297ae02223330140020012223253330393033303a3754002200426607a607c60766ea80040094ccc0e0cdc78030048a6103d87a8000130223303c374e660786ea4018cc0f0dd48019981e1ba80024bd7025eb80dd39981b1ba733036301a303437540046606c602e60686ea8008cc0d93010101004bd7025eb808c0c8c0ccc0ccc0cc004c0c0030c0bcc0c002c88c8c94ccc0c0c0cc0084c94ccc0b8c0a0dd69819981a181a00108008b1bae303200116375860620026466002002601000644a666060002297ae013232533302f3371e00a6eb8c0d0c0d40084cc0ccdd380119802002000899802002000981a0011bac303200122223370e600a66600e002008006004600200244a66605600229000099b8048008cc008008c0b8004888cc01400c94ccc0a4cdd7980898159baa300e302b375400260266605a66e9520023302d375200697ae03302d4c103d87a80004bd700999119198008008019129998180008a50132533302e3375e60660046e9c010528899801801800981980098029bab300e302b3754601c60566ea8004cc0b4c044c0acdd500119816980718159baa0023302d4c10101004bd700a5023330030014bd70111199803801000911198179ba73302f375200c6605e6ea400ccc0bcdd400125eb8000488c8cc00400400c894ccc0a800452f5c026464a666052600a00426605a00466008008002266008008002605c0046058002444646600200200844a66605400220082646660086eb8c0a4004dd598150009980180198170011816000911191980080080211299981480088020991998021bae3028001375a605200266006006605a00460560024a666042603860446ea80045280a51330230163302301d4bd701bab300330203754600660406ea8010dd71811180f9baa001163004301e37546008603c6ea8c004c078dd5001118109811000980f980e1baa00116323300300823375e6006603a6ea8004008c078c06cdd50049180f00091191980080080191299980f0008a6103d87a800013232533301d300500213007330210024bd70099802002000981100118100009ba548000dd6180d180d8011bac301900130190023758602e00260266ea800858c054c058008c050004c040dd50008a4c26cac64a66601a60100022a666020601e6ea8010526161533300d300700115333010300f37540082930b0a99980698048008a99980818079baa00414985854ccc034cdc3a400c0022a666020601e6ea8010526161533300d3370e90040008a99980818079baa00414985854ccc034cdc3a40140022a666020601e6ea8010526161533300d3370e90060008a99980818079baa00414985854ccc034cdc3a401c0022a666020601e6ea8010526161533300d300300115333010300f37540082930b0a99980699b874804800454ccc040c03cdd50020a4c2c2a66601a66e1d201400115333010300f37540082930b0a99980698010008a99980818079baa00414985858c034dd50019b8748058dc3a4020600200c464a666012600800226464a66601c6022004264932999805980318061baa00113232323232323232533301630190021323232498c94ccc058c0440044c8c94ccc06cc07800852616375a603800260306ea801054ccc058c04000454ccc064c060dd50020a4c2c2c602c6ea800d4ccc050c03cc054dd5003099191919299980d980f0010991924ca666032602860346ea80084c8c8c8c8c8c94ccc088c09400852616375a604600260460046eb4c084004c084008dd6980f800980d9baa00216325333019301400113232533301e30210021324994ccc06cc058c070dd5000899191919299981118128010a4c2c6eb8c08c004c08c008dd71810800980e9baa0011616301f001301b37540082a66603260260022a66603860366ea80105261616301937540062c603800260380046034002602c6ea801858cc04001c94ccc050c03cc054dd50008991919191919299980e98100010a4c2c6eb4c078004c078008dd7180e000980e0011bae301a001301637540022c2c602e002602e0046eb4c054004c054008c04c004c04c008dd6180880098069baa0011616300f001300b37540042a666012600600226464a66601c60220042649319299980618038008a99980798071baa00214985854ccc030c0180044c8c8c8c94ccc04cc0580084c9265333010300b30113754002264646464a66602e603400426493198088019299980a9808180b1baa001132323232533301c301f002149858dd7180e800980e8011bad301b001301737540022c2c6eb4c060004c060008dd6180b00098091baa001161630140013014002375a6024002601c6ea800858c030dd50008b180780098059baa00215333009300500113232533300e3011002132498c94ccc030c01c0044c8c94ccc044c0500084c926533300e3009300f3754002264646464a66602a60300042930b1bad30160013016002375a602800260206ea80045858c048004c038dd50010a99980618030008a99980798071baa00214985858c030dd50008b180780098059baa00216300937540026e1d2002370e90001b874801088c8cc00400400c894ccc02800452613233003003300e0023003300c0015734aae7555cf2ab9f5740ae855d101",
+      "hash": "06a3f01473a6f3ac538564f45b89856ca053bf096d969454d2da20c9"
+    },
+    {
+      "title": "oracle.oracle_nfts",
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/oracle~1MintingRedeemer"
+        }
+      },
+      "parameters": [
+        {
+          "title": "utxo_ref",
+          "schema": {
+            "$ref": "#/definitions/aiken~1transaction~1OutputReference"
+          }
+        },
+        {
+          "title": "settings",
+          "schema": {
+            "$ref": "#/definitions/oracle~1datum~1OracleSettings"
+          }
+        },
+        {
+          "title": "oracle_script_hash",
+          "schema": {
+            "$ref": "#/definitions/ByteArray"
+          }
+        }
+      ],
+      "compiledCode": "590d3b01000032323232323232222322323232322533300b323232533300e3008300f37540022646464646464646464646464646464646464646464646464646464646464646464a66605e6052026264a666060605460626ea800454ccc0c0c0a4dd6981a98191baa0011325333031302b3032375400226464a666066605a60686ea80044c8c8c94ccc0d8c0c0c0dcdd51980c813119baf30183039375400206c2a66606c6060606e6ea8c0ecc8c94ccc0ecc0f80084c94ccc0e4c0c4c0e8dd5000899191981f8011981f980e981e9baa0044bd701809800981f181d9baa001163012303a37540022c6078002666602204406491010001d132325333038333018375c603260746ea80d80a009054ccc0e001054ccc0e000c54ccc0e000840045280a5014a02940ccccc02c0cc0712201000040233333300903201c48810000502216163370e00400866e212000003375a6070606a6ea800458cc010069220108416767537461746500375a606c60666ea800458cc0080612210752657761726454001616330010174881095265776172644163630013232325333032302b01615333032302b303337546600803491109526577617264416363001325333033302d3034375400226464a66606a605e606c6ea80044c8c94ccc0dccdc424000008264a666070606460726ea80044c8c8c94ccc0ecccc06cdd7180e181e9baa03902b0271533303b0011533303b0051533303b003100214a029405280a5033303a533303a3034303b3754607e60806080608060786ea8c0fcc0f0dd50018a5114a0941289999980681a80f245000040253333300b03401e488100005024163232533303c303f002132533303a3032303b3754002264640046028002607e60786ea800458c04cc0ecdd5180d981d9baa00116303d00133300702503301e1325333038333300703401e3009005028100114a0666600c066038601000404e66e1c00400cdd6981d181b9baa001163300601c488108416767537461746500375a6070606a6ea800458cc010069221075265776172645400161325333033302d303437540022a66606666e1d2001375a6070606a6ea80044c8c8c8c8c8c8c94ccc0e8c0ccc040ccc0280a80d808454ccc0e801054ccc0e800c54ccc0e800840045280a5014a02940cccc0200d4078c0280100a4cccc01c0d0078c0240100a0cdc380100199b8900248000cc008cc01c07522010841676753746174650048000cc004cc018071220107526577617264540048000894ccc0d4c0b8c0d8dd5001080089bad303a303737540042c2c660080349101095265776172644163630022223370e601666600a0020080060044446601e0064a66606866ebcc054c0d8dd5180b181b1baa001301f330383374a90011981c1ba90034bd701981c26103d87a80004bd7009991191980080080191299981d8008a5013253330393375e607c0046e9c010528899801801800981f0009998091bab301630363754602c606c6ea80052f5c044466602c0040024446607c6e9ccc0f8dd48031981f1ba90033303e375000497ae00013303830153036375400466070602c606c6ea8008cc0e13010101004bd700a5025333030337100029000099b8148000004400488c8cc00400400c894ccc0d4004530103d87a800013232323253330363372200e0042a66606c66e3c01c0084c084cc0e8dd4000a5eb80530103d87a8000133006006003375a606e0066eb8c0d4008c0e4008c0dc00488888c8c94ccc0d0cdc398050010020998048009299981a9817981b1baa00114a2294052819805800919299981a9816981b1baa0011323253330373030303837540042607860726ea800858c03c004c0e8c0dcdd50008b1807181b1baa001333300d00100500300422222323253330333370e60120040082660100024a666068605c606a6ea80045280a5114a066014002464a6660686058606a6ea80044c8c94ccc0d8c0b8c0dcdd50010981d981c1baa00216300e0013039303637540022c601a606a6ea8004cccc03000401400c01088c8cc00400400c894ccc0c800452889929998181802181a8010998018018008a503035001300100122533302e0011480004cdc02400466004004606200244646600200200644a66605e002297ae0133030300330310013300200230320012325333029302300113232533302e30310021324994ccc0acc094c0b0dd500089919191919191919299981b181c801099191924c64a66606c606000226464a666076607c0042930b1bad303c001303837540082a66606c605e0022a66607260706ea8010526161630363754006a666068605c606a6ea80184c8c8c8c94ccc0ecc0f80084c8c92653330393033303a37540042646464646464a666084608a0042930b1bad30430013043002375a608200260820046eb4c0fc004c0ecdd50010b19299981c981980089919299981f182080109924ca666076606a60786ea80044c8c8c8c94ccc108c11400852616375c608600260860046eb8c104004c0f4dd50008b0b181f800981d9baa0041533303930320011533303c303b37540082930b0b181c9baa00316303c001303c002303a0013036375400c2c6602000e4a666068605c606a6ea80044c8c8c8c8c8c94ccc0f4c10000852616375a607c002607c0046eb8c0f0004c0f0008dd7181d000981b1baa001161630370013037002375a606a002606a004606600260660046eb0c0c4004c0b4dd50008b0b181780098159baa00215333029302200113232533302e3031002132498c94ccc0b0c09800454ccc0bcc0b8dd50010a4c2c2a666058604a002264646464a666066606c004264932999818181518189baa0011323232325333037303a002132498cc04400c94ccc0d4c0bcc0d8dd5000899191919299981e181f8010a4c2c6eb8c0f4004c0f4008dd6981d800981b9baa0011616375a607000260700046eb0c0d8004c0c8dd50008b0b181a000981a0011bad3032001302e37540042c60586ea800458c0bc004c0acdd50010a9998149810800899192999817181880109924c64a666058604c00226464a6660626068004264932999817181418179baa00113232323253330353038002149858dd6981b000981b0011bad3034001303037540022c2c6064002605c6ea800854ccc0b0c09400454ccc0bcc0b8dd50010a4c2c2c60586ea800458c0bc004c0acdd50010b18149baa0012302c302d302d00122223300533005004232533302b3024302c3754002266e3c014dd7181818169baa00114a0601660586ea8c02cc0b0dd5000919baf374e666010660266eacc030c0b0dd5000a45004bd70111199806001000911192999818981518191baa0011002133035303630333754002004a66606066e3c0180245300103d87a80001301b33034374e660686ea4018cc0d0dd48019981a1ba80024bd7025eb80dd3998171ba73302e300b302c37540046605c601860586ea8008cc0b93010101004bd7025eb8088c8cc00400400c894ccc0ac00452f5c026464a666054600a00426605c00466008008002266008008002605e004605a00244646600200200644a66605400229309919801801981700118019816000911191980080080211299981500088020991998021bae30290013756605400266006006605c0046058002444646600200200844a66605200220082646660086eb8c0a0004dd6981480099801801981680118158009111919192999813181018139baa00113232533302830223029375400226464a66605466ebcc02cc0b0dd5180618161baa004300b302c375400420022940cdd79ba630053756601660566ea8c02cc0acdd50019ba630053756601660566ea8004c0b4c0a8dd50008b19805002918029bab300a302a3754002605660506ea800458cc0200108c00cdd5980418141baa300830283754002464a66604c6040604e6ea80044dd5981598141baa001163300f00100525333024301e302537546601c0020082944528118128009181218128009119198008008019129998120008a6103d87a800013232533302330050021300e330270024bd7009980200200098140011813000980e9baa01730063301f375201a6603e98109484167675374617465004bd7018029980f1ba900c3301e4c01084752657761726454004bd7018021980e9ba900b3301d4c010a49526577617264416363004bd7019299980c9809180d1baa00114bd6f7b63009bab301e301b375400266004660026eacc074c078c0780152210000a22323300100100322533301e00114bd6f7b630099191919299980f99b910070021533301f3371e00e0042006200a26604666ec0dd48011ba600133006006003375660400066eb8c078008c088008c08000488c8cc00400400c894ccc0740045300103d87a8000132323232533301e3372200e0042a66603c66e3c01c0084c024cc088dd3000a5eb80530103d87a80001330060060033756603e0066eb8c074008c084008c07c004dd2a40006eb0c064004c064008dd6180b800980b8011bac3015001301137540066eb8c04cc040dd50008b18091809801180880098069baa00114984d958c94ccc028c01000454ccc034c030dd50028a4c2c2a66601460060022a66601a60186ea8014526161533300a30020011533300d300c375400a2930b0b18051baa004370e90021b8748008dc3a40006eb80055cd2ab9d5573caae7d5d02ba157441",
+      "hash": "1e722ab435dc3d6e1165cc041f9318c344e2f7ad75ab2c23ba00b814"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "List$oracle/datum/Node": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/oracle~1datum~1Node"
+      }
+    },
+    "List$oracle/datum/NodeFeed": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/oracle~1datum~1NodeFeed"
+      }
+    },
+    "Option$Int": {
+      "title": "Optional",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Option$ext/aiken/transaction/value/Asset": {
+      "title": "Optional",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/ext~1aiken~1transaction~1value~1Asset"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Option$oracle/datum/AggStateDatum": {
+      "title": "Optional",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/oracle~1datum~1AggStateDatum"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "aiken/transaction/OutputReference": {
+      "title": "OutputReference",
+      "description": "An `OutputReference` is a unique reference to an output on-chain. The `output_index`\n corresponds to the position in the output list of the transaction (identified by its id)\n that produced that output",
+      "anyOf": [
+        {
+          "title": "OutputReference",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "transaction_id",
+              "$ref": "#/definitions/aiken~1transaction~1TransactionId"
+            },
+            {
+              "title": "output_index",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "aiken/transaction/TransactionId": {
+      "title": "TransactionId",
+      "description": "A unique transaction identifier, as the hash of a transaction body. Note that the transaction id\n isn't a direct hash of the `Transaction` as visible on-chain. Rather, they correspond to hash\n digests of transaction body as they are serialized on the network.",
+      "anyOf": [
+        {
+          "title": "TransactionId",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "hash",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "ext/aiken/transaction/value/Asset": {
+      "title": "Asset",
+      "anyOf": [
+        {
+          "title": "Asset",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "policy_id",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "name",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/MintingRedeemer": {
+      "title": "MintingRedeemer",
+      "description": "Types of actions for Oracle NFTs (protocol tokens)\n * Mint  - Oracle start: one time mint for RewardAccount; any number of mints for RewardTransport and AggState\n * Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState\n * Burn  - Oracle close: all tokens are burned",
+      "anyOf": [
+        {
+          "title": "Mint",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Scale",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "Burn",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        }
+      ]
+    },
+    "oracle/OracleRedeemer": {
+      "title": "OracleRedeemer",
+      "description": "Types of actions for Oracle smart contract\n * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain\n * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO\n * NodeCollect - oracle node collects rewards\n * PlatformCollect - oracle platform collects rewards\n * UpdateSettings - oracle platform changes consensus settings\n * SetFeeConfig - oracle platform changes reward fee configuration\n * AddNodes - oracle platform adds new nodes\n * DelNodes - oracle platform deletes nodes\n * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs\n * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards\n * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards\n * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs",
+      "anyOf": [
+        {
+          "title": "OdvAggregate",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "CalculateRewards",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "NodeCollect",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        },
+        {
+          "title": "PlatformCollect",
+          "dataType": "constructor",
+          "index": 3,
+          "fields": []
+        },
+        {
+          "title": "UpdateSettings",
+          "dataType": "constructor",
+          "index": 4,
+          "fields": []
+        },
+        {
+          "title": "SetFeeConfig",
+          "dataType": "constructor",
+          "index": 5,
+          "fields": []
+        },
+        {
+          "title": "AddNodes",
+          "dataType": "constructor",
+          "index": 6,
+          "fields": []
+        },
+        {
+          "title": "DelNodes",
+          "dataType": "constructor",
+          "index": 7,
+          "fields": []
+        },
+        {
+          "title": "ScaleDown",
+          "dataType": "constructor",
+          "index": 8,
+          "fields": []
+        },
+        {
+          "title": "DismissRewards",
+          "dataType": "constructor",
+          "index": 9,
+          "fields": []
+        },
+        {
+          "title": "CloseOracle",
+          "dataType": "constructor",
+          "index": 10,
+          "fields": []
+        },
+        {
+          "title": "RemoveOracle",
+          "dataType": "constructor",
+          "index": 11,
+          "fields": []
+        }
+      ]
+    },
+    "oracle/datum/AggStateDatum": {
+      "title": "AggStateDatum",
+      "description": "AggStateDatum contains an oracle feed - median taken from individual node feeds,\n and an expiration timestamp marking time after which AggState can be consumed once again.",
+      "anyOf": [
+        {
+          "title": "AggStateDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "median",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "expiry_timestamp",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/AggregateMessage": {
+      "title": "AggregateMessage",
+      "anyOf": [
+        {
+          "title": "AggregateMessage",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "node_feeds",
+              "$ref": "#/definitions/List$oracle~1datum~1NodeFeed"
+            },
+            {
+              "title": "timestamp",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/FeeConfig": {
+      "title": "FeeConfig",
+      "anyOf": [
+        {
+          "title": "FeeConfig",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "rate_nft",
+              "$ref": "#/definitions/Option$ext~1aiken~1transaction~1value~1Asset"
+            },
+            {
+              "title": "reward_prices",
+              "$ref": "#/definitions/oracle~1datum~1RewardPrices"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/Node": {
+      "title": "Node",
+      "anyOf": [
+        {
+          "title": "Node",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "payment_vkh",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "feed_verification_key",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "reward",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/NodeFeed": {
+      "title": "NodeFeed",
+      "anyOf": [
+        {
+          "title": "NodeFeed",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "value",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "signature",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/OracleDatum": {
+      "title": "OracleDatum",
+      "description": "There are three types of oracle utxos:\n 1. RewardAccount - one for each oracle,\n    acts as single point of truth for oracle settings, node list, and reward distribution.\n 2. RewardTransport - many for each oracle, with possibility of scaling their number on demand,\n    users permorm ODV aggregation with those by providing node feeds list constructed off-chain.\n 3. AggState - each AggState utxo is complementary to RewardTransport, it containts the oracle feed value,\n    that will be referenced by a user of a DApp.",
+      "anyOf": [
+        {
+          "title": "RewardAccount",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/oracle~1datum~1RewardDatum"
+            }
+          ]
+        },
+        {
+          "title": "RewardTransport",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/oracle~1datum~1RewardTransportDatum"
+            }
+          ]
+        },
+        {
+          "title": "AggState",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "$ref": "#/definitions/Option$oracle~1datum~1AggStateDatum"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/OracleSettings": {
+      "title": "OracleSettings",
+      "description": "Immutable oracle settings.\n Rationale for immutability:\n * platform_auth_nft - oracle deployment corresponds to one unchanging \"platform\"\n * closing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * fee_token - oracle nodes will be sure that platform won't update reward currency",
+      "anyOf": [
+        {
+          "title": "OracleSettings",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "platform_auth_nft",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "closing_period_length",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "reward_dismissing_period_length",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "fee_token",
+              "$ref": "#/definitions/ext~1aiken~1transaction~1value~1Asset"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/RewardDatum": {
+      "title": "RewardDatum",
+      "description": "Mutable oracle settings and reward distribution data",
+      "anyOf": [
+        {
+          "title": "RewardDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "nodes",
+              "$ref": "#/definitions/List$oracle~1datum~1Node"
+            },
+            {
+              "title": "fee_info",
+              "$ref": "#/definitions/oracle~1datum~1FeeConfig"
+            },
+            {
+              "title": "aggregation_liveness_period",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "closing_period_started_at",
+              "$ref": "#/definitions/Option$Int"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/RewardPrices": {
+      "title": "RewardPrices",
+      "anyOf": [
+        {
+          "title": "RewardPrices",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "node_fee",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "consensus_fee",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "platform_fee",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "oracle/datum/RewardTransportDatum": {
+      "title": "RewardTransportDatum",
+      "description": "RewardTransport utxo can be in two states:\n 1. NoRewards - waiting for user to submit tx with OdvAggregate redeemer;\n 2. RewardConsensusPending - waiting to calculate aggregation reward distribution\n    and transfer user provided fees into RewardAccount utxo.",
+      "anyOf": [
+        {
+          "title": "NoRewards",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "RewardConsensusPending",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "median",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "message",
+              "$ref": "#/definitions/oracle~1datum~1AggregateMessage"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }

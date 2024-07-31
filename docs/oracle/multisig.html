@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>oracle/multisig - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
-    <link rel="icon" type="image/svg+xml" sizes="any" href="./favicon.svg"/>
-    <link rel="stylesheet" href="./css/index.css?v=1.0.29-alpha" type="text/css"/>
-    <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=1.0.29-alpha"/>
+    <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
+    <link rel="stylesheet" href="../css/index.css?v=1.0.29-alpha" type="text/css"/>
+    <link id="syntax-theme" rel="stylesheet" href="../css/atom-one-light.min.css?v=1.0.29-alpha"/>
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
       "use strict";
-      window.breadcrumbs = '.';
+      window.breadcrumbs = '..';
       const aikenConfig = {
         theme: {
           values: (() => {
@@ -118,7 +118,7 @@
       </button>
 
       <h2>
-        <a href="./">odv-multisig-charli3-oracle-onchain</a>
+        <a href="../">odv-multisig-charli3-oracle-onchain</a>
         <span id="project-version">
           <span>v0.0.0 </span>
         </span>
@@ -190,55 +190,55 @@
 	
         <ul>
         
-	  <li><a href="./ext/aiken/time.html">
+	  <li><a href="../ext/aiken/time.html">
 	  
 	  ext/aiken/time
 	  
 	  </a></li>
         
-	  <li><a href="./ext/aiken/transaction/credential.html">
+	  <li><a href="../ext/aiken/transaction/credential.html">
 	  
 	  ext/aiken/transaction/credential
 	  
 	  </a></li>
         
-	  <li><a href="./ext/aiken/transaction/value.html">
+	  <li><a href="../ext/aiken/transaction/value.html">
 	  
 	  ext/aiken/transaction/value
 	  
 	  </a></li>
         
-	  <li><a href="./oracle.html">
+	  <li><a href="../oracle.html">
 	  
 	  oracle
 	  
 	  </a></li>
         
-	  <li><a href="./oracle/checks.html">
+	  <li><a href="../oracle/checks.html">
 	  
 	  oracle/checks
 	  
 	  </a></li>
         
-	  <li><a href="./oracle/datum.html">
+	  <li><a href="../oracle/datum.html">
 	  
 	  oracle/datum
 	  
 	  </a></li>
         
-	  <li><a href="./oracle/multisig.html">
+	  <li><a href="../oracle/multisig.html">
 	  
-	  oracle/multisig
+	  <strong>oracle/multisig</strong>
 	  
 	  </a></li>
         
-	  <li><a href="./services/nft_based_auth.html">
+	  <li><a href="../services/nft_based_auth.html">
 	  
 	  services/nft_based_auth
 	  
 	  </a></li>
         
-	  <li><a href="./services/protocol_token.html">
+	  <li><a href="../services/protocol_token.html">
 	  
 	  services/protocol_token
 	  
@@ -247,42 +247,81 @@
         </ul>
 
         
+
+<h2>Types</h2>
+<ul>
+  
+  <li><a href="#NodeMessage">NodeMessage</a></li>
+  
+</ul>
+
+
+
+
+
+
       </nav>
 
       <main class="content">
         
-<h1>odv-multisig-charli3-oracle-onchain</h1>
-<p>Write validators in the <code>validators</code> folder, and supporting functions in the <code>lib</code> folder using <code>.ak</code> as a file extension.</p>
-<p>For example, as <code>validators/always_true.ak</code></p>
-<pre><code class="language-gleam">validator {
-  fn spend(_datum: Data, _redeemer: Data, _context: Data) -&gt; Bool {
-    True
-  }
-}
-</code></pre>
-<h2>Building</h2>
-<pre><code class="language-sh">aiken build
-</code></pre>
-<h2>Testing</h2>
-<p>You can write tests in any module using the <code>test</code> keyword. For example:</p>
-<pre><code class="language-gleam">test foo() {
-  1 + 1 == 2
-}
-</code></pre>
-<p>To run all tests, simply do:</p>
-<pre><code class="language-sh">aiken check
-</code></pre>
-<p>To run only tests matching the string <code>foo</code>, do:</p>
-<pre><code class="language-sh">aiken check -m foo
-</code></pre>
-<h2>Documentation</h2>
-<p>If you’re writing a library, you might want to generate an HTML documentation for it.</p>
-<p>Use:</p>
-<pre><code class="language-sh">aiken docs
-</code></pre>
-<h2>Resources</h2>
-<p>Find more on the <a href="https://aiken-lang.org">Aiken’s user manual</a>.</p>
-<p>Simply install latest version of aiken (change version tag) <code>nix profile install github:aiken-lang/aiken/v1.0.29-alpha#aiken</code>.</p>
+<h1 id="module-name" class="module-name">
+  <a href="#module-name">oracle/multisig</a>
+</h1>
+
+
+
+<section class="module-members">
+  <h1 id="module-types" class="module-member-kind">
+    <a href="#module-types">Types</a>
+  </h1>
+
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="NodeMessage">
+        <a href="#NodeMessage">
+	  NodeMessage
+        </a>
+      </h2>
+      
+      <!-- TODO: support source linking
+      <a class="member-source" alt="View Source" title="View Source" href="#todo">
+        &lt;/&gt;
+      </a>
+      -->
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"><p>NodeMessage is serialized hashed and signed by node operator,
+it contains the feed value, together with security parameters:</p>
+<ul>
+<li>timestamp - user is guarantied that value is at least as fresh as this time,
+and node is sure that his signature will expire soon after this time passes.</li>
+<li>oracle_nft_policy_id - acts as feed ID, therefore ensures that node message won’t be reused for other feeds</li>
+</ul>
+</div>
+      
+      <h3>Constructors</h3>
+      <ul class="constructor-list">
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">NodeMessage { value: Int, timestamp: PosixTime, oracle_nft_policy_id: PolicyId }</code></pre>
+          </div>
+	  
+        </li>
+        
+      </ul>
+      
+    </div>
+  </div>
+  
+</section>
+
+
+
+
 
 
       </main>
@@ -334,8 +373,8 @@
       </defs>
     </svg>
 
-    <script src="./js/highlight.min.js?v=1.0.29-alpha"></script>
-    <script src="./js/highlightjs-aiken.js?v=1.0.29-alpha"></script>
+    <script src="../js/highlight.min.js?v=1.0.29-alpha"></script>
+    <script src="../js/highlightjs-aiken.js?v=1.0.29-alpha"></script>
     <script>
       document.querySelectorAll("pre code").forEach((elem) => {
         if (elem.className === "") {
@@ -354,9 +393,9 @@
 	el.prepend(a);
       });
     </script>
-    <script src="./js/lunr.min.js?v=1.0.29-alpha"></script>
-    <script src="./js/index.js?v=1722335928"></script>
+    <script src="../js/lunr.min.js?v=1.0.29-alpha"></script>
+    <script src="../js/index.js?v=1722335928"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="./search-data.js?v=1722335928"></script>
+    <script src="../search-data.js?v=1722335928"></script>
   </body>
 </html>
