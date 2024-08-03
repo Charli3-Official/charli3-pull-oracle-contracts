@@ -252,6 +252,8 @@
       <main class="content">
         
 <h1>odv-multisig-charli3-oracle-onchain</h1>
+<p>Design and architecture for Charli3 ODV multisig oracle are described in this <a href="https://charli3io.atlassian.net/wiki/spaces/CHARLI3/pages/407502849/ODV+Multisig+Oracle">doc</a>. Flowcharts that were used in confluence document are uploaded to <code>docs-media</code> folder. See also presentation <a href="https://docs.google.com/presentation/d/1xGFmgowJRyg4N8WpRLgPo1wIYawi8ueyj04bHnZjhLs/edit?usp=sharing">slides</a> where that idea was first described.</p>
+<h2>Aiken usage</h2>
 <p>Write validators in the <code>validators</code> folder, and supporting functions in the <code>lib</code> folder using <code>.ak</code> as a file extension.</p>
 <p>For example, as <code>validators/always_true.ak</code></p>
 <pre><code class="language-gleam">validator {
@@ -260,10 +262,10 @@
   }
 }
 </code></pre>
-<h2>Building</h2>
+<h3>Building</h3>
 <pre><code class="language-sh">aiken build
 </code></pre>
-<h2>Testing</h2>
+<h3>Testing</h3>
 <p>You can write tests in any module using the <code>test</code> keyword. For example:</p>
 <pre><code class="language-gleam">test foo() {
   1 + 1 == 2
@@ -275,12 +277,12 @@
 <p>To run only tests matching the string <code>foo</code>, do:</p>
 <pre><code class="language-sh">aiken check -m foo
 </code></pre>
-<h2>Documentation</h2>
+<h3>Documentation</h3>
 <p>If you’re writing a library, you might want to generate an HTML documentation for it.</p>
 <p>Use:</p>
 <pre><code class="language-sh">aiken docs
 </code></pre>
-<h2>Resources</h2>
+<h3>Resources</h3>
 <p>Find more on the <a href="https://aiken-lang.org">Aiken’s user manual</a>.</p>
 <p>Simply install latest version of aiken (change version tag) <code>nix profile install github:aiken-lang/aiken/v1.0.29-alpha#aiken</code>.</p>
 
@@ -355,8 +357,8 @@
       });
     </script>
     <script src="./js/lunr.min.js?v=1.0.29-alpha"></script>
-    <script src="./js/index.js?v=1722335928"></script>
+    <script src="./js/index.js?v=1722666651"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="./search-data.js?v=1722335928"></script>
+    <script src="./search-data.js?v=1722666651"></script>
   </body>
 </html>

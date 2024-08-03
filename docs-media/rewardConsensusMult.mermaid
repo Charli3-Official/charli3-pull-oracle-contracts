@@ -1,0 +1,12 @@
+flowchart LR
+
+  tx[Reward consensus tx]
+  input1([Full reward transport 1]) --> tx
+  input2([Full reward transport 2]) --> tx
+  input3([Old reward account]) --> tx
+  tx --> output1([Empty reward transport 1])
+  tx --> output2([Empty reward transport 2])
+  tx --> output3([New reward account])
+
+  classDef default font-size:90%, overflow:visible;
+  classDef reference stroke-dasharray: 5 5;
