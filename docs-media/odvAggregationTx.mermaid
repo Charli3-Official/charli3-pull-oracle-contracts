@@ -1,0 +1,19 @@
+flowchart LR
+  tx[ODV Aggregation tx]
+  input1(["Aggregate state (old)"]) -- AggregateMessage --> tx
+  input2([User utxo]) --> tx
+  input3(["Reward transport (empty)"]) --> tx
+  refInput2([Oracle settings]):::reference -.-> tx
+  refInput3([C3/ADA oracle price]):::reference -.-> tx
+  tx --> output1(["Aggregate state (new)"])
+  tx --> output2([User utxo remainder])
+  tx --> output3(["Reward transport (full)"])
+
+  tx2[Reward consensus tx]
+  output3 --> tx2
+  input11(["Reward account (old)"]) --> tx2
+  tx2 --> output10(["Reward transport (empty)"])
+  tx2 --> output11(["Reward account (new)"])
+
+  classDef default font-size:90%, overflow:visible;
+  classDef reference stroke-dasharray: 5 5;

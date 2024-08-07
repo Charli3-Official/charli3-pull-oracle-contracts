@@ -1,5 +1,9 @@
 # odv-multisig-charli3-oracle-onchain
 
+Design and architecture for Charli3 ODV multisig oracle are described in this [doc](https://charli3io.atlassian.net/wiki/spaces/CHARLI3/pages/407502849/ODV+Multisig+Oracle). Flowcharts that were used in confluence document are uploaded to `docs-media` folder. See also presentation [slides](https://docs.google.com/presentation/d/1xGFmgowJRyg4N8WpRLgPo1wIYawi8ueyj04bHnZjhLs/edit?usp=sharing) where that idea was first described.
+
+## Aiken usage
+
 Write validators in the `validators` folder, and supporting functions in the `lib` folder using `.ak` as a file extension.
 
 For example, as `validators/always_true.ak`
@@ -12,13 +16,13 @@ validator {
 }
 ```
 
-## Building
+### Building
 
 ```sh
 aiken build
 ```
 
-## Testing
+### Testing
 
 You can write tests in any module using the `test` keyword. For example:
 
@@ -40,7 +44,7 @@ To run only tests matching the string `foo`, do:
 aiken check -m foo
 ```
 
-## Documentation
+### Documentation
 
 If you're writing a library, you might want to generate an HTML documentation for it.
 
@@ -50,7 +54,7 @@ Use:
 aiken docs
 ```
 
-## Resources
+### Resources
 
 Find more on the [Aiken's user manual](https://aiken-lang.org).
 
