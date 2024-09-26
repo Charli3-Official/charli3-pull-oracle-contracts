@@ -1,8 +1,8 @@
-use aiken/list
-use aiken/transaction.{Input, Output, find_script_outputs}
-use aiken/transaction/credential
-use aiken/transaction/value.{AssetName, PolicyId, Value}
-use ext/aiken/transaction/credential.{ScriptHash} as extc
+use aiken/collection/list
+use aiken/crypto.{ScriptHash} as extc
+use cardano/address
+use cardano/assets.{AssetName, PolicyId, Value}
+use cardano/transaction.{Input, Output, find_script_outputs}
 use ext/aiken/transaction/value.{Asset} as extv
 
 /// Find own protocol NFT inside the value we are spending.
@@ -16,7 +16,7 @@ pub fn find_own_protocol_policy_id(
 
   expect [(policy_id, _name, 1)] =
     input_value
-      |> value.flatten
+      |> assets.flatten
       |> list.filter(
           fn(t) {
             let (_, name, _) = t
@@ -38,14 +38,14 @@ pub fn find_script_inputs_by_token(
   let has_nft =
     fn(value: Value) -> Bool {
       value
-        |> value.flatten
+        |> assets.flatten
         |> list.has((protocol_token.policy_id, protocol_token.name, 1))
     }
 
   list.filter(
     tx_inputs,
     fn(i) {
-      i.output.address == credential.from_script(script_hash) && has_nft(
+      i.output.address == address.from_script(script_hash) && has_nft(
         i.output.value,
       )
     },
@@ -90,8 +90,8 @@ pub fn check_own_protocol_token(
 
   let tokens =
     output_value
-      |> value.without_lovelace
-      |> value.flatten_with(skip_allowed_asset(_, _, _, allowed_asset))
+      |> assets.without_lovelace
+      |> assets.flatten_with(skip_allowed_asset(_, _, _, allowed_asset))
 
   tokens == [(protocol_token.policy_id, protocol_token.name, 1)]
 }

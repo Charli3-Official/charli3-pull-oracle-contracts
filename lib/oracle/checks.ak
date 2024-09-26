@@ -1,9 +1,9 @@
-use aiken/dict
-use aiken/list
+use aiken/collection/dict
+use aiken/collection/list
+use aiken/crypto.{ScriptHash} as extc
 use aiken/option.{is_some}
-use aiken/transaction.{Input, Output} as tx
-use aiken/transaction/value.{PolicyId, Value}
-use ext/aiken/transaction/credential.{ScriptHash} as extc
+use cardano/assets.{PolicyId, Value}
+use cardano/transaction.{Input, Output} as tx
 use ext/aiken/transaction/value.{Asset} as extv
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
@@ -156,7 +156,7 @@ pub fn does_not_produce_own_nft_outputs(
   tx_outputs
     |> list.filter(
         fn(o) {
-          o.value |> value.to_dict |> dict.get(own_nft_policy_id) |> is_some
+          o.value |> assets.to_dict |> dict.get(own_nft_policy_id) |> is_some
         },
       )
     |> list.is_empty

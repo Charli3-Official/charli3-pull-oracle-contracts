@@ -1,5 +1,5 @@
-use aiken/time.{PosixTime}
-use aiken/transaction/value.{PolicyId}
+use cardano/assets.{PolicyId}
+use ext/aiken/time.{PosixTime}
 
 /// NodeMessage is serialized hashed and signed by node operator,
 /// it contains the feed value, together with security parameters:

@@ -1,4 +1,4 @@
-use aiken/transaction/value.{AssetName, PolicyId}
+use cardano/assets.{AssetName, PolicyId}
 
 pub type Asset {
   policy_id: PolicyId,

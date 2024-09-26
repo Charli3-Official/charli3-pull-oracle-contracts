@@ -1,8 +1,8 @@
-use aiken/dict.{Dict}
-use aiken/list
+use aiken/collection/dict.{Dict}
+use aiken/collection/list
 use aiken/option.{is_some}
-use aiken/transaction.{Input, Output}
-use aiken/transaction/value.{AssetName, PolicyId, Value}
+use cardano/assets.{AssetName, PolicyId, Value}
+use cardano/transaction.{Input, Output}
 
 pub fn auth_by_nft(
   nft: PolicyId,
@@ -13,11 +13,11 @@ pub fn auth_by_nft(
 
   let has_nft =
     fn(value: Value) -> Bool {
-      value |> value.to_dict |> dict.get(nft) |> is_some
+      value |> assets.to_dict |> dict.get(nft) |> is_some
     }
   let get_nft =
     fn(value: Value) -> Dict<AssetName, Int> {
-      expect Some(tokens) = value |> value.to_dict |> dict.get(nft)
+      expect Some(tokens) = value |> assets.to_dict |> dict.get(nft)
       tokens
     }
 

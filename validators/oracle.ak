@@ -3,15 +3,15 @@
 ////    each policy id is unique for one trade pair (ticker), or potentially even multiple tickers with same nodes and fee token;
 //// 2. oracle_manager - main oracle validator, see OracleRedeemer for list of allowed actions.
 
-use aiken/dict
-use aiken/list
+use aiken/collection/dict
+use aiken/collection/list
+use aiken/crypto.{ScriptHash} as extc
 use aiken/math.{abs}
 use aiken/option
-use aiken/transaction.{OutputReference, ScriptContext, Transaction}
-use aiken/transaction as tx
-use aiken/transaction/credential.{ScriptCredential}
-use aiken/transaction/value.{AssetName, ada_policy_id}
-use ext/aiken/transaction/credential.{ScriptHash} as extc
+use cardano/address
+use cardano/assets.{AssetName, PolicyId, ada_policy_id}
+use cardano/transaction.{OutputReference, Transaction}
+use cardano/transaction as tx
 use ext/aiken/transaction/value.{Asset} as extv
 use oracle/checks.{
   does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
@@ -71,29 +71,22 @@ pub type OracleRedeemer {
   RemoveOracle
 }
 
-validator(
+validator oracle_nfts(
   utxo_ref: OutputReference,
   settings: OracleSettings,
   oracle_script_hash: ScriptHash,
 ) {
-  fn oracle_nfts(redeemer: MintingRedeemer, context: ScriptContext) -> Bool {
-    let ScriptContext { transaction, purpose } = context
-
-    expect tx.Mint(own_policy_id) = purpose
-
+  mint(redeemer: MintingRedeemer, policy_id: PolicyId, transaction: Transaction) {
     let Transaction { mint, inputs, outputs, reference_inputs, .. } =
       transaction
 
     let minted_assets =
       mint
-        |> value.from_minted_value
-        |> value.tokens(own_policy_id)
-    let reward_acc_nft =
-      Asset { policy_id: own_policy_id, name: reward_acc_token_name }
+        |> assets.tokens(policy_id)
+    let reward_acc_nft = Asset { policy_id, name: reward_acc_token_name }
     let reward_transport_nft =
-      Asset { policy_id: own_policy_id, name: reward_transport_token_name }
-    let aggstate_nft =
-      Asset { policy_id: own_policy_id, name: aggstate_token_name }
+      Asset { policy_id, name: reward_transport_token_name }
+    let aggstate_nft = Asset { policy_id, name: aggstate_token_name }
 
     when redeemer is {
       Mint -> {
@@ -218,22 +211,25 @@ validator(
       }
     }
   }
+
+  else(_) {
+    fail
+  }
 }
 
-validator(settings: OracleSettings) {
-  fn oracle_manager(
-    in_datum: OracleDatum,
+validator oracle_manager(settings: OracleSettings) {
+  spend(
+    own_datum: Option<OracleDatum>,
     redeemer: OracleRedeemer,
-    context: ScriptContext,
-  ) -> Bool {
-    let ScriptContext { transaction, purpose } = context
-
-    expect tx.Spend(own_reference) = purpose
+    own_reference: OutputReference,
+    transaction: Transaction,
+  ) {
+    expect Some(in_datum) = own_datum
 
     let Transaction { inputs, outputs, reference_inputs, .. } = transaction
 
     expect Some(own_input) = tx.find_input(inputs, own_reference)
-    expect ScriptCredential(own_hash) =
+    expect address.Script(own_hash) =
       own_input.output.address.payment_credential
 
     let in_value = own_input.output.value
@@ -536,5 +532,9 @@ validator(settings: OracleSettings) {
       // ::
       _other -> fail @"Oracle Script state transition not allowed"
     }
+  }
+
+  else(_) {
+    fail
   }
 }
