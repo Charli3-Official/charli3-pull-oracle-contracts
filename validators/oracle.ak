@@ -10,6 +10,7 @@ use aiken/math.{abs}
 use aiken/option
 use cardano/address
 use cardano/assets.{AssetName, PolicyId, ada_policy_id}
+use cardano/script_context.{ScriptContext}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use ext/cardano/value.{Asset}
@@ -212,8 +213,8 @@ validator oracle_nfts(
     }
   }
 
-  else(_) {
-    fail
+  else(_ctx: ScriptContext) {
+    fail @"validator supports only mint purpose"
   }
 }
 
@@ -534,7 +535,7 @@ validator oracle_manager(settings: OracleSettings) {
     }
   }
 
-  else(_) {
-    fail
+  else(_ctx: ScriptContext) {
+    fail @"validator supports only spend purpose"
   }
 }
