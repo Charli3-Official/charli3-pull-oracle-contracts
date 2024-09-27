@@ -64,6 +64,12 @@ Use:
 aiken docs
 ```
 
+This command is run on every commit if you install the git hook by running:
+
+```bash
+root="$(pwd)" && ln -s "$root/hooks/pre-commit" "$root/.git/hooks/pre-commit"
+```
+
 ### Resources
 
 Find more on the [Aiken's user manual](https://aiken-lang.org).
