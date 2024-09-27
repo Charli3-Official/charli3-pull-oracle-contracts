@@ -1,9 +1,8 @@
-use aiken/crypto.{VerificationKeyHash} as extc
+use aiken/crypto.{VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
-use ext/aiken/time.{PosixTime}
-use ext/aiken/time.{PosixTimeDiff} as extt
-use ext/aiken/transaction/value.{Asset} as extv
+use ext/aiken/time.{PosixTime, PosixTimeDiff}
+use ext/cardano/value.{Asset}
 
 pub type OracleFeed =
   Int

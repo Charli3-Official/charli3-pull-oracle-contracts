@@ -1,10 +1,10 @@
 use aiken/collection/dict
 use aiken/collection/list
-use aiken/crypto.{ScriptHash} as extc
+use aiken/crypto.{ScriptHash}
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, Output} as tx
-use ext/aiken/transaction/value.{Asset} as extv
+use ext/cardano/value.{Asset}
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
   RewardConsensusPending, RewardTransport, RewardTransportDatum, has_no_rewards,

@@ -1,9 +1,9 @@
 use aiken/collection/list
-use aiken/crypto.{ScriptHash} as extc
+use aiken/crypto.{ScriptHash}
 use cardano/address
 use cardano/assets.{AssetName, PolicyId, Value}
 use cardano/transaction.{Input, Output, find_script_outputs}
-use ext/aiken/transaction/value.{Asset} as extv
+use ext/cardano/value.{Asset}
 
 /// Find own protocol NFT inside the value we are spending.
 /// Note that it's not required to check_own_protocol_token in tx inputs

@@ -5,14 +5,14 @@
 
 use aiken/collection/dict
 use aiken/collection/list
-use aiken/crypto.{ScriptHash} as extc
+use aiken/crypto.{ScriptHash}
 use aiken/math.{abs}
 use aiken/option
 use cardano/address
 use cardano/assets.{AssetName, PolicyId, ada_policy_id}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
-use ext/aiken/transaction/value.{Asset} as extv
+use ext/cardano/value.{Asset}
 use oracle/checks.{
   does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
   find_out_datum_and_value, returns_empty_aggstate_outputs,
