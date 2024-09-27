@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>services/time - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
-    <link rel="icon" type="image/svg+xml" sizes="any" href="./favicon.svg"/>
-    <link rel="stylesheet" href="./css/index.css?v=1.1.3" type="text/css"/>
-    <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=1.1.3"/>
+    <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
+    <link rel="stylesheet" href="../css/index.css?v=1.1.3" type="text/css"/>
+    <link id="syntax-theme" rel="stylesheet" href="../css/atom-one-light.min.css?v=1.1.3"/>
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
       "use strict";
-      window.breadcrumbs = '.';
+      window.breadcrumbs = '..';
       const aikenConfig = {
         theme: {
           values: (() => {
@@ -118,7 +118,7 @@
       </button>
 
       <h2>
-        <a href="./">odv-multisig-charli3-oracle-onchain</a>
+        <a href="../">odv-multisig-charli3-oracle-onchain</a>
         <span id="project-version">
           <span>0.0.0 </span>
         </span>
@@ -188,6 +188,27 @@
 
         
 
+
+
+
+
+<h2>Functions</h2>
+<ul>
+  
+    
+        <li><a href="#get_current_time">get_current_time</a></li>
+
+      
+  
+    
+        <li><a href="#is_current_time">is_current_time</a></li>
+
+      
+  
+</ul>
+
+
+
         <h2>Modules</h2>
         <ul>
         
@@ -201,7 +222,7 @@
         
 	  
 	    
-	      <li data-indent="2"><a href="./ext/aiken/time.html">
+	      <li data-indent="2"><a href="../ext/aiken/time.html">
 	      time
 	      </a></li>
 	    
@@ -213,7 +234,7 @@
         
 	  
 	    
-	      <li data-indent="2"><a href="./ext/cardano/value.html">
+	      <li data-indent="2"><a href="../ext/cardano/value.html">
 	      value
 	      </a></li>
 	    
@@ -221,7 +242,7 @@
         
 	  
 	    
-	      <li data-indent="0"><a href="./oracle.html">
+	      <li data-indent="0"><a href="../oracle.html">
 	      oracle
 	      </a></li>
 	    
@@ -229,7 +250,7 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="./oracle/checks.html">
+	      <li data-indent="1"><a href="../oracle/checks.html">
 	      checks
 	      </a></li>
 	    
@@ -237,7 +258,7 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="./oracle/datum.html">
+	      <li data-indent="1"><a href="../oracle/datum.html">
 	      datum
 	      </a></li>
 	    
@@ -245,7 +266,7 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="./oracle/multisig.html">
+	      <li data-indent="1"><a href="../oracle/multisig.html">
 	      multisig
 	      </a></li>
 	    
@@ -257,7 +278,7 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="./services/nft_based_auth.html">
+	      <li data-indent="1"><a href="../services/nft_based_auth.html">
 	      nft_based_auth
 	      </a></li>
 	    
@@ -265,7 +286,7 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="./services/protocol_token.html">
+	      <li data-indent="1"><a href="../services/protocol_token.html">
 	      protocol_token
 	      </a></li>
 	    
@@ -273,8 +294,8 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="./services/time.html">
-	      time
+	      <li data-indent="1" data-current><a href="../services/time.html">
+	      <strong>time</strong>
 	      </a></li>
 	    
 	  
@@ -284,50 +305,57 @@
 
       <main class="content">
         
-<h1>odv-multisig-charli3-oracle-onchain</h1>
-<p>Design and architecture for Charli3 ODV multisig oracle are described in this <a href="https://charli3io.atlassian.net/wiki/spaces/CHARLI3/pages/407502849/ODV+Multisig+Oracle">doc</a>. Flowcharts that were used in confluence document are uploaded to <code>docs-media</code> folder. See also presentation <a href="https://docs.google.com/presentation/d/1xGFmgowJRyg4N8WpRLgPo1wIYawi8ueyj04bHnZjhLs/edit?usp=sharing">slides</a> where that idea was first described.</p>
-<h2>Aiken usage</h2>
-<p>Write validators in the <code>validators</code> folder, and supporting functions in the <code>lib</code> folder using <code>.ak</code> as a file extension.</p>
-<pre><code class="language-aiken">validator my_first_validator {
-  spend(_datum: Option&lt;Data&gt;, _redeemer: Data, _output_reference: Data, _context: Data) {
-    True
-  }
-}
-</code></pre>
-<h3>Building</h3>
-<pre><code class="language-sh">aiken build
-</code></pre>
-<h3>Configuring</h3>
-<p><strong>aiken.toml</strong></p>
-<pre><code class="language-toml">[config.default]
-network_id = 41
-</code></pre>
-<p>Or, alternatively, write conditional environment modules under <code>env</code>.</p>
-<h3>Testing</h3>
-<p>You can write tests in any module using the <code>test</code> keyword. For example:</p>
-<pre><code class="language-aiken">use config
+<h1 id="module-name" class="module-name">
+  <a href="#module-name">services/time</a>
+</h1>
+<p>Tx validity interval checks:</p>
+<ol>
+<li>tx validity interval should have an upper limit, after which tx could not be submitted, because we want signatures to be expirable.</li>
+<li>tx validity interval should have a lower limit, because we want to guarantee that the tx is produced after a certain moment in time.</li>
+<li>tx validity interval should have a fixed length, which is the time measurement absolute uncertainty.</li>
+</ol>
 
-test foo() {
-  config.network_id + 1 == 42
-}
-</code></pre>
-<p>To run all tests, simply do:</p>
-<pre><code class="language-sh">aiken check
-</code></pre>
-<p>To run only tests matching the string <code>foo</code>, do:</p>
-<pre><code class="language-sh">aiken check -m foo
-</code></pre>
-<h3>Documentation</h3>
-<p>If you’re writing a library, you might want to generate an HTML documentation for it.</p>
-<p>Use:</p>
-<pre><code class="language-sh">aiken docs
-</code></pre>
-<p>This command is run on every commit if you install the git hook by running:</p>
-<pre><code class="language-bash">root="$(pwd)" &amp;&amp; ln -s "$root/hooks/pre-commit" "$root/.git/hooks/pre-commit"
-</code></pre>
-<h3>Resources</h3>
-<p>Find more on the <a href="https://aiken-lang.org">Aiken’s user manual</a>.</p>
-<p>Simply install latest version of aiken (change version tag) <code>nix profile install github:aiken-lang/aiken/v1.1.3#aiken</code>.</p>
+
+
+
+
+
+
+<section class="module-members">
+  <h1 id="module-functions" class="module-member-kind">
+    <a href="#module-functions">Functions</a>
+  </h1>
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="get_current_time"><pre class="hljs language-aiken">get_current_time(
+  time_accuracy: PosixTimeDiff,
+  tx_validity_range: ValidityRange,
+) -&gt; PosixTime</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/time.ak#L11-L25"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>Get the middle of tx validity interval and check time accuracy</p>
+</div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="is_current_time"><pre class="hljs language-aiken">is_current_time(tx_validity_range: ValidityRange, time: PosixTime) -&gt; Bool</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/time.ak#L28-L33"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>Check tx validity interval contains some time value</p>
+</div>
+      </div>
+    
+  
+</section>
 
 
       </main>
@@ -405,8 +433,8 @@ test foo() {
       </defs>
     </svg>
 
-    <script src="./js/highlight.min.js?v=1.1.3"></script>
-    <script src="./js/highlightjs-aiken.js?v=1.1.3"></script>
+    <script src="../js/highlight.min.js?v=1.1.3"></script>
+    <script src="../js/highlightjs-aiken.js?v=1.1.3"></script>
     <script>
       document.querySelectorAll("pre code").forEach((elem) => {
         if (elem.className === "") {
@@ -448,10 +476,10 @@ test foo() {
     </script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
-    <script src="./js/lunr.min.js?v=1.1.3"></script>
-    <script src="./js/index.js?v=1727439467"></script>
+    <script src="../js/lunr.min.js?v=1.1.3"></script>
+    <script src="../js/index.js?v=1727439467"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="./search-data.js?v=1727439467"></script>
+    <script src="../search-data.js?v=1727439467"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
