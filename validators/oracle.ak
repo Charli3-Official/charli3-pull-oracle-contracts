@@ -273,11 +273,15 @@ validator oracle_manager(settings: OracleSettings) {
         let must_spend_only_one_aggstate_input =
           spends_protocol_nft_inputs(own_hash, aggstate_nft, 1, inputs)
 
-        expect RewardAccount(_core_datum) =
+        expect RewardAccount(core_datum) =
           find_in_datum(reference_inputs, own_hash, reward_acc_nft)
 
         // TODO check reward datum
-        expect (RewardTransport(RewardConsensusPending { .. }), _out_value) =
+        // TODO check reward value transfer
+        expect (
+          RewardTransport(RewardConsensusPending { message, .. }),
+          _out_value,
+        ) =
           find_out_datum_and_value(
             outputs,
             own_hash,
@@ -286,7 +290,7 @@ validator oracle_manager(settings: OracleSettings) {
           )
 
         // TODO check aggstate datum
-        expect (AggState(Some(_aggstate)), _out_value) =
+        expect (AggState(Some(aggstate)), _out_value) =
           find_out_datum_and_value(
             outputs,
             own_hash,
@@ -294,12 +298,20 @@ validator oracle_manager(settings: OracleSettings) {
             ada_policy_id,
           )
 
+        let current_time =
+          get_current_time(core_datum.time_absolute_uncertainty, validity_range)
+
+        let must_have_current_time_as_timestamp =
+          current_time == message.timestamp && current_time == aggstate.created_at
+        let must_expire_in_liveness_period =
+          aggstate.expiry_timestamp == current_time + core_datum.aggregation_liveness_period
+
         // TODO multisig check
         // TODO median check
         // TODO timestamp check
         // TODO should not be closing check
-        // TODO check aggstate expiry and median
-        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input?
+        // TODO check aggstate median
+        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period?
       }
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {
