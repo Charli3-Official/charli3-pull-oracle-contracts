@@ -30,10 +30,12 @@ pub type RewardTransportDatum {
 }
 
 /// AggStateDatum contains an oracle feed - median taken from individual node feeds,
-/// and an expiration timestamp marking time after which AggState can be consumed once again.
+/// an expiration timestamp marking time after which AggState can be consumed once again,
+/// and a created at timestamp for oracle users.
 pub type AggStateDatum {
   median: OracleFeed,
   expiry_timestamp: PosixTime,
+  created_at: PosixTime,
 }
 
 /// Immutable oracle settings.

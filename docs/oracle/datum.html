@@ -352,12 +352,13 @@
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L34-L37"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L35-L39"></a>
       
     </div>
     <div class="custom-type-constructors">
       <div class="rendered-markdown"><p>AggStateDatum contains an oracle feed - median taken from individual node feeds,
-and an expiration timestamp marking time after which AggState can be consumed once again.</p>
+an expiration timestamp marking time after which AggState can be consumed once again,
+and a created at timestamp for oracle users.</p>
 </div>
       
       <h3>Constructors</h3>
@@ -366,7 +367,11 @@ and an expiration timestamp marking time after which AggState can be consumed on
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
-            <pre class="constructor-name"><code class="hljs aiken">AggStateDatum { median: OracleFeed, expiry_timestamp: PosixTime }</code></pre>
+            <pre class="constructor-name"><code class="hljs aiken">AggStateDatum {
+  median: OracleFeed,
+  expiry_timestamp: PosixTime,
+  created_at: PosixTime,
+}</code></pre>
           </div>
 	  
         </li>
@@ -384,7 +389,7 @@ and an expiration timestamp marking time after which AggState can be consumed on
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L52-L55"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L54-L57"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -414,7 +419,7 @@ and an expiration timestamp marking time after which AggState can be consumed on
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L76-L79"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L78-L81"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -444,7 +449,7 @@ and an expiration timestamp marking time after which AggState can be consumed on
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L70-L74"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L72-L76"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -478,7 +483,7 @@ and an expiration timestamp marking time after which AggState can be consumed on
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L57-L60"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L59-L62"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -586,7 +591,7 @@ that will be referenced by a user of a DApp.</li>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L45-L50"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L47-L52"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -629,7 +634,7 @@ Rationale for immutability:</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L63-L68"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L65-L70"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -665,7 +670,7 @@ Rationale for immutability:</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L81-L85"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L83-L87"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -747,7 +752,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="is_oracle_closing"><pre class="hljs language-aiken">is_oracle_closing(reward_datum: RewardDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L87-L89"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L89-L91"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -759,7 +764,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="has_no_rewards"><pre class="hljs language-aiken">has_no_rewards(reward_transport: RewardTransportDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L91-L96"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L93-L98"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -888,9 +893,9 @@ and transfer user provided fees into RewardAccount utxo.</li>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.3"></script>
-    <script src="../js/index.js?v=1727439467"></script>
+    <script src="../js/index.js?v=1727686382"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1727439467"></script>
+    <script src="../search-data.js?v=1727686382"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
