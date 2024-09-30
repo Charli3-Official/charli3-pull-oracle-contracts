@@ -4,6 +4,7 @@ use aiken/crypto.{ScriptHash}
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, Output} as tx
+use ext/aiken/time.{PosixTime}
 use ext/cardano/value.{Asset}
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
@@ -160,4 +161,15 @@ pub fn does_not_produce_own_nft_outputs(
         },
       )
     |> list.is_empty
+}
+
+pub fn is_aggstate_expired(
+  aggstate: Option<AggStateDatum>,
+  current_time: PosixTime,
+) -> Bool {
+  trace @"is_aggstate_expired"
+
+  aggstate
+    |> option.map(fn(state) { state.expiry_timestamp < current_time })
+    |> option.or_else(True)
 }

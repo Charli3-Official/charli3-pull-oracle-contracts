@@ -66,6 +66,7 @@ pub type RewardDatum {
   nodes: List<Node>,
   fee_info: FeeConfig,
   aggregation_liveness_period: PosixTimeDiff,
+  time_absolute_uncertainty: PosixTimeDiff,
   closing_period_started_at: Option<PosixTime>,
 }
 
