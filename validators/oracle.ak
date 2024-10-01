@@ -550,23 +550,19 @@ validator oracle_manager(settings: OracleSettings) {
       }
       (
         RemoveOracle,
-        RewardAccount(RewardDatum {
-          time_absolute_uncertainty,
-          closing_period_started_at,
-          ..
-        }),
+        RewardAccount(RewardDatum { closing_period_started_at, .. }),
       ) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, reward_acc_token_name)
-
-        let current_time =
-          get_current_time(time_absolute_uncertainty, validity_range)
 
         let is_time_to_be_removed =
           closing_period_started_at
             |> option.map(
                 fn(closing_start) {
-                  closing_start + settings.closing_period_length < current_time
+                  interval.is_entirely_after(
+                    validity_range,
+                    closing_start + settings.closing_period_length,
+                  )
                 },
               )
             |> option.or_else(False)
