@@ -140,10 +140,10 @@ pub fn find_in_aggregations(
     fn(input: Input) -> AnAggregation {
       expect tx.InlineDatum(datum) = input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardTransport(RewardConsensusPending { median, message }) =
+      expect RewardTransport(RewardConsensusPending { oracle_feed, message }) =
         oracle_datum
 
-      AnAggregation { value: input.output.value, median, message }
+      AnAggregation { value: input.output.value, median: oracle_feed, message }
     }
 
   list.map(inputs, extractor)

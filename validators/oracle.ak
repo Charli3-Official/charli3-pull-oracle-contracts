@@ -20,6 +20,7 @@ use oracle/checks.{
   find_out_datum_and_value, is_aggstate_expired, returns_empty_aggstate_outputs,
   returns_empty_reward_outputs, spends_reward_acc_utxo,
 }
+use oracle/consensus
 use oracle/datum.{
   AggState, NoRewards, OracleDatum, OracleSettings, RewardAccount,
   RewardConsensusPending, RewardDatum, RewardTransport, is_oracle_closing,
@@ -272,10 +273,9 @@ validator oracle_manager(settings: OracleSettings) {
         expect RewardAccount(core_datum) =
           find_in_datum(reference_inputs, own_hash, reward_acc_nft)
 
-        // TODO check reward datum
         // TODO check reward value transfer
         expect (
-          RewardTransport(RewardConsensusPending { message, .. }),
+          RewardTransport(RewardConsensusPending { message, oracle_feed }),
           _out_value,
         ) =
           find_out_datum_and_value(
@@ -285,7 +285,6 @@ validator oracle_manager(settings: OracleSettings) {
             settings.fee_token.policy_id,
           )
 
-        // TODO check aggstate datum
         expect (AggState(Some(aggstate)), _out_value) =
           find_out_datum_and_value(
             outputs,
@@ -302,11 +301,17 @@ validator oracle_manager(settings: OracleSettings) {
         let must_expire_in_liveness_period =
           aggstate.expiry_timestamp == current_time + core_datum.aggregation_liveness_period
 
+        let must_not_be_closing = is_oracle_closing(core_datum) |> not
+
+        let median =
+          message.node_feeds
+            |> list.map(fn(feed) { feed.value })
+            |> consensus.median
+        let must_have_correct_median =
+          median == oracle_feed && median == aggstate.oracle_feed
+
         // TODO multisig check
-        // TODO median check
-        // TODO should not be closing check
-        // TODO check aggstate median
-        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period?
+        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median?
       }
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {

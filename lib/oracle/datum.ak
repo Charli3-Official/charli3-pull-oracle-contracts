@@ -26,14 +26,14 @@ pub type OracleDatum {
 ///    and transfer user provided fees into RewardAccount utxo.
 pub type RewardTransportDatum {
   NoRewards
-  RewardConsensusPending { median: OracleFeed, message: AggregateMessage }
+  RewardConsensusPending { oracle_feed: OracleFeed, message: AggregateMessage }
 }
 
 /// AggStateDatum contains an oracle feed - median taken from individual node feeds,
 /// an expiration timestamp marking time after which AggState can be consumed once again,
 /// and a created at timestamp for oracle users.
 pub type AggStateDatum {
-  median: OracleFeed,
+  oracle_feed: OracleFeed,
   expiry_timestamp: PosixTime,
   created_at: PosixTime,
 }
