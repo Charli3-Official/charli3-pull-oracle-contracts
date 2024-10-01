@@ -6,6 +6,7 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{ScriptHash}
+use aiken/interval
 use aiken/math.{abs}
 use aiken/option
 use cardano/address
@@ -492,7 +493,7 @@ validator oracle_manager(settings: OracleSettings) {
         ) && is_aggstate_expired(aggstate, current_time)
       }
       // :: DismissRewards
-      (DismissRewards, RewardTransport(RewardConsensusPending { .. })) -> {
+      (DismissRewards, RewardTransport(RewardConsensusPending { message, .. })) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, reward_transport_token_name)
         let reward_transport_nft =
@@ -507,8 +508,13 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
           )
 
-        // TODO check reward_dismissing_period_length and message.timestamp
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos
+        let must_be_after_dismissing_period =
+          interval.is_entirely_after(
+            validity_range,
+            message.timestamp + settings.reward_dismissing_period_length,
+          )
+
+        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos && must_be_after_dismissing_period?
       }
       // :: CloseOracle
       (CloseOracle, RewardAccount(in_core_datum)) -> {

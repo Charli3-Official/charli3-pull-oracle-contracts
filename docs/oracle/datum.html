@@ -419,7 +419,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L79-L82"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L85-L88"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -449,7 +449,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L73-L77"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L79-L83"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -634,7 +634,7 @@ Rationale for immutability:</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L65-L71"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L65-L77"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -656,6 +656,26 @@ Rationale for immutability:</p>
 }</code></pre>
           </div>
 	  
+          <div class="constructor-item-docs">
+            <h4><code>.nodes</code></h4>
+<p>list of oracle nodes, node id is its index inside nodes list</p>
+<hr/>
+<h4><code>.fee_info</code></h4>
+<p>configuration of oracle fees</p>
+<hr/>
+<h4><code>.aggregation_liveness_period</code></h4>
+<p>aggregation is considered live, i.e. usable by dapps during this period</p>
+<hr/>
+<h4><code>.time_absolute_uncertainty</code></h4>
+<p>this is length of tx validity interval, so technically its value equals time absolute uncertainty times two,
+because we are taking tx validity interval middle as current time value</p>
+<hr/>
+<h4><code>.closing_period_started_at</code></h4>
+<p>if oracle is in closing state, then this field will have a certain timestamp value</p>
+<hr/>
+
+          </div>
+	  
         </li>
         
       </ul>
@@ -671,7 +691,7 @@ Rationale for immutability:</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L84-L88"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L90-L94"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -753,7 +773,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="is_oracle_closing"><pre class="hljs language-aiken">is_oracle_closing(reward_datum: RewardDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L90-L92"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L96-L98"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -765,7 +785,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="has_no_rewards"><pre class="hljs language-aiken">has_no_rewards(reward_transport: RewardTransportDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L94-L99"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L100-L105"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -894,9 +914,9 @@ and transfer user provided fees into RewardAccount utxo.</li>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.3"></script>
-    <script src="../js/index.js?v=1727692929"></script>
+    <script src="../js/index.js?v=1727765965"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1727692929"></script>
+    <script src="../search-data.js?v=1727765965"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {

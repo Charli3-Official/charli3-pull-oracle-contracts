@@ -63,10 +63,16 @@ pub type NodeFeed {
 
 /// Mutable oracle settings and reward distribution data
 pub type RewardDatum {
+  /// list of oracle nodes, node id is its index inside nodes list
   nodes: List<Node>,
+  /// configuration of oracle fees
   fee_info: FeeConfig,
+  /// aggregation is considered live, i.e. usable by dapps during this period
   aggregation_liveness_period: PosixTimeDiff,
+  /// this is length of tx validity interval, so technically its value equals time absolute uncertainty times two,
+  /// because we are taking tx validity interval middle as current time value
   time_absolute_uncertainty: PosixTimeDiff,
+  /// if oracle is in closing state, then this field will have a certain timestamp value
   closing_period_started_at: Option<PosixTime>,
 }
 
