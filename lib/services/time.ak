@@ -23,11 +23,3 @@ pub fn get_current_time(
 
   ( end + start ) / 2
 }
-
-/// Check tx validity interval contains some time value
-pub fn is_current_time(
-  tx_validity_range: ValidityRange,
-  time: PosixTime,
-) -> Bool {
-  interval.contains(tx_validity_range, time)
-}

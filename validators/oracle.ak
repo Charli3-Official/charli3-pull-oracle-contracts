@@ -248,19 +248,11 @@ validator oracle_manager(settings: OracleSettings) {
           find_own_protocol_policy_id(in_value, aggstate_token_name)
         let reward_transport_nft =
           Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
-        let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
-
-        expect RewardAccount(core_datum) =
-          find_in_datum(reference_inputs, own_hash, reward_acc_nft)
 
         let must_spend_reward_transport_utxo =
           spends_protocol_nft_inputs(own_hash, reward_transport_nft, 1, inputs)
 
-        let current_time =
-          get_current_time(core_datum.time_absolute_uncertainty, validity_range)
-
-        is_aggstate_expired(aggstate, current_time) && must_spend_reward_transport_utxo?
+        is_aggstate_expired(aggstate, validity_range) && must_spend_reward_transport_utxo?
       }
       (OdvAggregate, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
@@ -478,19 +470,11 @@ validator oracle_manager(settings: OracleSettings) {
       (ScaleDown, AggState(aggstate)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, aggstate_token_name)
-        let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
-
-        expect RewardAccount(core_datum) =
-          find_in_datum(reference_inputs, own_hash, reward_acc_nft)
-
-        let current_time =
-          get_current_time(core_datum.time_absolute_uncertainty, validity_range)
 
         auth_by_nft(settings.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
-        ) && is_aggstate_expired(aggstate, current_time)
+        ) && is_aggstate_expired(aggstate, validity_range)
       }
       // :: DismissRewards
       (DismissRewards, RewardTransport(RewardConsensusPending { message, .. })) -> {
@@ -559,13 +543,10 @@ validator oracle_manager(settings: OracleSettings) {
         let reward_acc_nft =
           Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
 
-        expect RewardAccount(core_datum) =
-          find_in_datum(inputs, own_hash, reward_acc_nft)
-
-        let current_time =
-          get_current_time(core_datum.time_absolute_uncertainty, validity_range)
-
-        is_aggstate_expired(aggstate, current_time)
+        spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs) && is_aggstate_expired(
+          aggstate,
+          validity_range,
+        )
       }
       (
         RemoveOracle,
