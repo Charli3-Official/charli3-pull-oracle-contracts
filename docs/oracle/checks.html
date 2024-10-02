@@ -237,6 +237,11 @@
 
       
   
+    
+        <li><a href="#is_aggstate_expired">is_aggstate_expired</a></li>
+
+      
+  
 </ul>
 
 
@@ -324,6 +329,14 @@
 	    
 	  
         
+	  
+	    
+	      <li data-indent="1"><a href="../services/time.html">
+	      time
+	      </a></li>
+	    
+	  
+        
         </ul>
       </nav>
 
@@ -349,7 +362,7 @@
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L16-L20"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L17-L21"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -391,7 +404,7 @@
   tx_inputs: List&lt;Input&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L22-L33"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L23-L34"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -409,7 +422,7 @@
   tx_outputs: List&lt;Output&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L35-L62"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L36-L63"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -427,7 +440,7 @@
   tx_outputs: List&lt;Output&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L64-L91"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L65-L92"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -444,7 +457,7 @@
   allowed_asset: PolicyId,
 ) -&gt; (OracleDatum, Value)</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L93-L112"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L94-L113"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -460,7 +473,7 @@
   protocol_token: Asset,
 ) -&gt; OracleDatum</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L114-L127"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L115-L128"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -476,7 +489,7 @@
   protocol_token: Asset,
 ) -&gt; List&lt;AnAggregation&gt;</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L129-L149"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L130-L150"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -491,7 +504,22 @@
   own_nft_policy_id: PolicyId,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L151-L163"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L152-L164"></a>
+          
+        </div>
+        <div class="rendered-markdown"></div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="is_aggstate_expired"><pre class="hljs language-aiken">is_aggstate_expired(
+  aggstate: Option&lt;AggStateDatum&gt;,
+  tx_validity_range: ValidityRange,
+) -&gt; Bool</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L166-L179"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -620,9 +648,9 @@
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.3"></script>
-    <script src="../js/index.js?v=1727435402"></script>
+    <script src="../js/index.js?v=1727767278"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1727435402"></script>
+    <script src="../search-data.js?v=1727767278"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {

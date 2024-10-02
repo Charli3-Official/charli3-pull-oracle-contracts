@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>services/protocol_token - charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>services/time - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
@@ -196,32 +196,7 @@
 <ul>
   
     
-        <li><a href="#find_own_protocol_policy_id">find_own_protocol_policy_id</a></li>
-
-      
-  
-    
-        <li><a href="#find_script_inputs_by_token">find_script_inputs_by_token</a></li>
-
-      
-  
-    
-        <li><a href="#spends_protocol_nft_inputs">spends_protocol_nft_inputs</a></li>
-
-      
-  
-    
-        <li><a href="#find_script_outputs_by_token">find_script_outputs_by_token</a></li>
-
-      
-  
-    
-        <li><a href="#check_own_protocol_token">check_own_protocol_token</a></li>
-
-      
-  
-    
-        <li><a href="#skip_allowed_asset">skip_allowed_asset</a></li>
+        <li><a href="#get_current_time">get_current_time</a></li>
 
       
   
@@ -306,16 +281,16 @@
         
 	  
 	    
-	      <li data-indent="1" data-current><a href="../services/protocol_token.html">
-	      <strong>protocol_token</strong>
+	      <li data-indent="1"><a href="../services/protocol_token.html">
+	      protocol_token
 	      </a></li>
 	    
 	  
         
 	  
 	    
-	      <li data-indent="1"><a href="../services/time.html">
-	      time
+	      <li data-indent="1" data-current><a href="../services/time.html">
+	      <strong>time</strong>
 	      </a></li>
 	    
 	  
@@ -326,8 +301,14 @@
       <main class="content">
         
 <h1 id="module-name" class="module-name">
-  <a href="#module-name">services/protocol_token</a>
+  <a href="#module-name">services/time</a>
 </h1>
+<p>Tx validity interval checks:</p>
+<ol>
+<li>tx validity interval should have an upper limit, after which tx could not be submitted, because we want signatures to be expirable.</li>
+<li>tx validity interval should have a lower limit, because we want to guarantee that the tx is produced after a certain moment in time.</li>
+<li>tx validity interval should have a fixed length, which is the time measurement absolute uncertainty.</li>
+</ol>
 
 
 
@@ -343,105 +324,15 @@
   
       <div class="member">
         <div class="member-name">
-          <h2 id="find_own_protocol_policy_id"><pre class="hljs language-aiken">find_own_protocol_policy_id(input_value: Value, nft_name: AssetName) -&gt; PolicyId</pre></h2>
+          <h2 id="get_current_time"><pre class="hljs language-aiken">get_current_time(
+  time_accuracy: PosixTimeDiff,
+  tx_validity_range: ValidityRange,
+) -&gt; PosixTime</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L11-L28"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Find own protocol NFT inside the value we are spending.
-Note that it’s not required to check_own_protocol_token in tx inputs
-because it’s already been checked for each output.</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="find_script_inputs_by_token"><pre class="hljs language-aiken">find_script_inputs_by_token(
-  tx_inputs: List&lt;Input&gt;,
-  script_hash: ScriptHash,
-  protocol_token: Asset,
-) -&gt; List&lt;Input&gt;</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L33-L53"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/time.ak#L11-L25"></a>
           
         </div>
-        <div class="rendered-markdown"><p>Find own protocol NFT inside transaction inputs.
-Note that it’s not required to check_own_protocol_token in tx inputs
-because it’s already been checked for each output.</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="spends_protocol_nft_inputs"><pre class="hljs language-aiken">spends_protocol_nft_inputs(
-  script_hash: ScriptHash,
-  protocol_nft: Asset,
-  utxo_count: Int,
-  tx_inputs: List&lt;Input&gt;,
-) -&gt; Bool</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L57-L66"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>A convenience function that calls find_script_inputs_by_token
-and also checks number of spent inputs</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="find_script_outputs_by_token"><pre class="hljs language-aiken">find_script_outputs_by_token(
-  tx_outputs: List&lt;Output&gt;,
-  script_hash: ScriptHash,
-  allowed_asset: PolicyId,
-  protocol_token: Asset,
-) -&gt; List&lt;Output&gt;</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L69-L81"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Find own protocol NFT inside transaction outputs</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="check_own_protocol_token"><pre class="hljs language-aiken">check_own_protocol_token(
-  output_value: Value,
-  allowed_asset: PolicyId,
-  protocol_token: Asset,
-) -&gt; Bool</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L84-L97"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Returns true if protocol NFT was found and it’s the only asset except lovelace and one allowed</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="skip_allowed_asset"><pre class="hljs language-aiken">skip_allowed_asset(
-  policy_id: PolicyId,
-  name: AssetName,
-  amount: Int,
-  allowed_asset: PolicyId,
-) -&gt; Option&lt;(PolicyId, AssetName, Int)&gt;</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L100-L111"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Skips allowed token: e.g. C3 fee payment token</p>
+        <div class="rendered-markdown"><p>Get the middle of tx validity interval and check time accuracy</p>
 </div>
       </div>
     
