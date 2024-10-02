@@ -2,13 +2,16 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{ScriptHash}
 use aiken/interval
+use aiken/math/rational
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, Output, ValidityRange} as tx
+use ext/aiken/math/rational.{coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
-  RewardConsensusPending, RewardTransport, RewardTransportDatum, has_no_rewards,
+  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
+  has_no_rewards,
 }
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
@@ -176,4 +179,54 @@ pub fn is_aggstate_expired(
         },
       )
     |> option.or_else(True)
+}
+
+pub fn convert_reward_prices(
+  tx_reference_inputs: List<Input>,
+  tx_validity_range: ValidityRange,
+  rate_nft: Option<Asset>,
+  reward_prices: RewardPrices,
+) -> RewardPrices {
+  when rate_nft is {
+    None -> reward_prices
+    Some(nft) -> {
+      expect Some(rate_input) =
+        tx_reference_inputs
+          |> list.find(
+              fn(input) {
+                input.output.value
+                  |> assets.flatten
+                  |> list.has((nft.policy_id, nft.name, 1))
+              },
+            )
+      expect tx.InlineDatum(datum) = rate_input.output.datum
+      expect oracle_datum: OracleDatum = datum
+      expect AggState(Some(rate_datum)) = oracle_datum
+      expect Some(rate) = rational.new(rate_datum.oracle_feed, coin_precision)
+
+      expect
+        interval.is_entirely_before(
+          tx_validity_range,
+          rate_datum.expiry_timestamp,
+        )
+
+      let convert_reward =
+        fn(reward: Int) -> Int {
+          rational.from_int(reward) |> rational.mul(rate) |> rational.ceil
+        }
+
+      RewardPrices {
+        node_fee: convert_reward(reward_prices.node_fee),
+        consensus_fee: convert_reward(reward_prices.consensus_fee),
+        platform_fee: convert_reward(reward_prices.platform_fee),
+      }
+    }
+  }
+}
+
+pub fn calculate_minimum_fee_amout(
+  reward_prices: RewardPrices,
+  nodes_count: Int,
+) -> Int {
+  reward_prices.node_fee * nodes_count + reward_prices.consensus_fee + reward_prices.platform_fee
 }

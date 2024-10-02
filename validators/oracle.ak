@@ -16,6 +16,7 @@ use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use ext/cardano/value.{Asset}
 use oracle/checks.{
+  calculate_minimum_fee_amout, convert_reward_prices,
   does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
   find_out_datum_and_value, is_aggstate_expired, returns_empty_aggstate_outputs,
   returns_empty_reward_outputs, spends_reward_acc_utxo,
@@ -249,11 +250,23 @@ validator oracle_manager(settings: OracleSettings) {
           find_own_protocol_policy_id(in_value, aggstate_token_name)
         let reward_transport_nft =
           Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+        let aggstate_nft =
+          Asset { policy_id: nft_policy_id, name: aggstate_token_name }
 
         let must_spend_reward_transport_utxo =
           spends_protocol_nft_inputs(own_hash, reward_transport_nft, 1, inputs)
 
-        is_aggstate_expired(aggstate, validity_range) && must_spend_reward_transport_utxo?
+        expect (AggState(_), out_value) =
+          find_out_datum_and_value(
+            outputs,
+            own_hash,
+            aggstate_nft,
+            ada_policy_id,
+          )
+
+        let must_conserve_value = in_value == out_value
+
+        is_aggstate_expired(aggstate, validity_range) && must_spend_reward_transport_utxo? && must_conserve_value?
       }
       (OdvAggregate, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
@@ -273,10 +286,9 @@ validator oracle_manager(settings: OracleSettings) {
         expect RewardAccount(core_datum) =
           find_in_datum(reference_inputs, own_hash, reward_acc_nft)
 
-        // TODO check reward value transfer
         expect (
           RewardTransport(RewardConsensusPending { message, oracle_feed }),
-          _out_value,
+          out_value,
         ) =
           find_out_datum_and_value(
             outputs,
@@ -310,8 +322,25 @@ validator oracle_manager(settings: OracleSettings) {
         let must_have_correct_median =
           median == oracle_feed && median == aggstate.oracle_feed
 
+        let fees_transfered =
+          assets.negate(in_value)
+            |> assets.merge(out_value, _)
+            |> assets.quantity_of(
+                settings.fee_token.policy_id,
+                settings.fee_token.name,
+              )
+        let minimum_fee_amout =
+          convert_reward_prices(
+            reference_inputs,
+            validity_range,
+            core_datum.fee_info.rate_nft,
+            core_datum.fee_info.reward_prices,
+          )
+            |> calculate_minimum_fee_amout(list.length(message.node_feeds))
+        let must_transfer_oracle_fees = fees_transfered >= minimum_fee_amout
+
         // TODO multisig check
-        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median?
+        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees?
       }
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {
