@@ -1,5 +1,6 @@
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/collection/pairs
 use aiken/crypto.{ScriptHash}
 use aiken/interval
 use aiken/math/rational
@@ -10,8 +11,8 @@ use ext/aiken/math/rational.{coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
-  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
-  has_no_rewards,
+  RewardConsensusPending, RewardDatum, RewardPrices, RewardTransport,
+  RewardTransportDatum, has_no_rewards,
 }
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
@@ -229,4 +230,15 @@ pub fn calculate_minimum_fee_amout(
   nodes_count: Int,
 ) -> Int {
   reward_prices.node_fee * nodes_count + reward_prices.consensus_fee + reward_prices.platform_fee
+}
+
+pub fn are_mutable_settings_unchanged(
+  in_core_datum: RewardDatum,
+  out_core_datum: RewardDatum,
+) -> Bool {
+  trace @"are_mutable_settings_unchanged"
+
+  in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty && in_core_datum.closing_period_started_at == out_core_datum.closing_period_started_at && pairs.keys(
+    in_core_datum.nodes_to_rewards,
+  ) == pairs.keys(out_core_datum.nodes_to_rewards)
 }

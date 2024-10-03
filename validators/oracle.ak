@@ -5,6 +5,7 @@
 
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/collection/pairs
 use aiken/crypto.{ScriptHash}
 use aiken/interval
 use aiken/math.{abs}
@@ -16,10 +17,11 @@ use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use ext/cardano/value.{Asset}
 use oracle/checks.{
-  calculate_minimum_fee_amout, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_out_datum_and_value, is_aggstate_expired, returns_empty_aggstate_outputs,
-  returns_empty_reward_outputs, spends_reward_acc_utxo,
+  are_mutable_settings_unchanged, calculate_minimum_fee_amout,
+  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
+  find_in_datum, find_out_datum_and_value, is_aggstate_expired,
+  returns_empty_aggstate_outputs, returns_empty_reward_outputs,
+  spends_reward_acc_utxo,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -317,6 +319,7 @@ validator oracle_manager(settings: OracleSettings) {
 
         let median =
           message.node_feeds
+            |> pairs.values
             |> consensus.median
         let must_have_correct_median =
           median == oracle_feed && median == aggstate.oracle_feed
@@ -350,7 +353,7 @@ validator oracle_manager(settings: OracleSettings) {
 
         spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs)
       }
-      (CalculateRewards, RewardAccount(RewardDatum { .. })) -> {
+      (CalculateRewards, RewardAccount(in_core_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, reward_acc_token_name)
         let reward_transport_nft =
@@ -358,7 +361,7 @@ validator oracle_manager(settings: OracleSettings) {
         let reward_acc_nft =
           Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
 
-        expect (RewardAccount(_), _out_value) =
+        expect (RewardAccount(out_core_datum), _out_value) =
           find_out_datum_and_value(
             outputs,
             own_hash,
@@ -379,7 +382,7 @@ validator oracle_manager(settings: OracleSettings) {
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
         // TODO rewards consensus checks
-        must_return_empty_reward_utxos
+        are_mutable_settings_unchanged(in_core_datum, out_core_datum) && must_return_empty_reward_utxos
       }
       // :: NodeCollect
       (NodeCollect, RewardAccount(RewardDatum { .. })) -> {

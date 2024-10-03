@@ -7,6 +7,9 @@ use ext/cardano/value.{Asset}
 pub type OracleFeed =
   Int
 
+pub type NodeId =
+  Int
+
 pub type NodeFeed =
   Int
 
@@ -55,14 +58,14 @@ pub type OracleSettings {
 }
 
 pub type AggregateMessage {
-  node_feeds: List<NodeFeed>,
+  node_feeds: Pairs<NodeId, NodeFeed>,
   timestamp: PosixTime,
 }
 
 /// Mutable oracle settings and reward distribution data
 pub type RewardDatum {
-  /// list of oracle nodes, node id is its index inside nodes list
-  nodes: List<Node>,
+  /// list of oracle nodes mapped to node reward amount, node id is its index inside nodes list
+  nodes_to_rewards: Pairs<Node, Int>,
   /// configuration of oracle fees
   fee_info: FeeConfig,
   /// aggregation is considered live, i.e. usable by dapps during this period
@@ -77,7 +80,6 @@ pub type RewardDatum {
 pub type Node {
   payment_vkh: VerificationKeyHash,
   feed_vkh: VerificationKeyHash,
-  reward: Int,
 }
 
 pub type FeeConfig {
