@@ -317,7 +317,6 @@ validator oracle_manager(settings: OracleSettings) {
 
         let median =
           message.node_feeds
-            |> list.map(fn(feed) { feed.value })
             |> consensus.median
         let must_have_correct_median =
           median == oracle_feed && median == aggstate.oracle_feed

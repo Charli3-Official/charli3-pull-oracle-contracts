@@ -7,6 +7,9 @@ use ext/cardano/value.{Asset}
 pub type OracleFeed =
   Int
 
+pub type NodeFeed =
+  Int
+
 /// There are three types of oracle utxos:
 /// 1. RewardAccount - one for each oracle,
 ///    acts as single point of truth for oracle settings, node list, and reward distribution.
@@ -56,11 +59,6 @@ pub type AggregateMessage {
   timestamp: PosixTime,
 }
 
-pub type NodeFeed {
-  value: Int,
-  signature: ByteArray,
-}
-
 /// Mutable oracle settings and reward distribution data
 pub type RewardDatum {
   /// list of oracle nodes, node id is its index inside nodes list
@@ -78,7 +76,7 @@ pub type RewardDatum {
 
 pub type Node {
   payment_vkh: VerificationKeyHash,
-  feed_verification_key: ByteArray,
+  feed_vkh: VerificationKeyHash,
   reward: Int,
 }
 

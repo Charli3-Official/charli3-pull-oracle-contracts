@@ -1,8 +1,9 @@
 use aiken/collection/list
 use aiken/option
 use aiken/primitive/int
+use oracle/datum.{NodeFeed, OracleFeed}
 
-pub fn median(node_feeds: List<Int>) -> Int {
+pub fn median(node_feeds: List<NodeFeed>) -> OracleFeed {
   let length = list.length(node_feeds)
   let sorted = list.sort(node_feeds, int.compare)
 
