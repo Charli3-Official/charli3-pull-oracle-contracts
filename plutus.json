@@ -6,7 +6,7 @@
     "plutusVersion": "v3",
     "compiler": {
       "name": "Aiken",
-      "version": "v1.1.3+3d77b5c"
+      "version": "v1.1.4+79d0e45"
     },
     "license": "Apache-2.0"
   },
@@ -38,6 +38,9 @@
     },
     {
       "title": "oracle.oracle_manager.else",
+      "redeemer": {
+        "schema": {}
+      },
       "parameters": [
         {
           "title": "settings",
@@ -82,6 +85,9 @@
     },
     {
       "title": "oracle.oracle_nfts.else",
+      "redeemer": {
+        "schema": {}
+      },
       "parameters": [
         {
           "title": "utxo_ref",
