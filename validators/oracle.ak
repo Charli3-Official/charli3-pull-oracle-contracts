@@ -20,8 +20,8 @@ use oracle/checks.{
   are_mutable_settings_unchanged, calculate_minimum_fee_amout,
   convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
   find_in_datum, find_out_datum_and_value, is_aggstate_expired,
-  returns_empty_aggstate_outputs, returns_empty_reward_outputs,
-  spends_reward_acc_utxo,
+  oracle_fees_were_transfered, returns_empty_aggstate_outputs,
+  returns_empty_reward_outputs, spends_reward_acc_utxo,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -361,7 +361,7 @@ validator oracle_manager(settings: OracleSettings) {
         let reward_acc_nft =
           Asset { policy_id: nft_policy_id, name: reward_acc_token_name }
 
-        expect (RewardAccount(out_core_datum), _out_value) =
+        expect (RewardAccount(out_core_datum), out_value) =
           find_out_datum_and_value(
             outputs,
             own_hash,
@@ -382,7 +382,12 @@ validator oracle_manager(settings: OracleSettings) {
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
         // TODO rewards consensus checks
-        are_mutable_settings_unchanged(in_core_datum, out_core_datum) && must_return_empty_reward_utxos
+        are_mutable_settings_unchanged(in_core_datum, out_core_datum) && oracle_fees_were_transfered(
+          settings.fee_token,
+          aggregations,
+          in_value,
+          out_value,
+        ) && must_return_empty_reward_utxos
       }
       // :: NodeCollect
       (NodeCollect, RewardAccount(in_core_datum)) -> {

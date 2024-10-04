@@ -242,3 +242,26 @@ pub fn are_mutable_settings_unchanged(
     in_core_datum.nodes_to_rewards,
   ) == pairs.keys(out_core_datum.nodes_to_rewards)
 }
+
+pub fn oracle_fees_were_transfered(
+  fee_token: Asset,
+  aggregations: List<AnAggregation>,
+  in_value: Value,
+  out_value: Value,
+) -> Bool {
+  trace @"oracle_fees_were_transfered"
+
+  let actual_fee =
+    assets.negate(in_value)
+      |> assets.merge(out_value, _)
+      |> assets.quantity_of(fee_token.policy_id, fee_token.name)
+  let required_fee =
+    aggregations
+      |> list.foldr(
+          assets.zero,
+          fn(aggregation, acc) { assets.merge(acc, aggregation.value) },
+        )
+      |> assets.quantity_of(fee_token.policy_id, fee_token.name)
+
+  actual_fee == required_fee
+}
