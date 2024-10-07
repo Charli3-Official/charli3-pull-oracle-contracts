@@ -1,3 +1,6 @@
+pub type Percent =
+  Int
+
 pub const per_cent: Int = 100
 
 pub const per_mille: Int = 1000

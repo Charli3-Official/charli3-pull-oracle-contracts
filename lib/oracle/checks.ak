@@ -238,7 +238,7 @@ pub fn are_mutable_settings_unchanged(
 ) -> Bool {
   trace @"are_mutable_settings_unchanged"
 
-  in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty && in_core_datum.closing_period_started_at == out_core_datum.closing_period_started_at && pairs.keys(
+  in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty && in_core_datum.closing_period_started_at == out_core_datum.closing_period_started_at && pairs.keys(
     in_core_datum.nodes_to_rewards,
   ) == pairs.keys(out_core_datum.nodes_to_rewards)
 }

@@ -1,6 +1,7 @@
 use aiken/crypto.{VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
+use ext/aiken/math/rational.{Percent}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 
@@ -62,6 +63,7 @@ pub type AggregateMessage {
   timestamp: PosixTime,
 }
 
+// TODO separate reward account datum from mutable settings datum to prevent contention of editing settings and reward consensus
 /// Mutable oracle settings and reward distribution data
 pub type RewardDatum {
   /// list of oracle nodes mapped to node reward amount, node id is its index inside nodes list
@@ -73,6 +75,9 @@ pub type RewardDatum {
   /// this is length of tx validity interval, so technically its value equals time absolute uncertainty times two,
   /// because we are taking tx validity interval middle as current time value
   time_absolute_uncertainty: PosixTimeDiff,
+  /// see interquartile range (IQR) and turkey fences methods for outlier detection,
+  /// recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
+  iqr_fence_multiplier: Percent,
   /// if oracle is in closing state, then this field will have a certain timestamp value
   closing_period_started_at: Option<PosixTime>,
 }

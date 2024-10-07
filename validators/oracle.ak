@@ -570,7 +570,7 @@ validator oracle_manager(settings: OracleSettings) {
           out_core_datum.closing_period_started_at == Some(current_time)
 
         let must_not_change_other_settings =
-          in_core_datum.nodes_to_rewards == out_core_datum.nodes_to_rewards && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
+          in_core_datum.nodes_to_rewards == out_core_datum.nodes_to_rewards && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
 
         auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_not_be_closing_already? && must_start_closing_period? && must_not_change_other_settings?
       }
