@@ -63,7 +63,7 @@ pub type AggregateMessage {
   timestamp: PosixTime,
 }
 
-// TODO separate reward account datum from mutable settings datum to prevent contention of editing settings and reward consensus
+// TODO separate reward account datum from mutable settings datum to prevent contention of odv aggregation and reward consensus
 /// Mutable oracle settings and reward distribution data
 pub type RewardDatum {
   /// list of oracle nodes mapped to node reward amount, node id is its index inside nodes list
