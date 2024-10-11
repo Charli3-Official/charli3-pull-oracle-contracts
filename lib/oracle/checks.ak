@@ -1,3 +1,4 @@
+use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/collection/pairs
@@ -7,10 +8,11 @@ use aiken/math/rational
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, Output, ValidityRange} as tx
-use ext/aiken/math/rational.{coin_precision} as ext
+use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
+use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
+  AggState, AggStateDatum, AggregateMessage, Node, OracleDatum, OracleFeed,
   RewardConsensusPending, RewardDatum, RewardPrices, RewardTransport,
   RewardTransportDatum, has_no_rewards,
 }
@@ -218,7 +220,6 @@ pub fn convert_reward_prices(
 
       RewardPrices {
         node_fee: convert_reward(reward_prices.node_fee),
-        consensus_fee: convert_reward(reward_prices.consensus_fee),
         platform_fee: convert_reward(reward_prices.platform_fee),
       }
     }
@@ -229,7 +230,7 @@ pub fn calculate_minimum_fee_amout(
   reward_prices: RewardPrices,
   nodes_count: Int,
 ) -> Int {
-  reward_prices.node_fee * nodes_count + reward_prices.consensus_fee + reward_prices.platform_fee
+  reward_prices.node_fee * nodes_count + reward_prices.platform_fee
 }
 
 pub fn are_mutable_settings_unchanged(
@@ -264,4 +265,39 @@ pub fn oracle_fees_were_transfered(
       |> assets.quantity_of(fee_token.policy_id, fee_token.name)
 
   actual_fee == required_fee
+}
+
+pub fn check_reward_distribution(
+  aggregations: List<AnAggregation>,
+  in_distribution: Pairs<Node, Int>,
+  out_distribution: Pairs<Node, Int>,
+  reward_prices: RewardPrices,
+  iqr_fence_multiplier: Percent,
+) -> Bool {
+  trace @"check_reward_distribution"
+
+  let node_id_to_reward =
+    list.zip(out_distribution, in_distribution)
+      |> list.indexed_map(
+          fn(index, (out, in)) {
+            (index, builtin.snd_pair(out) - builtin.snd_pair(in))
+          },
+        )
+
+  let beneficiaries =
+    list.flat_map(
+      aggregations,
+      fn(a) { consensus_by_iqr(a.message.node_feeds, iqr_fence_multiplier) },
+    )
+
+  let check_node =
+    fn((index, actual_reward)) -> Bool {
+      let reward_count =
+        beneficiaries |> list.filter(fn(b) { index == b }) |> list.length
+      let required_reward = reward_count * reward_prices.node_fee
+
+      required_reward == actual_reward
+    }
+
+  list.all(node_id_to_reward, check_node)
 }

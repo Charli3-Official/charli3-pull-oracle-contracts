@@ -94,7 +94,6 @@ pub type FeeConfig {
 
 pub type RewardPrices {
   node_fee: Int,
-  consensus_fee: Int,
   platform_fee: Int,
 }
 
