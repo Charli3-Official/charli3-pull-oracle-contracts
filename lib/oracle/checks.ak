@@ -4,7 +4,7 @@ use aiken/crypto.{ScriptHash}
 use aiken/interval
 use aiken/math/rational
 use aiken/option.{is_some}
-use cardano/assets.{PolicyId, Value}
+use cardano/assets.{PolicyId, Value, ada_policy_id}
 use cardano/transaction.{Input, Output, ValidityRange} as tx
 use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
@@ -27,7 +27,6 @@ pub type AnAggregation {
 pub fn returns_empty_reward_outputs(
   script_hash: ScriptHash,
   reward_transport_nft: Asset,
-  allowed_asset: PolicyId,
   utxo_count: Int,
   tx_outputs: List<Output>,
 ) -> Bool {
@@ -37,7 +36,7 @@ pub fn returns_empty_reward_outputs(
     find_script_outputs_by_token(
       tx_outputs,
       script_hash,
-      allowed_asset,
+      ada_policy_id,
       reward_transport_nft,
     )
   let extractor =
@@ -56,7 +55,6 @@ pub fn returns_empty_reward_outputs(
 pub fn returns_empty_aggstate_outputs(
   script_hash: ScriptHash,
   aggstate_nft: Asset,
-  allowed_asset: PolicyId,
   utxo_count: Int,
   tx_outputs: List<Output>,
 ) -> Bool {
@@ -66,7 +64,7 @@ pub fn returns_empty_aggstate_outputs(
     find_script_outputs_by_token(
       tx_outputs,
       script_hash,
-      allowed_asset,
+      ada_policy_id,
       aggstate_nft,
     )
   let extractor =
