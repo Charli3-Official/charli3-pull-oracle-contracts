@@ -26,7 +26,7 @@ use oracle/checks.{
 }
 use oracle/consensus
 use oracle/datum.{
-  AggState, NoRewards, OracleDatum, OracleSettings, RewardAccount,
+  AggState, NoRewards, OracleConfiguration, OracleDatum, RewardAccount,
   RewardConsensusPending, RewardDatum, RewardTransport, is_oracle_closing,
 }
 use services/nft_based_auth.{auth_by_nft}
@@ -82,7 +82,7 @@ pub type OracleRedeemer {
 
 validator oracle_nfts(
   utxo_ref: OutputReference,
-  settings: OracleSettings,
+  config: OracleConfiguration,
   oracle_script_hash: ScriptHash,
 ) {
   mint(redeemer: MintingRedeemer, policy_id: PolicyId, transaction: Transaction) {
@@ -133,7 +133,7 @@ validator oracle_nfts(
             outputs,
           )
 
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
       }
       Scale -> {
         expect None = minted_assets |> dict.get(reward_acc_token_name)
@@ -166,7 +166,7 @@ validator oracle_nfts(
 
           let must_not_be_closing = is_oracle_closing(core_datum) |> not
 
-          auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_not_be_closing? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+          auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_not_be_closing? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
         } else {
           trace @"scale down"
 
@@ -226,7 +226,7 @@ validator oracle_nfts(
   }
 }
 
-validator oracle_manager(settings: OracleSettings) {
+validator oracle_manager(config: OracleConfiguration) {
   // TODO check some datum pieces had been left immutable
   // TODO check value is untouched
   spend(
@@ -297,7 +297,7 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_transport_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         expect (AggState(Some(aggstate)), _out_value) =
@@ -329,8 +329,8 @@ validator oracle_manager(settings: OracleSettings) {
           assets.negate(in_value)
             |> assets.merge(out_value, _)
             |> assets.quantity_of(
-                settings.fee_token.policy_id,
-                settings.fee_token.name,
+                config.fee_token.policy_id,
+                config.fee_token.name,
               )
         let minimum_fee_amout =
           convert_reward_prices(
@@ -367,7 +367,7 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         let aggregations =
@@ -383,7 +383,7 @@ validator oracle_manager(settings: OracleSettings) {
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
         are_mutable_settings_unchanged(in_core_datum, out_core_datum) && oracle_fees_were_transfered(
-          settings.fee_token,
+          config.fee_token,
           aggregations,
           in_value,
           out_value,
@@ -407,7 +407,7 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         // TODO node signature check
@@ -426,13 +426,13 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         let datum_left_unchanged = in_core_datum == out_core_datum
 
         // TODO platform rewards check
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && datum_left_unchanged?
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && datum_left_unchanged?
       }
       // :: UpdateSettings
       (UpdateSettings, RewardAccount(RewardDatum { .. })) -> {
@@ -446,11 +446,11 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         // TODO settings sanity check
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+        auth_by_nft(config.platform_auth_nft, inputs, outputs)
       }
       // :: SetFeeConfig
       (SetFeeConfig, RewardAccount(RewardDatum { .. })) -> {
@@ -464,11 +464,11 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         // TODO fee config sanity check
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+        auth_by_nft(config.platform_auth_nft, inputs, outputs)
       }
       // :: AddNodes
       (AddNodes, RewardAccount(RewardDatum { .. })) -> {
@@ -482,11 +482,11 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         // TODO new reward distribution == 0 check
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+        auth_by_nft(config.platform_auth_nft, inputs, outputs)
       }
       // :: DelNodes
       (DelNodes, RewardAccount(RewardDatum { .. })) -> {
@@ -500,18 +500,18 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         // TODO reward distribution check
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs)
+        auth_by_nft(config.platform_auth_nft, inputs, outputs)
       }
       // :: ScaleDown
       (ScaleDown, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, reward_transport_token_name)
 
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
         )
@@ -520,7 +520,7 @@ validator oracle_manager(settings: OracleSettings) {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, aggstate_token_name)
 
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
         ) && is_aggstate_expired(aggstate, validity_range)
@@ -544,10 +544,10 @@ validator oracle_manager(settings: OracleSettings) {
         let must_be_after_dismissing_period =
           interval.is_entirely_after(
             validity_range,
-            message.timestamp + settings.reward_dismissing_period_length,
+            message.timestamp + config.reward_dismissing_period_length,
           )
 
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos && must_be_after_dismissing_period?
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos && must_be_after_dismissing_period?
       }
       // :: CloseOracle
       (CloseOracle, RewardAccount(in_core_datum)) -> {
@@ -564,7 +564,7 @@ validator oracle_manager(settings: OracleSettings) {
             outputs,
             own_hash,
             reward_acc_nft,
-            settings.fee_token.policy_id,
+            config.fee_token.policy_id,
           )
 
         let current_time =
@@ -578,7 +578,7 @@ validator oracle_manager(settings: OracleSettings) {
         let must_not_change_other_settings =
           in_core_datum.nodes_to_rewards == out_core_datum.nodes_to_rewards && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
 
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && must_not_be_closing_already? && must_start_closing_period? && must_not_change_other_settings?
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_not_be_closing_already? && must_start_closing_period? && must_not_change_other_settings?
       }
       // :: RemoveOracle
       (RemoveOracle, RewardTransport(NoRewards)) -> {
@@ -613,13 +613,13 @@ validator oracle_manager(settings: OracleSettings) {
                 fn(closing_start) {
                   interval.is_entirely_after(
                     validity_range,
-                    closing_start + settings.closing_period_length,
+                    closing_start + config.closing_period_length,
                   )
                 },
               )
             |> option.or_else(False)
 
-        auth_by_nft(settings.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
         ) && is_time_to_be_removed?

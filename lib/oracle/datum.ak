@@ -51,7 +51,7 @@ pub type AggStateDatum {
 /// * closing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * fee_token - oracle nodes will be sure that platform won't update reward currency
-pub type OracleSettings {
+pub type OracleConfiguration {
   platform_auth_nft: PolicyId,
   closing_period_length: PosixTimeDiff,
   reward_dismissing_period_length: PosixTimeDiff,

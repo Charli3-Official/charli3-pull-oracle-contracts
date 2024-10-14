@@ -27,9 +27,9 @@
       },
       "parameters": [
         {
-          "title": "settings",
+          "title": "config",
           "schema": {
-            "$ref": "#/definitions/oracle~1datum~1OracleSettings"
+            "$ref": "#/definitions/oracle~1datum~1OracleConfiguration"
           }
         }
       ],
@@ -43,9 +43,9 @@
       },
       "parameters": [
         {
-          "title": "settings",
+          "title": "config",
           "schema": {
-            "$ref": "#/definitions/oracle~1datum~1OracleSettings"
+            "$ref": "#/definitions/oracle~1datum~1OracleConfiguration"
           }
         }
       ],
@@ -68,9 +68,9 @@
           }
         },
         {
-          "title": "settings",
+          "title": "config",
           "schema": {
-            "$ref": "#/definitions/oracle~1datum~1OracleSettings"
+            "$ref": "#/definitions/oracle~1datum~1OracleConfiguration"
           }
         },
         {
@@ -96,9 +96,9 @@
           }
         },
         {
-          "title": "settings",
+          "title": "config",
           "schema": {
-            "$ref": "#/definitions/oracle~1datum~1OracleSettings"
+            "$ref": "#/definitions/oracle~1datum~1OracleConfiguration"
           }
         },
         {
@@ -477,6 +477,35 @@
         }
       ]
     },
+    "oracle/datum/OracleConfiguration": {
+      "title": "OracleConfiguration",
+      "description": "Immutable oracle settings.\n Rationale for immutability:\n * platform_auth_nft - oracle deployment corresponds to one unchanging \"platform\"\n * closing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * fee_token - oracle nodes will be sure that platform won't update reward currency",
+      "anyOf": [
+        {
+          "title": "OracleConfiguration",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "platform_auth_nft",
+              "$ref": "#/definitions/PolicyId"
+            },
+            {
+              "title": "closing_period_length",
+              "$ref": "#/definitions/PosixTimeDiff"
+            },
+            {
+              "title": "reward_dismissing_period_length",
+              "$ref": "#/definitions/PosixTimeDiff"
+            },
+            {
+              "title": "fee_token",
+              "$ref": "#/definitions/ext~1cardano~1value~1Asset"
+            }
+          ]
+        }
+      ]
+    },
     "oracle/datum/OracleDatum": {
       "title": "OracleDatum",
       "description": "There are three types of oracle utxos:\n 1. RewardAccount - one for each oracle,\n    acts as single point of truth for oracle settings, node list, and reward distribution.\n 2. RewardTransport - many for each oracle, with possibility of scaling their number on demand,\n    users permorm ODV aggregation with those by providing node feeds list constructed off-chain.\n 3. AggState - each AggState utxo is complementary to RewardTransport, it containts the oracle feed value,\n    that will be referenced by a user of a DApp.",
@@ -508,35 +537,6 @@
           "fields": [
             {
               "$ref": "#/definitions/Option$oracle~1datum~1AggStateDatum"
-            }
-          ]
-        }
-      ]
-    },
-    "oracle/datum/OracleSettings": {
-      "title": "OracleSettings",
-      "description": "Immutable oracle settings.\n Rationale for immutability:\n * platform_auth_nft - oracle deployment corresponds to one unchanging \"platform\"\n * closing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * fee_token - oracle nodes will be sure that platform won't update reward currency",
-      "anyOf": [
-        {
-          "title": "OracleSettings",
-          "dataType": "constructor",
-          "index": 0,
-          "fields": [
-            {
-              "title": "platform_auth_nft",
-              "$ref": "#/definitions/PolicyId"
-            },
-            {
-              "title": "closing_period_length",
-              "$ref": "#/definitions/PosixTimeDiff"
-            },
-            {
-              "title": "reward_dismissing_period_length",
-              "$ref": "#/definitions/PosixTimeDiff"
-            },
-            {
-              "title": "fee_token",
-              "$ref": "#/definitions/ext~1cardano~1value~1Asset"
             }
           ]
         }
