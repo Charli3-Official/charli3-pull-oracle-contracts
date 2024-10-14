@@ -27,6 +27,17 @@ pub fn find_own_protocol_policy_id(
   policy_id
 }
 
+/// Find one protocol NFT inside transaction inputs.
+pub fn spends_script_utxo_with_nft(
+  script_hash: ScriptHash,
+  nft: Asset,
+  tx_inputs: List<Input>,
+) -> Bool {
+  let inputs = find_script_inputs_by_token(tx_inputs, script_hash, nft)
+
+  list.length(inputs) == 1
+}
+
 /// Find own protocol NFT inside transaction inputs.
 /// Note that it's not required to check_own_protocol_token in tx inputs
 /// because it's already been checked for each output.

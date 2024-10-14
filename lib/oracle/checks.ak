@@ -24,19 +24,6 @@ pub type AnAggregation {
   value: Value,
 }
 
-pub fn spends_reward_acc_utxo(
-  script_hash: ScriptHash,
-  reward_acc_nft: Asset,
-  tx_inputs: List<Input>,
-) -> Bool {
-  trace @"spends_reward_acc_utxo"
-
-  let inputs =
-    find_script_inputs_by_token(tx_inputs, script_hash, reward_acc_nft)
-
-  list.length(inputs) == 1
-}
-
 pub fn returns_empty_reward_outputs(
   script_hash: ScriptHash,
   reward_transport_nft: Asset,

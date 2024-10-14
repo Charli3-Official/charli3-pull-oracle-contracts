@@ -1,4 +1,4 @@
-//// 1. oracle_nfts - this validator will act as one time policy for RewardAccount
+//// 1. oracle_nfts - this validator will act as one time policy for CoreSettings and RewardAccount
 ////    and as a scaling policy for RewardTransport with AggState,
 ////    each policy id is unique for one trade pair (ticker), or potentially even multiple tickers with same nodes and fee token;
 //// 2. oracle_manager - main oracle validator, see OracleRedeemer for list of allowed actions.
@@ -21,7 +21,6 @@ use oracle/checks.{
   does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
   find_out_datum_and_value, is_aggstate_expired, oracle_fees_were_transfered,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
-  spends_reward_acc_utxo,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -32,6 +31,7 @@ use oracle/datum.{
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{
   find_own_protocol_policy_id, spends_protocol_nft_inputs,
+  spends_script_utxo_with_nft,
 }
 use services/time.{get_current_time}
 
@@ -44,7 +44,7 @@ pub const reward_transport_token_name: AssetName = "RewardT"
 pub const aggstate_token_name: AssetName = "AggState"
 
 /// Types of actions for Oracle NFTs (protocol tokens)
-/// * Mint  - Oracle start: one time mint for RewardAccount; any number of mints for RewardTransport and AggState
+/// * Mint  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState
 /// * Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState
 /// * Burn  - Oracle close: all tokens are burned
 pub type MintingRedeemer {
@@ -78,7 +78,7 @@ pub type OracleRedeemer {
   ScaleDown
   DismissRewards
   CloseOracle
-  // TODO implement ReopenOracle - redeemer for cancelling oracle close?
+  // TODO implement ReopenOracle - redeemer for cancelling oracle close
   RemoveOracle
 }
 
@@ -102,7 +102,7 @@ validator oracle_nfts(
 
     when redeemer is {
       Mint -> {
-        // TODO core NFT mint
+        expect Some(1) = minted_assets |> dict.get(core_settings_token_name)
         expect Some(1) = minted_assets |> dict.get(reward_account_token_name)
         expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
         expect Some(m) = minted_assets |> dict.get(aggstate_token_name)
@@ -111,6 +111,14 @@ validator oracle_nfts(
 
         expect Some(_input) =
           list.find(inputs, fn(input) { input.output_reference == utxo_ref })
+
+        expect (OracleSettings(_), _) =
+          find_out_datum_and_value(
+            outputs,
+            oracle_script_hash,
+            core_nft,
+            ada_policy_id,
+          )
 
         expect (RewardAccount(_), _) =
           find_out_datum_and_value(
@@ -140,6 +148,7 @@ validator oracle_nfts(
         auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
       }
       Scale -> {
+        expect None = minted_assets |> dict.get(core_settings_token_name)
         expect None = minted_assets |> dict.get(reward_account_token_name)
         expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
         expect Some(m) = minted_assets |> dict.get(aggstate_token_name)
@@ -193,6 +202,7 @@ validator oracle_nfts(
         }
       }
       Burn -> {
+        expect Some(-1) = minted_assets |> dict.get(core_settings_token_name)
         expect Some(-1) = minted_assets |> dict.get(reward_account_token_name)
         let n =
           minted_assets
@@ -204,6 +214,15 @@ validator oracle_nfts(
             |> option.or_else(0)
         let must_not_mint_reward_transport = n <= 0
         let must_mint_same_amount_aggstate = m == n
+
+        let must_spend_core_settings_input =
+          spends_script_utxo_with_nft(oracle_script_hash, core_nft, inputs)
+        let must_spend_reward_account_input =
+          spends_script_utxo_with_nft(
+            oracle_script_hash,
+            reward_acc_nft,
+            inputs,
+          )
 
         let must_spend_reward_transport_inputs =
           spends_protocol_nft_inputs(
@@ -220,7 +239,7 @@ validator oracle_nfts(
             inputs,
           )
 
-        spends_reward_acc_utxo(oracle_script_hash, reward_acc_nft, inputs) && must_not_mint_reward_transport? && must_mint_same_amount_aggstate? && must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
+        must_spend_core_settings_input? && must_spend_reward_account_input? && must_not_mint_reward_transport? && must_mint_same_amount_aggstate? && must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
       }
     }
   }
@@ -230,6 +249,8 @@ validator oracle_nfts(
   }
 }
 
+// TODO spends_script_utxo_with_nft
+// TODO find out by core_nft filtering ada_policy_id
 validator oracle_manager(config: OracleConfiguration) {
   // TODO check some datum pieces had been left immutable
   // TODO check value is untouched
@@ -356,7 +377,7 @@ validator oracle_manager(config: OracleConfiguration) {
         let reward_acc_nft =
           Asset { policy_id: nft_policy_id, name: reward_account_token_name }
 
-        spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs)
+        spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs)
       }
       (CalculateRewards, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
@@ -605,7 +626,7 @@ validator oracle_manager(config: OracleConfiguration) {
         let reward_acc_nft =
           Asset { policy_id: nft_policy_id, name: reward_account_token_name }
 
-        spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs)
+        spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs)
       }
       (RemoveOracle, AggState(aggstate)) -> {
         let nft_policy_id =
@@ -613,7 +634,7 @@ validator oracle_manager(config: OracleConfiguration) {
         let reward_acc_nft =
           Asset { policy_id: nft_policy_id, name: reward_account_token_name }
 
-        spends_reward_acc_utxo(own_hash, reward_acc_nft, inputs) && is_aggstate_expired(
+        spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs) && is_aggstate_expired(
           aggstate,
           validity_range,
         )

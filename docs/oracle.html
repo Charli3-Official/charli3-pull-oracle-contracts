@@ -328,7 +328,7 @@
   <a href="#module-name">oracle</a>
 </h1>
 <ol>
-<li>oracle_nfts - this validator will act as one time policy for RewardAccount
+<li>oracle_nfts - this validator will act as one time policy for CoreSettings and RewardAccount
 and as a scaling policy for RewardTransport with AggState,
 each policy id is unique for one trade pair (ticker), or potentially even multiple tickers with same nodes and fee token;</li>
 <li>oracle_manager - main oracle validator, see OracleRedeemer for list of allowed actions.</li>
@@ -356,7 +356,7 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
     <div class="custom-type-constructors">
       <div class="rendered-markdown"><p>Types of actions for Oracle NFTs (protocol tokens)</p>
 <ul>
-<li>Mint  - Oracle start: one time mint for RewardAccount; any number of mints for RewardTransport and AggState</li>
+<li>Mint  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState</li>
 <li>Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState</li>
 <li>Burn  - Oracle close: all tokens are burned</li>
 </ul>
@@ -701,9 +701,9 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="./js/lunr.min.js?v=1.1.4"></script>
-    <script src="./js/index.js?v=1728912233"></script>
+    <script src="./js/index.js?v=1728917051"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="./search-data.js?v=1728912233"></script>
+    <script src="./search-data.js?v=1728917051"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {

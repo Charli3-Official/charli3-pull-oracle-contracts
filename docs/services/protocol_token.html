@@ -201,6 +201,11 @@
       
   
     
+        <li><a href="#spends_script_utxo_with_nft">spends_script_utxo_with_nft</a></li>
+
+      
+  
+    
         <li><a href="#find_script_inputs_by_token">find_script_inputs_by_token</a></li>
 
       
@@ -370,13 +375,30 @@ because it’s already been checked for each output.</p>
   
       <div class="member">
         <div class="member-name">
+          <h2 id="spends_script_utxo_with_nft"><pre class="hljs language-aiken">spends_script_utxo_with_nft(
+  script_hash: ScriptHash,
+  nft: Asset,
+  tx_inputs: List&lt;Input&gt;,
+) -&gt; Bool</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L31-L39"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>Find one protocol NFT inside transaction inputs.</p>
+</div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
           <h2 id="find_script_inputs_by_token"><pre class="hljs language-aiken">find_script_inputs_by_token(
   tx_inputs: List&lt;Input&gt;,
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -&gt; List&lt;Input&gt;</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L33-L53"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L44-L64"></a>
           
         </div>
         <div class="rendered-markdown"><p>Find own protocol NFT inside transaction inputs.
@@ -396,7 +418,7 @@ because it’s already been checked for each output.</p>
   tx_inputs: List&lt;Input&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L57-L66"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L68-L77"></a>
           
         </div>
         <div class="rendered-markdown"><p>A convenience function that calls find_script_inputs_by_token
@@ -415,7 +437,7 @@ and also checks number of spent inputs</p>
   protocol_token: Asset,
 ) -&gt; List&lt;Output&gt;</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L69-L81"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L80-L92"></a>
           
         </div>
         <div class="rendered-markdown"><p>Find own protocol NFT inside transaction outputs</p>
@@ -432,7 +454,7 @@ and also checks number of spent inputs</p>
   protocol_token: Asset,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L84-L97"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L95-L108"></a>
           
         </div>
         <div class="rendered-markdown"><p>Returns true if protocol NFT was found and it’s the only asset except lovelace and one allowed</p>
@@ -450,7 +472,7 @@ and also checks number of spent inputs</p>
   allowed_asset: PolicyId,
 ) -&gt; Option&lt;(PolicyId, AssetName, Int)&gt;</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L100-L111"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L111-L122"></a>
           
         </div>
         <div class="rendered-markdown"><p>Skips allowed token: e.g. C3 fee payment token</p>
@@ -580,9 +602,9 @@ and also checks number of spent inputs</p>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1728912233"></script>
+    <script src="../js/index.js?v=1728917051"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1728912233"></script>
+    <script src="../search-data.js?v=1728917051"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
