@@ -1,7 +1,5 @@
-use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
-use aiken/collection/pairs
 use aiken/crypto.{ScriptHash}
 use aiken/interval
 use aiken/math/rational
@@ -12,9 +10,9 @@ use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Node, OracleDatum, OracleFeed,
-  RewardConsensusPending, RewardDatum, RewardPrices, RewardTransport,
-  RewardTransportDatum, has_no_rewards,
+  AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
+  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
+  has_no_rewards,
 }
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
@@ -233,17 +231,6 @@ pub fn calculate_minimum_fee_amout(
   reward_prices.node_fee * nodes_count + reward_prices.platform_fee
 }
 
-pub fn are_mutable_settings_unchanged(
-  in_core_datum: RewardDatum,
-  out_core_datum: RewardDatum,
-) -> Bool {
-  trace @"are_mutable_settings_unchanged"
-
-  in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty && in_core_datum.closing_period_started_at == out_core_datum.closing_period_started_at && pairs.keys(
-    in_core_datum.nodes_to_rewards,
-  ) == pairs.keys(out_core_datum.nodes_to_rewards)
-}
-
 pub fn oracle_fees_were_transfered(
   fee_token: Asset,
   aggregations: List<AnAggregation>,
@@ -269,20 +256,19 @@ pub fn oracle_fees_were_transfered(
 
 pub fn check_reward_distribution(
   aggregations: List<AnAggregation>,
-  in_distribution: Pairs<Node, Int>,
-  out_distribution: Pairs<Node, Int>,
+  in_distribution: List<Int>,
+  out_distribution: List<Int>,
   reward_prices: RewardPrices,
   iqr_fence_multiplier: Percent,
 ) -> Bool {
   trace @"check_reward_distribution"
 
+  let check_nodes_count =
+    list.length(in_distribution) == list.length(out_distribution)
+
   let node_id_to_reward =
     list.zip(out_distribution, in_distribution)
-      |> list.indexed_map(
-          fn(index, (out, in)) {
-            (index, builtin.snd_pair(out) - builtin.snd_pair(in))
-          },
-        )
+      |> list.indexed_map(fn(index, (out, in)) { (index, out - in) })
 
   let beneficiaries =
     list.flat_map(
@@ -299,5 +285,5 @@ pub fn check_reward_distribution(
       required_reward == actual_reward
     }
 
-  list.all(node_id_to_reward, check_node)
+  list.all(node_id_to_reward, check_node) && check_nodes_count?
 }
