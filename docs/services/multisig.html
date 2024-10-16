@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>services/protocol_token - charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>services/multisig - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
@@ -188,6 +188,13 @@
 
         
 
+<h2>Types</h2>
+<ul>
+  
+  <li><a href="#Multisig">Multisig</a></li>
+  
+</ul>
+
 
 
 
@@ -196,37 +203,7 @@
 <ul>
   
     
-        <li><a href="#find_own_protocol_policy_id">find_own_protocol_policy_id</a></li>
-
-      
-  
-    
-        <li><a href="#spends_script_utxo_with_nft">spends_script_utxo_with_nft</a></li>
-
-      
-  
-    
-        <li><a href="#find_script_inputs_by_token">find_script_inputs_by_token</a></li>
-
-      
-  
-    
-        <li><a href="#spends_protocol_nft_inputs">spends_protocol_nft_inputs</a></li>
-
-      
-  
-    
-        <li><a href="#find_script_outputs_by_token">find_script_outputs_by_token</a></li>
-
-      
-  
-    
-        <li><a href="#check_own_protocol_token">check_own_protocol_token</a></li>
-
-      
-  
-    
-        <li><a href="#skip_allowed_asset">skip_allowed_asset</a></li>
+        <li><a href="#check_multisig">check_multisig</a></li>
 
       
   
@@ -323,8 +300,8 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="../services/multisig.html">
-	      multisig
+	      <li data-indent="1" data-current><a href="../services/multisig.html">
+	      <strong>multisig</strong>
 	      </a></li>
 	    
 	  
@@ -339,8 +316,8 @@
         
 	  
 	    
-	      <li data-indent="1" data-current><a href="../services/protocol_token.html">
-	      <strong>protocol_token</strong>
+	      <li data-indent="1"><a href="../services/protocol_token.html">
+	      protocol_token
 	      </a></li>
 	    
 	  
@@ -359,10 +336,56 @@
       <main class="content">
         
 <h1 id="module-name" class="module-name">
-  <a href="#module-name">services/protocol_token</a>
+  <a href="#module-name">services/multisig</a>
 </h1>
 
 
+
+<section class="module-members">
+  <h1 id="module-types" class="module-member-kind">
+    <a href="#module-types">Types</a>
+  </h1>
+
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="Multisig">
+        <a href="#Multisig">
+	  Multisig
+        </a>
+      </h2>
+      
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/multisig.ak#L7-L10"></a>
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"><p>This type represents an entity with multisig capabilities - e.g. a multisig wallet:</p>
+<ul>
+<li>allowed_signatories - Verification key hashed allowed for authorization</li>
+<li>required_signatories_count - Minimum required number of signatories for authorization</li>
+</ul>
+</div>
+      
+      <h3>Constructors</h3>
+      <ul class="constructor-list">
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">Multisig {
+  allowed_signatories: List&lt;VerificationKeyHash&gt;,
+  required_signatories_count: Int,
+}</code></pre>
+          </div>
+	  
+        </li>
+        
+      </ul>
+      
+    </div>
+  </div>
+  
+</section>
 
 
 
@@ -376,123 +399,15 @@
   
       <div class="member">
         <div class="member-name">
-          <h2 id="find_own_protocol_policy_id"><pre class="hljs language-aiken">find_own_protocol_policy_id(input_value: Value, nft_name: AssetName) -&gt; PolicyId</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L11-L28"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Find own protocol NFT inside the value we are spending.
-Note that it’s not required to check_own_protocol_token in tx inputs
-because it’s already been checked for each output.</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="spends_script_utxo_with_nft"><pre class="hljs language-aiken">spends_script_utxo_with_nft(
-  script_hash: ScriptHash,
-  nft: Asset,
-  tx_inputs: List&lt;Input&gt;,
+          <h2 id="check_multisig"><pre class="hljs language-aiken">check_multisig(
+  multisig: Multisig,
+  tx_signatories: List&lt;VerificationKeyHash&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L31-L39"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/multisig.ak#L12-L23"></a>
           
         </div>
-        <div class="rendered-markdown"><p>Find one protocol NFT inside transaction inputs.</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="find_script_inputs_by_token"><pre class="hljs language-aiken">find_script_inputs_by_token(
-  tx_inputs: List&lt;Input&gt;,
-  script_hash: ScriptHash,
-  protocol_token: Asset,
-) -&gt; List&lt;Input&gt;</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L44-L64"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Find own protocol NFT inside transaction inputs.
-Note that it’s not required to check_own_protocol_token in tx inputs
-because it’s already been checked for each output.</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="spends_protocol_nft_inputs"><pre class="hljs language-aiken">spends_protocol_nft_inputs(
-  script_hash: ScriptHash,
-  protocol_nft: Asset,
-  utxo_count: Int,
-  tx_inputs: List&lt;Input&gt;,
-) -&gt; Bool</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L68-L77"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>A convenience function that calls find_script_inputs_by_token
-and also checks number of spent inputs</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="find_script_outputs_by_token"><pre class="hljs language-aiken">find_script_outputs_by_token(
-  tx_outputs: List&lt;Output&gt;,
-  script_hash: ScriptHash,
-  allowed_asset: PolicyId,
-  protocol_token: Asset,
-) -&gt; List&lt;Output&gt;</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L80-L92"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Find own protocol NFT inside transaction outputs</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="check_own_protocol_token"><pre class="hljs language-aiken">check_own_protocol_token(
-  output_value: Value,
-  allowed_asset: PolicyId,
-  protocol_token: Asset,
-) -&gt; Bool</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L95-L108"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Returns true if protocol NFT was found and it’s the only asset except lovelace and one allowed</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="skip_allowed_asset"><pre class="hljs language-aiken">skip_allowed_asset(
-  policy_id: PolicyId,
-  name: AssetName,
-  amount: Int,
-  allowed_asset: PolicyId,
-) -&gt; Option&lt;(PolicyId, AssetName, Int)&gt;</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/protocol_token.ak#L111-L122"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Skips allowed token: e.g. C3 fee payment token</p>
-</div>
+        <div class="rendered-markdown"></div>
       </div>
     
   
