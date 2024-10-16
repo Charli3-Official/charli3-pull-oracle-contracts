@@ -28,6 +28,7 @@ use oracle/datum.{
   OracleSettingsDatum, RewardAccount, RewardAccountDatum, RewardConsensusPending,
   RewardTransport, is_oracle_closing,
 }
+use oracle/multisig.{check_nodes_multisig}
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{
   find_own_protocol_policy_id, spends_protocol_nft_inputs,
@@ -256,8 +257,14 @@ validator oracle_manager(config: OracleConfiguration) {
   ) {
     expect Some(in_datum) = own_datum
 
-    let Transaction { inputs, outputs, reference_inputs, validity_range, .. } =
-      transaction
+    let Transaction {
+      inputs,
+      outputs,
+      reference_inputs,
+      validity_range,
+      extra_signatories,
+      ..
+    } = transaction
 
     expect Some(own_input) = tx.find_input(inputs, own_reference)
     expect address.Script(own_hash) =
@@ -361,8 +368,12 @@ validator oracle_manager(config: OracleConfiguration) {
             |> calculate_minimum_fee_amout(list.length(message.node_feeds))
         let must_transfer_oracle_fees = fees_transfered >= minimum_fee_amout
 
-        // TODO multisig check
-        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees?
+        check_nodes_multisig(
+          message.node_feeds,
+          extra_signatories,
+          core_datum.nodes,
+          core_datum.required_node_signatures_count,
+        ) && must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees?
       }
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {
