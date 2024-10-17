@@ -12,8 +12,8 @@ use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Node, OracleDatum, OracleFeed,
-  RewardConsensusPending, RewardDatum, RewardPrices, RewardTransport,
+  AggState, AggStateDatum, AggregateMessage, Node, NodeFeed, OracleDatum,
+  OracleFeed, RewardConsensusPending, RewardDatum, RewardPrices, RewardTransport,
   RewardTransportDatum, has_no_rewards,
 }
 use services/protocol_token.{
@@ -287,7 +287,13 @@ pub fn check_reward_distribution(
   let beneficiaries =
     list.flat_map(
       aggregations,
-      fn(a) { consensus_by_iqr(a.message.node_feeds, iqr_fence_multiplier) },
+      fn(a) {
+        consensus_by_iqr(
+          a.message.node_feeds_sorted_by_feed,
+          a.message.node_feeds_count,
+          iqr_fence_multiplier,
+        )
+      },
     )
 
   let check_node =
@@ -300,4 +306,36 @@ pub fn check_reward_distribution(
     }
 
   list.all(node_id_to_reward, check_node)
+}
+
+pub fn validate_message_form(message: AggregateMessage) -> Bool {
+  trace @"validate_message_form"
+
+  let node_feeds = pairs.values(message.node_feeds_sorted_by_feed)
+
+  let length = get_length_and_check_order(node_feeds, 0, None)
+
+  length == message.node_feeds_count
+}
+
+fn get_length_and_check_order(
+  node_feeds_sorted: List<NodeFeed>,
+  count: Int,
+  previous: Option<NodeFeed>,
+) -> Int {
+  when node_feeds_sorted is {
+    [] -> count
+    [curr, ..rest] ->
+      previous
+        |> option.map(
+            fn(prev: NodeFeed) -> Int {
+              if prev <= curr {
+                get_length_and_check_order(rest, count + 1, Some(curr))
+              } else {
+                fail @"check node feeds order"
+              }
+            },
+          )
+        |> option.or_else(get_length_and_check_order(rest, count + 1, Some(curr)))
+  }
 }

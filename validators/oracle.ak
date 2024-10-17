@@ -22,7 +22,7 @@ use oracle/checks.{
   does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
   find_out_datum_and_value, is_aggstate_expired, oracle_fees_were_transfered,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
-  spends_reward_acc_utxo,
+  spends_reward_acc_utxo, validate_message_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -319,9 +319,9 @@ validator oracle_manager(settings: OracleSettings) {
         let must_not_be_closing = is_oracle_closing(core_datum) |> not
 
         let median =
-          message.node_feeds
+          message.node_feeds_sorted_by_feed
             |> pairs.values
-            |> consensus.median
+            |> consensus.median(message.node_feeds_count)
         let must_have_correct_median =
           median == oracle_feed && median == aggstate.oracle_feed
 
@@ -339,11 +339,11 @@ validator oracle_manager(settings: OracleSettings) {
             core_datum.fee_info.rate_nft,
             core_datum.fee_info.reward_prices,
           )
-            |> calculate_minimum_fee_amout(list.length(message.node_feeds))
+            |> calculate_minimum_fee_amout(message.node_feeds_count)
         let must_transfer_oracle_fees = fees_transfered >= minimum_fee_amout
 
         // TODO multisig check
-        must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees?
+        validate_message_form(message) && must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees?
       }
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {
