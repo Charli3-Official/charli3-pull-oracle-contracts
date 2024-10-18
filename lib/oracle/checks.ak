@@ -4,7 +4,7 @@ use aiken/crypto.{ScriptHash}
 use aiken/interval
 use aiken/math/rational
 use aiken/option.{is_some}
-use cardano/assets.{PolicyId, Value, ada_policy_id}
+use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, Output, ValidityRange} as tx
 use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
@@ -16,6 +16,7 @@ use oracle/datum.{
 }
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
+  find_script_outputs_by_token_allowing_asset,
 }
 
 pub type AnAggregation {
@@ -33,12 +34,7 @@ pub fn returns_empty_reward_outputs(
   trace @"returns_empty_reward_outputs"
 
   let outputs =
-    find_script_outputs_by_token(
-      tx_outputs,
-      script_hash,
-      ada_policy_id,
-      reward_transport_nft,
-    )
+    find_script_outputs_by_token(tx_outputs, script_hash, reward_transport_nft)
   let extractor =
     fn(output: Output) -> RewardTransportDatum {
       expect tx.InlineDatum(datum) = output.datum
@@ -61,12 +57,7 @@ pub fn returns_empty_aggstate_outputs(
   trace @"returns_empty_aggstate_outputs"
 
   let outputs =
-    find_script_outputs_by_token(
-      tx_outputs,
-      script_hash,
-      ada_policy_id,
-      aggstate_nft,
-    )
+    find_script_outputs_by_token(tx_outputs, script_hash, aggstate_nft)
   let extractor =
     fn(output: Output) -> Option<AggStateDatum> {
       expect tx.InlineDatum(datum) = output.datum
@@ -84,12 +75,27 @@ pub fn find_out_datum_and_value(
   tx_outputs: List<Output>,
   script_hash: ScriptHash,
   protocol_token: Asset,
-  allowed_asset: PolicyId,
 ) -> (OracleDatum, Value) {
   trace @"find_out_datum_and_value"
 
   expect [script_out] =
-    find_script_outputs_by_token(
+    find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
+  expect tx.InlineDatum(datum) = script_out.datum
+  expect oracle_datum: OracleDatum = datum
+
+  (oracle_datum, script_out.value)
+}
+
+pub fn find_out_datum_and_value_allowing_asset(
+  tx_outputs: List<Output>,
+  script_hash: ScriptHash,
+  protocol_token: Asset,
+  allowed_asset: PolicyId,
+) -> (OracleDatum, Value) {
+  trace @"find_out_datum_and_value_allowing_asset"
+
+  expect [script_out] =
+    find_script_outputs_by_token_allowing_asset(
       tx_outputs,
       script_hash,
       allowed_asset,
