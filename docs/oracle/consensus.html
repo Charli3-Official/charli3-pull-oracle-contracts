@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>oracle/multisig - charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>oracle/consensus - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
@@ -188,16 +188,24 @@
 
         
 
-<h2>Types</h2>
+
+
+
+
+<h2>Functions</h2>
 <ul>
   
-  <li><a href="#NodeMessage">NodeMessage</a></li>
+    
+        <li><a href="#median">median</a></li>
+
+      
+  
+    
+        <li><a href="#consensus_by_iqr">consensus_by_iqr</a></li>
+
+      
   
 </ul>
-
-
-
-
 
 
 
@@ -210,6 +218,18 @@
         
 	  
 	    <li data-indent="1"><span>aiken</span></li>
+	  
+        
+	  
+	    <li data-indent="2"><span>collection</span></li>
+	  
+        
+	  
+	    
+	      <li data-indent="3"><a href="../ext/aiken/collection/list.html">
+	      list
+	      </a></li>
+	    
 	  
         
 	  
@@ -262,8 +282,8 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="../oracle/consensus.html">
-	      consensus
+	      <li data-indent="1" data-current><a href="../oracle/consensus.html">
+	      <strong>consensus</strong>
 	      </a></li>
 	    
 	  
@@ -277,15 +297,15 @@
 	  
         
 	  
-	    
-	      <li data-indent="1" data-current><a href="../oracle/multisig.html">
-	      <strong>multisig</strong>
-	      </a></li>
-	    
+	    <li data-indent="0"><span>services</span></li>
 	  
         
 	  
-	    <li data-indent="0"><span>services</span></li>
+	    
+	      <li data-indent="1"><a href="../services/iqr.html">
+	      iqr
+	      </a></li>
+	    
 	  
         
 	  
@@ -318,59 +338,50 @@
       <main class="content">
         
 <h1 id="module-name" class="module-name">
-  <a href="#module-name">oracle/multisig</a>
+  <a href="#module-name">oracle/consensus</a>
 </h1>
 
 
 
-<section class="module-members">
-  <h1 id="module-types" class="module-member-kind">
-    <a href="#module-types">Types</a>
-  </h1>
 
+
+
+
+<section class="module-members">
+  <h1 id="module-functions" class="module-member-kind">
+    <a href="#module-functions">Functions</a>
+  </h1>
   
-  <div class="member">
-    <div class="member-name">
-      <h2 id="NodeMessage">
-        <a href="#NodeMessage">
-	  NodeMessage
-        </a>
-      </h2>
-      
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/multisig.ak#L9-L13"></a>
-      
-    </div>
-    <div class="custom-type-constructors">
-      <div class="rendered-markdown"><p>NodeMessage is serialized hashed and signed by node operator,
-it contains the feed value, together with security parameters:</p>
-<ul>
-<li>timestamp - user is guarantied that value is at least as fresh as this time,
-and node is sure that his signature will expire soon after this time passes.</li>
-<li>oracle_nft_policy_id - acts as feed ID, therefore ensures that node message won’t be reused for other feeds</li>
-</ul>
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="median"><pre class="hljs language-aiken">median(node_feeds_sorted: List&lt;NodeFeed&gt;, node_feeds_count: Int) -&gt; OracleFeed</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/consensus.ak#L10-L24"></a>
+          
+        </div>
+        <div class="rendered-markdown"></div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="consensus_by_iqr"><pre class="hljs language-aiken">consensus_by_iqr(
+  node_feeds: Pairs&lt;NodeId, NodeFeed&gt;,
+  node_feeds_count: Int,
+  iqr_fence_multiplier: Percent,
+) -&gt; List&lt;NodeId&gt;</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/consensus.ak#L27-L56"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>Returns list of nodes which are not outliers using interquartile range algorithm (IQR).</p>
 </div>
-      
-      <h3>Constructors</h3>
-      <ul class="constructor-list">
-        
-        <li class="constructor-item">
-          <div class="constructor-row">
-            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
-            <pre class="constructor-name"><code class="hljs aiken">NodeMessage { value: Int, timestamp: PosixTime, oracle_nft_policy_id: PolicyId }</code></pre>
-          </div>
-	  
-        </li>
-        
-      </ul>
-      
-    </div>
-  </div>
+      </div>
+    
   
 </section>
-
-
-
-
 
 
       </main>
@@ -492,9 +503,9 @@ and node is sure that his signature will expire soon after this time passes.</li
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1727947594"></script>
+    <script src="../js/index.js?v=1729505212"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1727947594"></script>
+    <script src="../search-data.js?v=1729505212"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {

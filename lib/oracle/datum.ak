@@ -1,10 +1,17 @@
 use aiken/crypto.{VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
+use ext/aiken/math/rational.{Percent}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 
 pub type OracleFeed =
+  Int
+
+pub type NodeId =
+  Int
+
+pub type NodeFeed =
   Int
 
 /// There are three types of oracle utxos:
@@ -26,14 +33,14 @@ pub type OracleDatum {
 ///    and transfer user provided fees into RewardAccount utxo.
 pub type RewardTransportDatum {
   NoRewards
-  RewardConsensusPending { median: OracleFeed, message: AggregateMessage }
+  RewardConsensusPending { oracle_feed: OracleFeed, message: AggregateMessage }
 }
 
 /// AggStateDatum contains an oracle feed - median taken from individual node feeds,
 /// an expiration timestamp marking time after which AggState can be consumed once again,
 /// and a created at timestamp for oracle users.
 pub type AggStateDatum {
-  median: OracleFeed,
+  oracle_feed: OracleFeed,
   expiry_timestamp: PosixTime,
   created_at: PosixTime,
 }
@@ -52,19 +59,16 @@ pub type OracleSettings {
 }
 
 pub type AggregateMessage {
-  node_feeds: List<NodeFeed>,
+  node_feeds_sorted_by_feed: Pairs<NodeId, NodeFeed>,
+  node_feeds_count: Int,
   timestamp: PosixTime,
 }
 
-pub type NodeFeed {
-  value: Int,
-  signature: ByteArray,
-}
-
+// TODO separate reward account datum from mutable settings datum to prevent contention of odv aggregation and reward consensus
 /// Mutable oracle settings and reward distribution data
 pub type RewardDatum {
-  /// list of oracle nodes, node id is its index inside nodes list
-  nodes: List<Node>,
+  /// list of oracle nodes mapped to node reward amount, node id is its index inside nodes list
+  nodes_to_rewards: Pairs<Node, Int>,
   /// configuration of oracle fees
   fee_info: FeeConfig,
   /// aggregation is considered live, i.e. usable by dapps during this period
@@ -72,14 +76,16 @@ pub type RewardDatum {
   /// this is length of tx validity interval, so technically its value equals time absolute uncertainty times two,
   /// because we are taking tx validity interval middle as current time value
   time_absolute_uncertainty: PosixTimeDiff,
+  /// see interquartile range (IQR) and Tukey fences methods for outlier detection,
+  /// recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
+  iqr_fence_multiplier: Percent,
   /// if oracle is in closing state, then this field will have a certain timestamp value
   closing_period_started_at: Option<PosixTime>,
 }
 
 pub type Node {
   payment_vkh: VerificationKeyHash,
-  feed_verification_key: ByteArray,
-  reward: Int,
+  feed_vkh: VerificationKeyHash,
 }
 
 pub type FeeConfig {
@@ -89,7 +95,6 @@ pub type FeeConfig {
 
 pub type RewardPrices {
   node_fee: Int,
-  consensus_fee: Int,
   platform_fee: Int,
 }
 
