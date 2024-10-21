@@ -38,6 +38,7 @@ use services/protocol_token.{
 }
 use services/time.{get_current_time}
 
+// TODO move constants to toml config or to env
 pub const core_settings_token_name: AssetName = "CoreSettings"
 
 pub const reward_account_token_name: AssetName = "RewardAccount"
@@ -56,6 +57,7 @@ pub type MintingRedeemer {
   Burn
 }
 
+// TODO move redeemers to lib to see documentation
 /// Types of actions for Oracle smart contract
 /// * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain
 /// * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO

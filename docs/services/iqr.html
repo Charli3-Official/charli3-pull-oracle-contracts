@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>services/multisig - charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>services/iqr - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
@@ -188,13 +188,6 @@
 
         
 
-<h2>Types</h2>
-<ul>
-  
-  <li><a href="#Multisig">Multisig</a></li>
-  
-</ul>
-
 
 
 
@@ -203,7 +196,12 @@
 <ul>
   
     
-        <li><a href="#check_multisig">check_multisig</a></li>
+        <li><a href="#iqr_fence">iqr_fence</a></li>
+
+      
+  
+    
+        <li><a href="#quantile">quantile</a></li>
 
       
   
@@ -312,16 +310,16 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="../services/iqr.html">
-	      iqr
+	      <li data-indent="1" data-current><a href="../services/iqr.html">
+	      <strong>iqr</strong>
 	      </a></li>
 	    
 	  
         
 	  
 	    
-	      <li data-indent="1" data-current><a href="../services/multisig.html">
-	      <strong>multisig</strong>
+	      <li data-indent="1"><a href="../services/multisig.html">
+	      multisig
 	      </a></li>
 	    
 	  
@@ -356,56 +354,14 @@
       <main class="content">
         
 <h1 id="module-name" class="module-name">
-  <a href="#module-name">services/multisig</a>
+  <a href="#module-name">services/iqr</a>
 </h1>
+<p>To ensure a more reliable outlier detection using IQR, it’s advisable to have a sample size of at least 20-30 data points,
+i.e. five points per quartile.
+Naturally, minimum number of points is four, to have at least one element in earch quartile,
+but beware that IQR could become useless for sample sizes of 4-10.</p>
 
 
-
-<section class="module-members">
-  <h1 id="module-types" class="module-member-kind">
-    <a href="#module-types">Types</a>
-  </h1>
-
-  
-  <div class="member">
-    <div class="member-name">
-      <h2 id="Multisig">
-        <a href="#Multisig">
-	  Multisig
-        </a>
-      </h2>
-      
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/multisig.ak#L7-L10"></a>
-      
-    </div>
-    <div class="custom-type-constructors">
-      <div class="rendered-markdown"><p>This type represents an entity with multisig capabilities - e.g. a multisig wallet:</p>
-<ul>
-<li>allowed_signatories - Verification key hashed allowed for authorization</li>
-<li>required_signatories_count - Minimum required number of signatories for authorization</li>
-</ul>
-</div>
-      
-      <h3>Constructors</h3>
-      <ul class="constructor-list">
-        
-        <li class="constructor-item">
-          <div class="constructor-row">
-            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
-            <pre class="constructor-name"><code class="hljs aiken">Multisig {
-  allowed_signatories: List&lt;VerificationKeyHash&gt;,
-  required_signatories_count: Int,
-}</code></pre>
-          </div>
-	  
-        </li>
-        
-      </ul>
-      
-    </div>
-  </div>
-  
-</section>
 
 
 
@@ -419,15 +375,30 @@
   
       <div class="member">
         <div class="member-name">
-          <h2 id="check_multisig"><pre class="hljs language-aiken">check_multisig(
-  multisig: Multisig,
-  tx_signatories: List&lt;VerificationKeyHash&gt;,
-) -&gt; Bool</pre></h2>
+          <h2 id="iqr_fence"><pre class="hljs language-aiken">iqr_fence(
+  sorted_input: List&lt;Int&gt;,
+  input_length: Int,
+  iqr_multiplier: Rational,
+) -&gt; (Rational, Rational)</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/multisig.ak#L12-L23"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/iqr.ak#L11-L28"></a>
           
         </div>
-        <div class="rendered-markdown"></div>
+        <div class="rendered-markdown"><p>See interquartile range (IQR) and Tukey fences methods for outlier detection</p>
+</div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="quantile"><pre class="hljs language-aiken">quantile(xs: List&lt;Int&gt;, n: Int, q: Rational) -&gt; Rational</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/iqr.ak#L31-L59"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>Returns weighted (by proximity) average of the two elements closest to the quantile index q * (n - 1)</p>
+</div>
       </div>
     
   

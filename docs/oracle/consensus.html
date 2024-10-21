@@ -205,11 +205,6 @@
 
       
   
-    
-        <li><a href="#iqr_fences">iqr_fences</a></li>
-
-      
-  
 </ul>
 
 
@@ -223,6 +218,18 @@
         
 	  
 	    <li data-indent="1"><span>aiken</span></li>
+	  
+        
+	  
+	    <li data-indent="2"><span>collection</span></li>
+	  
+        
+	  
+	    
+	      <li data-indent="3"><a href="../ext/aiken/collection/list.html">
+	      list
+	      </a></li>
+	    
 	  
         
 	  
@@ -303,6 +310,14 @@
         
 	  
 	    
+	      <li data-indent="1"><a href="../services/iqr.html">
+	      iqr
+	      </a></li>
+	    
+	  
+        
+	  
+	    
 	      <li data-indent="1"><a href="../services/multisig.html">
 	      multisig
 	      </a></li>
@@ -356,9 +371,9 @@
   
       <div class="member">
         <div class="member-name">
-          <h2 id="median"><pre class="hljs language-aiken">median(node_feeds: List&lt;NodeFeed&gt;) -&gt; OracleFeed</pre></h2>
+          <h2 id="median"><pre class="hljs language-aiken">median(node_feeds_sorted: List&lt;NodeFeed&gt;, node_feeds_count: Int) -&gt; OracleFeed</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/consensus.ak#L9-L23"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/consensus.ak#L9-L25"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -370,32 +385,14 @@
         <div class="member-name">
           <h2 id="consensus_by_iqr"><pre class="hljs language-aiken">consensus_by_iqr(
   node_feeds: Pairs&lt;NodeId, NodeFeed&gt;,
+  node_feeds_count: Int,
   iqr_fence_multiplier: Percent,
 ) -&gt; List&lt;NodeId&gt;</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/consensus.ak#L26-L51"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/consensus.ak#L28-L57"></a>
           
         </div>
         <div class="rendered-markdown"><p>Returns list of nodes which are not outliers using interquartile range algorithm (IQR).</p>
-</div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="iqr_fences"><pre class="hljs language-aiken">iqr_fences(
-  node_feeds: List&lt;NodeFeed&gt;,
-  iqr_fence_multiplier: Percent,
-) -&gt; (NodeFeed, NodeFeed)</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/consensus.ak#L57-L89"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>To ensure a more reliable outlier detection using IQR, it’s advisable to have a sample size of at least 20-30 data points,
-i.e. five points per quartile.
-Naturally, minimum number of points is four, to have at least one element in earch quartile,
-but beware that IQR could become useless for sample sizes of 4-10.</p>
 </div>
       </div>
     
@@ -522,9 +519,9 @@ but beware that IQR could become useless for sample sizes of 4-10.</p>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1729077246"></script>
+    <script src="../js/index.js?v=1729518268"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1729077246"></script>
+    <script src="../search-data.js?v=1729518268"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
