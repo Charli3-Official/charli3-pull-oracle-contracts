@@ -252,14 +252,24 @@ pub fn oracle_fees_were_transfered(
 ) -> Bool {
   trace @"oracle_fees_were_transfered"
 
-  let actual_fee = assets.quantity_of(out_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(out_value, fee_token.policy_id, fee_token.name)
+  let actual_fee =
+    assets.quantity_of(out_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(
+      in_value,
+      fee_token.policy_id,
+      fee_token.name,
+    )
   let required_fee =
-    aggregations
-      |> list.foldr(
-          assets.zero,
-          fn(aggregation, acc) { assets.merge(acc, aggregation.value) },
+    list.foldr(
+      aggregations,
+      0,
+      fn(aggregation, acc) {
+        acc + assets.quantity_of(
+          aggregation.value,
+          fee_token.policy_id,
+          fee_token.name,
         )
-      |> assets.quantity_of(fee_token.policy_id, fee_token.name)
+      },
+    )
 
   actual_fee == required_fee
 }

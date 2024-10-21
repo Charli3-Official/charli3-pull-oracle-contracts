@@ -326,12 +326,15 @@ validator oracle_manager(settings: OracleSettings) {
           median == oracle_feed && median == aggstate.oracle_feed
 
         let fees_transfered =
-          assets.negate(in_value)
-            |> assets.merge(out_value, _)
-            |> assets.quantity_of(
-                settings.fee_token.policy_id,
-                settings.fee_token.name,
-              )
+          assets.quantity_of(
+            out_value,
+            settings.fee_token.policy_id,
+            settings.fee_token.name,
+          ) - assets.quantity_of(
+            in_value,
+            settings.fee_token.policy_id,
+            settings.fee_token.name,
+          )
         let minimum_fee_amout =
           convert_reward_prices(
             reference_inputs,
