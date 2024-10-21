@@ -320,29 +320,30 @@ pub fn validate_message_form(message: AggregateMessage) -> Bool {
 
   let node_feeds = pairs.values(message.node_feeds_sorted_by_feed)
 
-  let length = get_length_and_check_order(node_feeds, 0, None)
+  let length = get_length_and_check_order(node_feeds)
 
   length == message.node_feeds_count
 }
 
-fn get_length_and_check_order(
+fn get_length_and_check_order(node_feeds_sorted: List<NodeFeed>) -> Int {
+  when node_feeds_sorted is {
+    [] -> 0
+    [x, ..xs] -> do_get_length_and_check_order(xs, 1, x)
+  }
+}
+
+fn do_get_length_and_check_order(
   node_feeds_sorted: List<NodeFeed>,
-  count: Int,
-  previous: Option<NodeFeed>,
+  n: Int,
+  prev: NodeFeed,
 ) -> Int {
   when node_feeds_sorted is {
-    [] -> count
-    [curr, ..rest] ->
-      previous
-        |> option.map(
-            fn(prev: NodeFeed) -> Int {
-              if prev <= curr {
-                get_length_and_check_order(rest, count + 1, Some(curr))
-              } else {
-                fail @"check node feeds order"
-              }
-            },
-          )
-        |> option.or_else(get_length_and_check_order(rest, count + 1, Some(curr)))
+    [] -> n
+    [x, ..xs] ->
+      if prev <= x {
+        do_get_length_and_check_order(xs, n + 1, x)
+      } else {
+        fail @"check node feeds order"
+      }
   }
 }
