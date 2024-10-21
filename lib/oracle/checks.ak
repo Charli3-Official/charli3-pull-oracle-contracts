@@ -1,16 +1,18 @@
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/collection/pairs
 use aiken/crypto.{ScriptHash}
 use aiken/interval
 use aiken/math/rational
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, Output, ValidityRange} as tx
+use ext/aiken/collection/list.{indexed_zip_with} as list_ext
 use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, OracleDatum, OracleFeed,
+  AggState, AggStateDatum, AggregateMessage, NodeFeed, OracleDatum, OracleFeed,
   RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
   has_no_rewards,
 }
@@ -231,16 +233,23 @@ pub fn oracle_fees_were_transfered(
   trace @"oracle_fees_were_transfered"
 
   let actual_fee =
-    assets.negate(in_value)
-      |> assets.merge(out_value, _)
-      |> assets.quantity_of(fee_token.policy_id, fee_token.name)
+    assets.quantity_of(out_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(
+      in_value,
+      fee_token.policy_id,
+      fee_token.name,
+    )
   let required_fee =
-    aggregations
-      |> list.foldr(
-          assets.zero,
-          fn(aggregation, acc) { assets.merge(acc, aggregation.value) },
+    list.foldr(
+      aggregations,
+      0,
+      fn(aggregation, acc) {
+        acc + assets.quantity_of(
+          aggregation.value,
+          fee_token.policy_id,
+          fee_token.name,
         )
-      |> assets.quantity_of(fee_token.policy_id, fee_token.name)
+      },
+    )
 
   actual_fee == required_fee
 }
@@ -258,13 +267,22 @@ pub fn check_reward_distribution(
     list.length(in_distribution) == list.length(out_distribution)
 
   let node_id_to_reward =
-    list.zip(out_distribution, in_distribution)
-      |> list.indexed_map(fn(index, (out, in)) { (index, out - in) })
+    indexed_zip_with(
+      out_distribution,
+      in_distribution,
+      fn(index, out, in) { (index, out - in) },
+    )
 
   let beneficiaries =
     list.flat_map(
       aggregations,
-      fn(a) { consensus_by_iqr(a.message.node_feeds, iqr_fence_multiplier) },
+      fn(a) {
+        consensus_by_iqr(
+          a.message.node_feeds_sorted_by_feed,
+          a.message.node_feeds_count,
+          iqr_fence_multiplier,
+        )
+      },
     )
 
   let check_node =
@@ -277,4 +295,37 @@ pub fn check_reward_distribution(
     }
 
   list.all(node_id_to_reward, check_node) && check_nodes_count?
+}
+
+pub fn validate_message_form(message: AggregateMessage) -> Bool {
+  trace @"validate_message_form"
+
+  let node_feeds = pairs.values(message.node_feeds_sorted_by_feed)
+
+  let length = get_length_and_check_order(node_feeds)
+
+  length == message.node_feeds_count
+}
+
+fn get_length_and_check_order(node_feeds_sorted: List<NodeFeed>) -> Int {
+  when node_feeds_sorted is {
+    [] -> 0
+    [x, ..xs] -> do_get_length_and_check_order(xs, 1, x)
+  }
+}
+
+fn do_get_length_and_check_order(
+  node_feeds_sorted: List<NodeFeed>,
+  n: Int,
+  prev: NodeFeed,
+) -> Int {
+  when node_feeds_sorted is {
+    [] -> n
+    [x, ..xs] ->
+      if prev <= x {
+        do_get_length_and_check_order(xs, n + 1, x)
+      } else {
+        fail @"check node feeds order"
+      }
+  }
 }

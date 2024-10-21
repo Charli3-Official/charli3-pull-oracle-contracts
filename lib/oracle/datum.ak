@@ -62,7 +62,8 @@ pub type OracleConfiguration {
 }
 
 pub type AggregateMessage {
-  node_feeds: Pairs<NodeId, NodeFeed>,
+  node_feeds_sorted_by_feed: Pairs<NodeId, NodeFeed>,
+  node_feeds_count: Int,
   timestamp: PosixTime,
 }
 
@@ -77,7 +78,7 @@ pub type OracleSettingsDatum {
   /// this is length of tx validity interval, so technically its value equals time absolute uncertainty times two,
   /// because we are taking tx validity interval middle as current time value
   time_absolute_uncertainty: PosixTimeDiff,
-  /// see interquartile range (IQR) and turkey fences methods for outlier detection,
+  /// see interquartile range (IQR) and Tukey fences methods for outlier detection,
   /// recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
   iqr_fence_multiplier: Percent,
   /// if oracle is in closing state, then this field will have a certain timestamp value
