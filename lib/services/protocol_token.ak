@@ -27,6 +27,17 @@ pub fn find_own_protocol_policy_id(
   policy_id
 }
 
+/// Find one protocol NFT inside transaction inputs.
+pub fn spends_script_utxo_with_nft(
+  script_hash: ScriptHash,
+  nft: Asset,
+  tx_inputs: List<Input>,
+) -> Bool {
+  let inputs = find_script_inputs_by_token(tx_inputs, script_hash, nft)
+
+  list.length(inputs) == 1
+}
+
 /// Find own protocol NFT inside transaction inputs.
 /// Note that it's not required to check_own_protocol_token in tx inputs
 /// because it's already been checked for each output.
@@ -69,24 +80,53 @@ pub fn spends_protocol_nft_inputs(
 pub fn find_script_outputs_by_token(
   tx_outputs: List<Output>,
   script_hash: ScriptHash,
+  protocol_token: Asset,
+) -> List<Output> {
+  find_script_outputs(tx_outputs, script_hash)
+    |> list.filter(fn(o) { check_own_protocol_token(o.value, protocol_token) })
+}
+
+/// Find own protocol NFT inside transaction outputs allowing asset
+pub fn find_script_outputs_by_token_allowing_asset(
+  tx_outputs: List<Output>,
+  script_hash: ScriptHash,
   allowed_asset: PolicyId,
   protocol_token: Asset,
 ) -> List<Output> {
   find_script_outputs(tx_outputs, script_hash)
     |> list.filter(
         fn(o) {
-          check_own_protocol_token(o.value, allowed_asset, protocol_token)
+          check_own_protocol_token_allowing_asset(
+            o.value,
+            allowed_asset,
+            protocol_token,
+          )
         },
       )
 }
 
-/// Returns true if protocol NFT was found and it's the only asset except lovelace and one allowed
+/// Returns true if protocol NFT was found and it's the only asset except lovelace
 pub fn check_own_protocol_token(
+  output_value: Value,
+  protocol_token: Asset,
+) -> Bool {
+  trace @"check_own_protocol_token"
+
+  let tokens =
+    output_value
+      |> assets.without_lovelace
+      |> assets.flatten
+
+  tokens == [(protocol_token.policy_id, protocol_token.name, 1)]
+}
+
+/// Returns true if protocol NFT was found and it's the only asset except lovelace and one allowed
+pub fn check_own_protocol_token_allowing_asset(
   output_value: Value,
   allowed_asset: PolicyId,
   protocol_token: Asset,
 ) -> Bool {
-  trace @"check_own_protocol_token"
+  trace @"check_own_protocol_token_allowing_asset"
 
   let tokens =
     output_value

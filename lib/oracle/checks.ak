@@ -1,4 +1,3 @@
-use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/collection/pairs
@@ -13,12 +12,13 @@ use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Node, NodeFeed, OracleDatum,
-  OracleFeed, RewardConsensusPending, RewardDatum, RewardPrices, RewardTransport,
-  RewardTransportDatum, has_no_rewards,
+  AggState, AggStateDatum, AggregateMessage, NodeFeed, OracleDatum, OracleFeed,
+  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
+  has_no_rewards,
 }
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
+  find_script_outputs_by_token_allowing_asset,
 }
 
 pub type AnAggregation {
@@ -27,35 +27,16 @@ pub type AnAggregation {
   value: Value,
 }
 
-pub fn spends_reward_acc_utxo(
-  script_hash: ScriptHash,
-  reward_acc_nft: Asset,
-  tx_inputs: List<Input>,
-) -> Bool {
-  trace @"spends_reward_acc_utxo"
-
-  let inputs =
-    find_script_inputs_by_token(tx_inputs, script_hash, reward_acc_nft)
-
-  list.length(inputs) == 1
-}
-
 pub fn returns_empty_reward_outputs(
   script_hash: ScriptHash,
   reward_transport_nft: Asset,
-  allowed_asset: PolicyId,
   utxo_count: Int,
   tx_outputs: List<Output>,
 ) -> Bool {
   trace @"returns_empty_reward_outputs"
 
   let outputs =
-    find_script_outputs_by_token(
-      tx_outputs,
-      script_hash,
-      allowed_asset,
-      reward_transport_nft,
-    )
+    find_script_outputs_by_token(tx_outputs, script_hash, reward_transport_nft)
   let extractor =
     fn(output: Output) -> RewardTransportDatum {
       expect tx.InlineDatum(datum) = output.datum
@@ -72,19 +53,13 @@ pub fn returns_empty_reward_outputs(
 pub fn returns_empty_aggstate_outputs(
   script_hash: ScriptHash,
   aggstate_nft: Asset,
-  allowed_asset: PolicyId,
   utxo_count: Int,
   tx_outputs: List<Output>,
 ) -> Bool {
   trace @"returns_empty_aggstate_outputs"
 
   let outputs =
-    find_script_outputs_by_token(
-      tx_outputs,
-      script_hash,
-      allowed_asset,
-      aggstate_nft,
-    )
+    find_script_outputs_by_token(tx_outputs, script_hash, aggstate_nft)
   let extractor =
     fn(output: Output) -> Option<AggStateDatum> {
       expect tx.InlineDatum(datum) = output.datum
@@ -102,12 +77,27 @@ pub fn find_out_datum_and_value(
   tx_outputs: List<Output>,
   script_hash: ScriptHash,
   protocol_token: Asset,
-  allowed_asset: PolicyId,
 ) -> (OracleDatum, Value) {
   trace @"find_out_datum_and_value"
 
   expect [script_out] =
-    find_script_outputs_by_token(
+    find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
+  expect tx.InlineDatum(datum) = script_out.datum
+  expect oracle_datum: OracleDatum = datum
+
+  (oracle_datum, script_out.value)
+}
+
+pub fn find_out_datum_and_value_allowing_asset(
+  tx_outputs: List<Output>,
+  script_hash: ScriptHash,
+  protocol_token: Asset,
+  allowed_asset: PolicyId,
+) -> (OracleDatum, Value) {
+  trace @"find_out_datum_and_value_allowing_asset"
+
+  expect [script_out] =
+    find_script_outputs_by_token_allowing_asset(
       tx_outputs,
       script_hash,
       allowed_asset,
@@ -234,17 +224,6 @@ pub fn calculate_minimum_fee_amout(
   reward_prices.node_fee * nodes_count + reward_prices.platform_fee
 }
 
-pub fn are_mutable_settings_unchanged(
-  in_core_datum: RewardDatum,
-  out_core_datum: RewardDatum,
-) -> Bool {
-  trace @"are_mutable_settings_unchanged"
-
-  in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty && in_core_datum.closing_period_started_at == out_core_datum.closing_period_started_at && pairs.keys(
-    in_core_datum.nodes_to_rewards,
-  ) == pairs.keys(out_core_datum.nodes_to_rewards)
-}
-
 pub fn oracle_fees_were_transfered(
   fee_token: Asset,
   aggregations: List<AnAggregation>,
@@ -277,20 +256,21 @@ pub fn oracle_fees_were_transfered(
 
 pub fn check_reward_distribution(
   aggregations: List<AnAggregation>,
-  in_distribution: Pairs<Node, Int>,
-  out_distribution: Pairs<Node, Int>,
+  in_distribution: List<Int>,
+  out_distribution: List<Int>,
   reward_prices: RewardPrices,
   iqr_fence_multiplier: Percent,
 ) -> Bool {
   trace @"check_reward_distribution"
 
+  let check_nodes_count =
+    list.length(in_distribution) == list.length(out_distribution)
+
   let node_id_to_reward =
     indexed_zip_with(
       out_distribution,
       in_distribution,
-      fn(index, out, in) {
-        (index, builtin.snd_pair(out) - builtin.snd_pair(in))
-      },
+      fn(index, out, in) { (index, out - in) },
     )
 
   let beneficiaries =
@@ -314,7 +294,7 @@ pub fn check_reward_distribution(
       required_reward == actual_reward
     }
 
-  list.all(node_id_to_reward, check_node)
+  list.all(node_id_to_reward, check_node) && check_nodes_count?
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {

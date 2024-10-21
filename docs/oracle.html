@@ -204,7 +204,9 @@
   
   <li><a href="#aggstate_token_name">aggstate_token_name</a></li>
   
-  <li><a href="#reward_acc_token_name">reward_acc_token_name</a></li>
+  <li><a href="#core_settings_token_name">core_settings_token_name</a></li>
+  
+  <li><a href="#reward_account_token_name">reward_account_token_name</a></li>
   
   <li><a href="#reward_transport_token_name">reward_transport_token_name</a></li>
   
@@ -223,18 +225,6 @@
         
 	  
 	    <li data-indent="1"><span>aiken</span></li>
-	  
-        
-	  
-	    <li data-indent="2"><span>collection</span></li>
-	  
-        
-	  
-	    
-	      <li data-indent="3"><a href="./ext/aiken/collection/list.html">
-	      list
-	      </a></li>
-	    
 	  
         
 	  
@@ -307,14 +297,6 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="./services/iqr.html">
-	      iqr
-	      </a></li>
-	    
-	  
-        
-	  
-	    
 	      <li data-indent="1"><a href="./services/nft_based_auth.html">
 	      nft_based_auth
 	      </a></li>
@@ -346,7 +328,7 @@
   <a href="#module-name">oracle</a>
 </h1>
 <ol>
-<li>oracle_nfts - this validator will act as one time policy for RewardAccount
+<li>oracle_nfts - this validator will act as one time policy for CoreSettings and RewardAccount
 and as a scaling policy for RewardTransport with AggState,
 each policy id is unique for one trade pair (ticker), or potentially even multiple tickers with same nodes and fee token;</li>
 <li>oracle_manager - main oracle validator, see OracleRedeemer for list of allowed actions.</li>
@@ -368,13 +350,13 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L48-L52"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L51-L55"></a>
       
     </div>
     <div class="custom-type-constructors">
       <div class="rendered-markdown"><p>Types of actions for Oracle NFTs (protocol tokens)</p>
 <ul>
-<li>Mint  - Oracle start: one time mint for RewardAccount; any number of mints for RewardTransport and AggState</li>
+<li>Mint  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState</li>
 <li>Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState</li>
 <li>Burn  - Oracle close: all tokens are burned</li>
 </ul>
@@ -420,7 +402,7 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L67-L81"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L70-L84"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -559,7 +541,7 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
     <div class="member-name">
       <h2 id="aggstate_token_name"><pre class="hljs language-aiken">aggstate_token_name: ByteArray = &quot;AggState&quot;</pre></h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L42-L42"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L45-L45"></a>
       
     </div>
     <div class="rendered-markdown"></div>
@@ -567,9 +549,19 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
   
   <div class="member">
     <div class="member-name">
-      <h2 id="reward_acc_token_name"><pre class="hljs language-aiken">reward_acc_token_name: ByteArray = &quot;RewardAcc&quot;</pre></h2>
+      <h2 id="core_settings_token_name"><pre class="hljs language-aiken">core_settings_token_name: ByteArray = &quot;CoreSettings&quot;</pre></h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L38-L38"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L39-L39"></a>
+      
+    </div>
+    <div class="rendered-markdown"></div>
+  </div>
+  
+  <div class="member">
+    <div class="member-name">
+      <h2 id="reward_account_token_name"><pre class="hljs language-aiken">reward_account_token_name: ByteArray = &quot;RewardAccount&quot;</pre></h2>
+      
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L41-L41"></a>
       
     </div>
     <div class="rendered-markdown"></div>
@@ -579,7 +571,7 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
     <div class="member-name">
       <h2 id="reward_transport_token_name"><pre class="hljs language-aiken">reward_transport_token_name: ByteArray = &quot;RewardT&quot;</pre></h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L40-L40"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/validators/oracle.ak#L43-L43"></a>
       
     </div>
     <div class="rendered-markdown"></div>
@@ -709,9 +701,9 @@ each policy id is unique for one trade pair (ticker), or potentially even multip
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="./js/lunr.min.js?v=1.1.4"></script>
-    <script src="./js/index.js?v=1729505212"></script>
+    <script src="./js/index.js?v=1729252853"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="./search-data.js?v=1729505212"></script>
+    <script src="./search-data.js?v=1729252853"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {

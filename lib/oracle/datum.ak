@@ -14,15 +14,18 @@ pub type NodeId =
 pub type NodeFeed =
   Int
 
-/// There are three types of oracle utxos:
+/// There are four types of oracle utxos:
+/// 0. OracleSettings - one for each oracle,
+///    acts as single point of truth for oracle settings and node list.
 /// 1. RewardAccount - one for each oracle,
-///    acts as single point of truth for oracle settings, node list, and reward distribution.
+///    acts as single point of truth for reward distribution.
 /// 2. RewardTransport - many for each oracle, with possibility of scaling their number on demand,
 ///    users permorm ODV aggregation with those by providing node feeds list constructed off-chain.
 /// 3. AggState - each AggState utxo is complementary to RewardTransport, it containts the oracle feed value,
 ///    that will be referenced by a user of a DApp.
 pub type OracleDatum {
-  RewardAccount(RewardDatum)
+  OracleSettings(OracleSettingsDatum)
+  RewardAccount(RewardAccountDatum)
   RewardTransport(RewardTransportDatum)
   AggState(Option<AggStateDatum>)
 }
@@ -51,7 +54,7 @@ pub type AggStateDatum {
 /// * closing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * fee_token - oracle nodes will be sure that platform won't update reward currency
-pub type OracleSettings {
+pub type OracleConfiguration {
   platform_auth_nft: PolicyId,
   closing_period_length: PosixTimeDiff,
   reward_dismissing_period_length: PosixTimeDiff,
@@ -64,11 +67,10 @@ pub type AggregateMessage {
   timestamp: PosixTime,
 }
 
-// TODO separate reward account datum from mutable settings datum to prevent contention of odv aggregation and reward consensus
-/// Mutable oracle settings and reward distribution data
-pub type RewardDatum {
-  /// list of oracle nodes mapped to node reward amount, node id is its index inside nodes list
-  nodes_to_rewards: Pairs<Node, Int>,
+/// Mutable oracle settings
+pub type OracleSettingsDatum {
+  /// list of oracle nodes, node id is its index inside nodes list
+  nodes: List<Node>,
   /// configuration of oracle fees
   fee_info: FeeConfig,
   /// aggregation is considered live, i.e. usable by dapps during this period
@@ -81,6 +83,12 @@ pub type RewardDatum {
   iqr_fence_multiplier: Percent,
   /// if oracle is in closing state, then this field will have a certain timestamp value
   closing_period_started_at: Option<PosixTime>,
+}
+
+/// Reward distribution datum
+pub type RewardAccountDatum {
+  /// oracle node id mapped to node reward amount
+  nodes_to_rewards: List<Int>,
 }
 
 pub type Node {
@@ -98,8 +106,8 @@ pub type RewardPrices {
   platform_fee: Int,
 }
 
-pub fn is_oracle_closing(reward_datum: RewardDatum) -> Bool {
-  option.is_some(reward_datum.closing_period_started_at)
+pub fn is_oracle_closing(settings: OracleSettingsDatum) -> Bool {
+  option.is_some(settings.closing_period_started_at)
 }
 
 pub fn has_no_rewards(reward_transport: RewardTransportDatum) -> Bool {
