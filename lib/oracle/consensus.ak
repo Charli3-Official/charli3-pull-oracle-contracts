@@ -2,25 +2,23 @@ use aiken/builtin
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/math/rational
-use aiken/option
 use ext/aiken/math/rational.{Percent, per_cent} as ext
 use oracle/datum.{NodeFeed, NodeId, OracleFeed}
-use services/iqr.{iqr_fence}
+use services/iqr.{iqr_fence, quantile}
 
+// TODO fail if node_feeds_count < 4 in mainnet
 pub fn median(
   node_feeds_sorted: List<NodeFeed>,
   node_feeds_count: Int,
 ) -> OracleFeed {
-  if node_feeds_count % 2 == 0 {
-    option.map2(
-      list.at(node_feeds_sorted, node_feeds_count / 2),
-      list.at(node_feeds_sorted, node_feeds_count / 2 - 1),
-      fn(a, b) { ( a + b ) / 2 },
-    )
-  } else {
-    list.at(node_feeds_sorted, node_feeds_count / 2)
+  when node_feeds_sorted is {
+    [] -> fail @"median: empty list"
+    [x] -> x
+    xs -> {
+      expect Some(midpoint) = rational.new(1, 2)
+      quantile(xs, node_feeds_count, midpoint) |> rational.round_even
+    }
   }
-    |> option.or_else(fail @"median: empty list")
 }
 
 /// Returns list of nodes which are not outliers using interquartile range algorithm (IQR).
