@@ -71,6 +71,8 @@ pub type AggregateMessage {
 pub type OracleSettingsDatum {
   /// list of oracle nodes, node id is its index inside nodes list
   nodes: List<Node>,
+  /// distinct node signatures number that passes multisig check
+  required_node_signatures_count: Int,
   /// configuration of oracle fees
   fee_info: FeeConfig,
   /// aggregation is considered live, i.e. usable by dapps during this period

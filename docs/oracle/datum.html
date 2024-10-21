@@ -316,7 +316,23 @@
 	  
         
 	  
+	    
+	      <li data-indent="1"><a href="../oracle/multisig.html">
+	      multisig
+	      </a></li>
+	    
+	  
+        
+	  
 	    <li data-indent="0"><span>services</span></li>
+	  
+        
+	  
+	    
+	      <li data-indent="1"><a href="../services/multisig.html">
+	      multisig
+	      </a></li>
+	    
 	  
         
 	  
@@ -435,7 +451,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L98-L101"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L100-L103"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -465,7 +481,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L93-L96"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L95-L98"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -672,7 +688,7 @@ that will be referenced by a user of a DApp.</li>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L70-L85"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L70-L87"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -687,6 +703,7 @@ that will be referenced by a user of a DApp.</li>
             <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
             <pre class="constructor-name"><code class="hljs aiken">OracleSettingsDatum {
   nodes: List&lt;Node&gt;,
+  required_node_signatures_count: Int,
   fee_info: FeeConfig,
   aggregation_liveness_period: PosixTimeDiff,
   time_absolute_uncertainty: PosixTimeDiff,
@@ -698,6 +715,9 @@ that will be referenced by a user of a DApp.</li>
           <div class="constructor-item-docs">
             <h4><code>.nodes</code></h4>
 <p>list of oracle nodes, node id is its index inside nodes list</p>
+<hr/>
+<h4><code>.required_node_signatures_count</code></h4>
+<p>distinct node signatures number that passes multisig check</p>
 <hr/>
 <h4><code>.fee_info</code></h4>
 <p>configuration of oracle fees</p>
@@ -734,7 +754,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L88-L91"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L90-L93"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -772,7 +792,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L103-L106"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L105-L108"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -854,7 +874,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="is_oracle_closing"><pre class="hljs language-aiken">is_oracle_closing(settings: OracleSettingsDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L108-L110"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L110-L112"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -866,7 +886,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="has_no_rewards"><pre class="hljs language-aiken">has_no_rewards(reward_transport: RewardTransportDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L112-L117"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L114-L119"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -995,9 +1015,9 @@ and transfer user provided fees into RewardAccount utxo.</li>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1729252853"></script>
+    <script src="../js/index.js?v=1729077246"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1729252853"></script>
+    <script src="../search-data.js?v=1729077246"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
