@@ -15,4 +15,8 @@ name = "aiken-lang/stdlib"
 version = "v2.1.0"
 source = "github"
 
-[config]
+[config.default]
+disallow_less_than_four_nodes = true
+
+[config.testnet]
+disallow_less_than_four_nodes = false

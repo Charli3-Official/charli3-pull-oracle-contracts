@@ -2,21 +2,25 @@ use aiken/builtin
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/math/rational
+use config
 use ext/aiken/math/rational.{Percent, per_cent} as ext
 use oracle/datum.{NodeFeed, NodeId, OracleFeed}
 use services/iqr.{iqr_fence, quantile}
 
-// TODO fail if node_feeds_count < 4 in mainnet
 pub fn median(
   node_feeds_sorted: List<NodeFeed>,
   node_feeds_count: Int,
 ) -> OracleFeed {
-  when node_feeds_sorted is {
-    [] -> fail @"median: empty list"
-    [x] -> x
-    xs -> {
-      expect Some(midpoint) = rational.new(1, 2)
-      quantile(xs, node_feeds_count, midpoint) |> rational.round_even
+  if config.disallow_less_than_four_nodes && node_feeds_count < 4 {
+    fail @"median: less than four nodes"
+  } else {
+    when node_feeds_sorted is {
+      [] -> fail @"median: empty list"
+      [x] -> x
+      xs -> {
+        expect Some(midpoint) = rational.new(1, 2)
+        quantile(xs, node_feeds_count, midpoint) |> rational.round_even
+      }
     }
   }
 }
@@ -28,7 +32,11 @@ pub fn consensus_by_iqr(
   iqr_fence_multiplier: Percent,
 ) -> List<NodeId> {
   if node_feeds_count < 4 {
-    pairs.keys(node_feeds)
+    if config.disallow_less_than_four_nodes {
+      fail @"consensus_by_iqr: less than four nodes"
+    } else {
+      pairs.keys(node_feeds)
+    }
   } else {
     expect Some(multiplier) = rational.new(iqr_fence_multiplier, per_cent)
     let (lower_fence, upper_fence) =
