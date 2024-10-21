@@ -8,6 +8,7 @@ use aiken/math/rational
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input, Output, ValidityRange} as tx
+use ext/aiken/collection/list.{indexed_zip_with} as list_ext
 use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
@@ -284,12 +285,13 @@ pub fn check_reward_distribution(
   trace @"check_reward_distribution"
 
   let node_id_to_reward =
-    list.zip(out_distribution, in_distribution)
-      |> list.indexed_map(
-          fn(index, (out, in)) {
-            (index, builtin.snd_pair(out) - builtin.snd_pair(in))
-          },
-        )
+    indexed_zip_with(
+      out_distribution,
+      in_distribution,
+      fn(index, out, in) {
+        (index, builtin.snd_pair(out) - builtin.snd_pair(in))
+      },
+    )
 
   let beneficiaries =
     list.flat_map(
