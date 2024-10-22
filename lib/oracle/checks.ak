@@ -13,8 +13,8 @@ use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, NodeFeed, OracleDatum, OracleFeed,
-  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
-  has_no_rewards,
+  OracleSettingsDatum, RewardConsensusPending, RewardPrices, RewardTransport,
+  RewardTransportDatum, has_no_rewards,
 }
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
@@ -328,4 +328,22 @@ fn do_get_length_and_check_order(
         fail @"check node feeds order"
       }
   }
+}
+
+pub fn check_settings_sanity(
+  in_settings: OracleSettingsDatum,
+  out_settings: OracleSettingsDatum,
+) -> Bool {
+  trace @"check_settings_sanity"
+
+  let must_not_break_multisig =
+    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
+      out_settings.nodes,
+    )
+  let must_measure_time_precisely =
+    out_settings.aggregation_liveness_period > out_settings.time_absolute_uncertainty
+  let must_have_positive_intervals = out_settings.time_absolute_uncertainty > 0
+  let must_be_fair_about_outliers = out_settings.iqr_fence_multiplier > 100
+
+  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers
 }

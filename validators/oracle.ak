@@ -17,12 +17,12 @@ use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use ext/cardano/value.{Asset}
 use oracle/checks.{
-  calculate_minimum_fee_amout, check_reward_distribution, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_out_datum_and_value, find_out_datum_and_value_allowing_asset,
-  is_aggstate_expired, oracle_fees_were_transfered,
-  returns_empty_aggstate_outputs, returns_empty_reward_outputs,
-  validate_message_form,
+  calculate_minimum_fee_amout, check_reward_distribution, check_settings_sanity,
+  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
+  find_in_datum, find_out_datum_and_value,
+  find_out_datum_and_value_allowing_asset, is_aggstate_expired,
+  oracle_fees_were_transfered, returns_empty_aggstate_outputs,
+  returns_empty_reward_outputs, validate_message_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -464,17 +464,21 @@ validator oracle_manager(config: OracleConfiguration) {
         auth_by_nft(config.platform_auth_nft, inputs, outputs) && datum_left_unchanged?
       }
       // :: UpdateSettings
-      (UpdateSettings, OracleSettings(OracleSettingsDatum { .. })) -> {
+      (UpdateSettings, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, core_settings_token_name)
         let core_nft =
           Asset { policy_id: nft_policy_id, name: core_settings_token_name }
 
-        expect (OracleSettings(_), _out_value) =
+        expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        // TODO settings sanity check
-        auth_by_nft(config.platform_auth_nft, inputs, outputs)
+        let must_conserve_value = in_value == out_value
+
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && check_settings_sanity(
+          in_core_datum,
+          out_core_datum,
+        ) && must_conserve_value?
       }
       // :: SetFeeConfig
       (SetFeeConfig, OracleSettings(OracleSettingsDatum { .. })) -> {
@@ -487,7 +491,7 @@ validator oracle_manager(config: OracleConfiguration) {
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         // TODO fee config sanity check
-        // TODO all fees are transfered check
+        // TODO should be closing
         auth_by_nft(config.platform_auth_nft, inputs, outputs)
       }
       // :: AddNodes
