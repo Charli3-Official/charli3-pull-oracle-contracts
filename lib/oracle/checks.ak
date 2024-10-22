@@ -359,3 +359,12 @@ pub fn check_fee_settings_sanity(
 
   in_settings.nodes == out_settings.nodes && in_settings.required_node_signatures_count == out_settings.required_node_signatures_count && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_have_negative_price
 }
+
+pub fn check_closing_does_not_change_settings(
+  in_core_datum: OracleSettingsDatum,
+  out_core_datum: OracleSettingsDatum,
+) -> Bool {
+  trace @"check_closing_does_not_change_settings"
+
+  in_core_datum.nodes == out_core_datum.nodes && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
+}

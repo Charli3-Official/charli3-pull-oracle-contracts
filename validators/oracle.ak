@@ -17,13 +17,13 @@ use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use ext/cardano/value.{Asset}
 use oracle/checks.{
-  calculate_minimum_fee_amout, check_fee_settings_sanity,
-  check_reward_distribution, check_settings_sanity, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_out_datum_and_value, find_out_datum_and_value_allowing_asset,
-  is_aggstate_expired, oracle_fees_were_transfered,
-  returns_empty_aggstate_outputs, returns_empty_reward_outputs,
-  validate_message_form,
+  calculate_minimum_fee_amout, check_closing_does_not_change_settings,
+  check_fee_settings_sanity, check_reward_distribution, check_settings_sanity,
+  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
+  find_in_datum, find_out_datum_and_value,
+  find_out_datum_and_value_allowing_asset, is_aggstate_expired,
+  oracle_fees_were_transfered, returns_empty_aggstate_outputs,
+  returns_empty_reward_outputs, validate_message_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -71,6 +71,7 @@ pub type MintingRedeemer {
 /// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
 /// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
 /// * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards
+/// * ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily
 /// * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs
 pub type OracleRedeemer {
   OdvAggregate
@@ -84,7 +85,7 @@ pub type OracleRedeemer {
   ScaleDown
   DismissRewards
   CloseOracle
-  // TODO implement ReopenOracle - redeemer for cancelling oracle close
+  ReopenOracle
   RemoveOracle
 }
 
@@ -608,7 +609,7 @@ validator oracle_manager(config: OracleConfiguration) {
         let reward_transport_nft =
           Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
 
-        let must_return_empty_reward_utxos =
+        let must_return_empty_reward_utxo =
           returns_empty_reward_outputs(
             own_hash,
             reward_transport_nft,
@@ -622,7 +623,7 @@ validator oracle_manager(config: OracleConfiguration) {
             message.timestamp + config.reward_dismissing_period_length,
           )
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos && must_be_after_dismissing_period?
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period?
       }
       // :: CloseOracle
       (CloseOracle, OracleSettings(in_core_datum)) -> {
@@ -634,7 +635,7 @@ validator oracle_manager(config: OracleConfiguration) {
         let must_not_be_closing_already =
           is_oracle_closing(in_core_datum) |> not
 
-        expect (OracleSettings(out_core_datum), _out_value) =
+        expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         let current_time =
@@ -645,10 +646,33 @@ validator oracle_manager(config: OracleConfiguration) {
         let must_start_closing_period =
           out_core_datum.closing_period_started_at == Some(current_time)
 
-        let must_not_change_other_settings =
-          in_core_datum.nodes == out_core_datum.nodes && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
+        let must_conserve_value = in_value == out_value
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_not_be_closing_already? && must_start_closing_period? && must_not_change_other_settings?
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
+          in_core_datum,
+          out_core_datum,
+        ) && must_not_be_closing_already? && must_start_closing_period? && must_conserve_value?
+      }
+      // :: ReopenOracle
+      (ReopenOracle, OracleSettings(in_core_datum)) -> {
+        let nft_policy_id =
+          find_own_protocol_policy_id(in_value, core_settings_token_name)
+        let core_nft =
+          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+
+        let must_be_closing = is_oracle_closing(in_core_datum)
+
+        expect (OracleSettings(out_core_datum), out_value) =
+          find_out_datum_and_value(outputs, own_hash, core_nft)
+
+        let must_open_oracle = is_oracle_closing(out_core_datum) |> not
+
+        let must_conserve_value = in_value == out_value
+
+        auth_by_nft(config.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
+          in_core_datum,
+          out_core_datum,
+        ) && must_be_closing? && must_open_oracle? && must_conserve_value?
       }
       // :: RemoveOracle
       (RemoveOracle, RewardAccount(_)) -> {
