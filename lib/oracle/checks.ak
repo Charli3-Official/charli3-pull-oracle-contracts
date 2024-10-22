@@ -1,7 +1,7 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/collection/pairs
-use aiken/crypto.{ScriptHash}
+use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/interval
 use aiken/math/rational
 use aiken/option.{is_some}
@@ -12,9 +12,9 @@ use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, NodeFeed, OracleDatum, OracleFeed,
-  OracleSettingsDatum, RewardConsensusPending, RewardPrices, RewardTransport,
-  RewardTransportDatum, has_no_rewards,
+  AggState, AggStateDatum, AggregateMessage, Node, NodeFeed, NodeId, OracleDatum,
+  OracleFeed, OracleSettingsDatum, RewardConsensusPending, RewardPrices,
+  RewardTransport, RewardTransportDatum, has_no_rewards,
 }
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
@@ -367,4 +367,47 @@ pub fn check_closing_does_not_change_settings(
   trace @"check_closing_does_not_change_settings"
 
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
+}
+
+pub fn find_node_id_by_signature(
+  tx_signatories: List<VerificationKeyHash>,
+  nodes: List<Node>,
+) -> NodeId {
+  trace @"find_node_id_by_signature"
+
+  expect [(node_id, _)] =
+    list.indexed_map(nodes, fn(index, node) { (index, node.payment_vkh) })
+      |> list.filter(fn((_, node_vkh)) { list.has(tx_signatories, node_vkh) })
+
+  node_id
+}
+
+pub fn check_node_received_reward(
+  fee_token: Asset,
+  rewarded_node: NodeId,
+  in_distribution: List<Int>,
+  out_distribution: List<Int>,
+  in_value: Value,
+  out_value: Value,
+) -> Bool {
+  trace @"check_node_received_reward"
+
+  expect (in_init, [in_reward, ..in_tail]) =
+    list.span(in_distribution, rewarded_node)
+  expect (out_init, [out_reward, ..out_tail]) =
+    list.span(out_distribution, rewarded_node)
+  let required_reward = in_reward - out_reward
+
+  let actual_reward =
+    assets.quantity_of(out_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(
+      in_value,
+      fee_token.policy_id,
+      fee_token.name,
+    )
+
+  let must_not_modify_other_nodes = in_init == out_init && in_tail == out_tail
+  let must_withdraw_reward = required_reward > 0
+  let must_receive_reward = required_reward == actual_reward
+
+  must_not_modify_other_nodes && must_withdraw_reward && must_receive_reward
 }

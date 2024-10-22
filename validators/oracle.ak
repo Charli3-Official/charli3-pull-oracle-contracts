@@ -19,9 +19,10 @@ use config
 use ext/cardano/value.{Asset}
 use oracle/checks.{
   calculate_minimum_fee_amout, check_closing_does_not_change_settings,
-  check_fee_settings_sanity, check_reward_distribution, check_settings_sanity,
-  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
-  find_in_datum, find_out_datum_and_value,
+  check_fee_settings_sanity, check_node_received_reward,
+  check_reward_distribution, check_settings_sanity, convert_reward_prices,
+  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
+  find_node_id_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_allowing_asset, is_aggstate_expired,
   oracle_fees_were_transfered, returns_empty_aggstate_outputs,
   returns_empty_reward_outputs, validate_message_form,
@@ -423,13 +424,21 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             in_value,
             config.reward_account_token_name,
           )
+        let core_nft =
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_acc_nft =
           Asset {
             policy_id: nft_policy_id,
             name: config.reward_account_token_name,
           }
 
-        expect (RewardAccount(out_account_datum), _out_value) =
+        expect OracleSettings(core_datum) =
+          find_in_datum(reference_inputs, own_hash, core_nft)
+
+        expect (RewardAccount(out_account_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
@@ -437,14 +446,17 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token.policy_id,
           )
 
-        let check_nodes_count =
-          list.length(in_account_datum.nodes_to_rewards) == list.length(
-            out_account_datum.nodes_to_rewards,
-          )
+        let rewarded_node =
+          find_node_id_by_signature(extra_signatories, core_datum.nodes)
 
-        // TODO node signature check
-        // TODO node rewards check
-        check_nodes_count?
+        check_node_received_reward(
+          oracle_conf.fee_token,
+          rewarded_node,
+          in_account_datum.nodes_to_rewards,
+          out_account_datum.nodes_to_rewards,
+          in_value,
+          out_value,
+        )
       }
       // :: PlatformCollect
       (PlatformCollect, RewardAccount(in_core_datum)) -> {
