@@ -347,3 +347,15 @@ pub fn check_settings_sanity(
 
   in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers
 }
+
+pub fn check_fee_settings_sanity(
+  in_settings: OracleSettingsDatum,
+  out_settings: OracleSettingsDatum,
+) -> Bool {
+  trace @"check_fee_settings_sanity"
+
+  let must_not_have_negative_price =
+    out_settings.fee_info.reward_prices.node_fee >= 0 && out_settings.fee_info.reward_prices.platform_fee >= 0
+
+  in_settings.nodes == out_settings.nodes && in_settings.required_node_signatures_count == out_settings.required_node_signatures_count && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_have_negative_price
+}
