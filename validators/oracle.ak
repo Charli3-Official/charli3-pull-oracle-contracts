@@ -32,6 +32,12 @@ use oracle/datum.{
   RewardTransport, is_oracle_closing,
 }
 use oracle/multisig.{check_nodes_multisig}
+use oracle/redeemer.{
+  AddNodes, BurnToken, CalculateRewards, CloseOracle, DelNodes, DismissRewards,
+  MintToken, MintingRedeemer, NodeCollect, OdvAggregate, OracleRedeemer,
+  PlatformCollect, RemoveOracle, ReopenOracle, ScaleDown, ScaleToken,
+  SetFeeConfig, UpdateSettings,
+}
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{
   find_own_protocol_policy_id, spends_protocol_nft_inputs,
@@ -47,47 +53,6 @@ pub const reward_account_token_name: AssetName = "RewardAccount"
 pub const reward_transport_token_name: AssetName = "RewardT"
 
 pub const aggstate_token_name: AssetName = "AggState"
-
-/// Types of actions for Oracle NFTs (protocol tokens)
-/// * Mint  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState
-/// * Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState
-/// * Burn  - Oracle close: all tokens are burned
-pub type MintingRedeemer {
-  Mint
-  Scale
-  Burn
-}
-
-// TODO move redeemers to lib to see documentation
-/// Types of actions for Oracle smart contract
-/// * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain
-/// * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO
-/// * NodeCollect - oracle node collects rewards
-/// * PlatformCollect - oracle platform collects rewards
-/// * UpdateSettings - oracle platform changes consensus settings
-/// * SetFeeConfig - oracle platform changes reward fee configuration
-/// * AddNodes - oracle platform adds new nodes
-/// * DelNodes - oracle platform deletes nodes
-/// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
-/// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
-/// * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards
-/// * ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily
-/// * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs
-pub type OracleRedeemer {
-  OdvAggregate
-  CalculateRewards
-  NodeCollect
-  PlatformCollect
-  UpdateSettings
-  SetFeeConfig
-  AddNodes
-  DelNodes
-  ScaleDown
-  DismissRewards
-  CloseOracle
-  ReopenOracle
-  RemoveOracle
-}
 
 validator oracle_nfts(
   utxo_ref: OutputReference,
@@ -108,7 +73,7 @@ validator oracle_nfts(
     let aggstate_nft = Asset { policy_id, name: aggstate_token_name }
 
     when redeemer is {
-      Mint -> {
+      MintToken -> {
         expect Some(1) = minted_assets |> dict.get(core_settings_token_name)
         expect Some(1) = minted_assets |> dict.get(reward_account_token_name)
         expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
@@ -142,7 +107,7 @@ validator oracle_nfts(
 
         auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
       }
-      Scale -> {
+      ScaleToken -> {
         expect None = minted_assets |> dict.get(core_settings_token_name)
         expect None = minted_assets |> dict.get(reward_account_token_name)
         expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
@@ -194,7 +159,7 @@ validator oracle_nfts(
           must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
         }
       }
-      Burn -> {
+      BurnToken -> {
         expect Some(-1) = minted_assets |> dict.get(core_settings_token_name)
         expect Some(-1) = minted_assets |> dict.get(reward_account_token_name)
         let n =

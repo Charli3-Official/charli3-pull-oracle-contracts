@@ -22,7 +22,7 @@
       "redeemer": {
         "title": "redeemer",
         "schema": {
-          "$ref": "#/definitions/oracle~1OracleRedeemer"
+          "$ref": "#/definitions/oracle~1redeemer~1OracleRedeemer"
         }
       },
       "parameters": [
@@ -57,7 +57,7 @@
       "redeemer": {
         "title": "redeemer",
         "schema": {
-          "$ref": "#/definitions/oracle~1MintingRedeemer"
+          "$ref": "#/definitions/oracle~1redeemer~1MintingRedeemer"
         }
       },
       "parameters": [
@@ -289,114 +289,6 @@
               "$ref": "#/definitions/AssetName"
             }
           ]
-        }
-      ]
-    },
-    "oracle/MintingRedeemer": {
-      "title": "MintingRedeemer",
-      "description": "Types of actions for Oracle NFTs (protocol tokens)\n * Mint  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState\n * Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState\n * Burn  - Oracle close: all tokens are burned",
-      "anyOf": [
-        {
-          "title": "Mint",
-          "dataType": "constructor",
-          "index": 0,
-          "fields": []
-        },
-        {
-          "title": "Scale",
-          "dataType": "constructor",
-          "index": 1,
-          "fields": []
-        },
-        {
-          "title": "Burn",
-          "dataType": "constructor",
-          "index": 2,
-          "fields": []
-        }
-      ]
-    },
-    "oracle/OracleRedeemer": {
-      "title": "OracleRedeemer",
-      "description": "Types of actions for Oracle smart contract\n * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain\n * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO\n * NodeCollect - oracle node collects rewards\n * PlatformCollect - oracle platform collects rewards\n * UpdateSettings - oracle platform changes consensus settings\n * SetFeeConfig - oracle platform changes reward fee configuration\n * AddNodes - oracle platform adds new nodes\n * DelNodes - oracle platform deletes nodes\n * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs\n * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards\n * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards\n * ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily\n * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs",
-      "anyOf": [
-        {
-          "title": "OdvAggregate",
-          "dataType": "constructor",
-          "index": 0,
-          "fields": []
-        },
-        {
-          "title": "CalculateRewards",
-          "dataType": "constructor",
-          "index": 1,
-          "fields": []
-        },
-        {
-          "title": "NodeCollect",
-          "dataType": "constructor",
-          "index": 2,
-          "fields": []
-        },
-        {
-          "title": "PlatformCollect",
-          "dataType": "constructor",
-          "index": 3,
-          "fields": []
-        },
-        {
-          "title": "UpdateSettings",
-          "dataType": "constructor",
-          "index": 4,
-          "fields": []
-        },
-        {
-          "title": "SetFeeConfig",
-          "dataType": "constructor",
-          "index": 5,
-          "fields": []
-        },
-        {
-          "title": "AddNodes",
-          "dataType": "constructor",
-          "index": 6,
-          "fields": []
-        },
-        {
-          "title": "DelNodes",
-          "dataType": "constructor",
-          "index": 7,
-          "fields": []
-        },
-        {
-          "title": "ScaleDown",
-          "dataType": "constructor",
-          "index": 8,
-          "fields": []
-        },
-        {
-          "title": "DismissRewards",
-          "dataType": "constructor",
-          "index": 9,
-          "fields": []
-        },
-        {
-          "title": "CloseOracle",
-          "dataType": "constructor",
-          "index": 10,
-          "fields": []
-        },
-        {
-          "title": "ReopenOracle",
-          "dataType": "constructor",
-          "index": 11,
-          "fields": []
-        },
-        {
-          "title": "RemoveOracle",
-          "dataType": "constructor",
-          "index": 12,
-          "fields": []
         }
       ]
     },
@@ -674,6 +566,114 @@
               "$ref": "#/definitions/oracle~1datum~1AggregateMessage"
             }
           ]
+        }
+      ]
+    },
+    "oracle/redeemer/MintingRedeemer": {
+      "title": "MintingRedeemer",
+      "description": "Types of actions for Oracle NFTs (protocol tokens)\n * MintToken  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState\n * ScaleToken - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState\n * BurnToken  - Oracle close: all tokens are burned",
+      "anyOf": [
+        {
+          "title": "MintToken",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "ScaleToken",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "BurnToken",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        }
+      ]
+    },
+    "oracle/redeemer/OracleRedeemer": {
+      "title": "OracleRedeemer",
+      "description": "Types of actions for Oracle smart contract\n * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain\n * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO\n * NodeCollect - oracle node collects rewards\n * PlatformCollect - oracle platform collects rewards\n * UpdateSettings - oracle platform changes consensus settings\n * SetFeeConfig - oracle platform changes reward fee configuration\n * AddNodes - oracle platform adds new nodes\n * DelNodes - oracle platform deletes nodes\n * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs\n * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards\n * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards\n * ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily\n * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs",
+      "anyOf": [
+        {
+          "title": "OdvAggregate",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "CalculateRewards",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "NodeCollect",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        },
+        {
+          "title": "PlatformCollect",
+          "dataType": "constructor",
+          "index": 3,
+          "fields": []
+        },
+        {
+          "title": "UpdateSettings",
+          "dataType": "constructor",
+          "index": 4,
+          "fields": []
+        },
+        {
+          "title": "SetFeeConfig",
+          "dataType": "constructor",
+          "index": 5,
+          "fields": []
+        },
+        {
+          "title": "AddNodes",
+          "dataType": "constructor",
+          "index": 6,
+          "fields": []
+        },
+        {
+          "title": "DelNodes",
+          "dataType": "constructor",
+          "index": 7,
+          "fields": []
+        },
+        {
+          "title": "ScaleDown",
+          "dataType": "constructor",
+          "index": 8,
+          "fields": []
+        },
+        {
+          "title": "DismissRewards",
+          "dataType": "constructor",
+          "index": 9,
+          "fields": []
+        },
+        {
+          "title": "CloseOracle",
+          "dataType": "constructor",
+          "index": 10,
+          "fields": []
+        },
+        {
+          "title": "ReopenOracle",
+          "dataType": "constructor",
+          "index": 11,
+          "fields": []
+        },
+        {
+          "title": "RemoveOracle",
+          "dataType": "constructor",
+          "index": 12,
+          "fields": []
         }
       ]
     }
