@@ -97,6 +97,7 @@ pub type RewardAccountDatum {
 // and pays tx fees from other address which is not known to the validator
 /// An oracle node has two keys:
 /// 1. feed_vkh - for verification of node feed inside the AggregateMessage.
+///    Node operator does not store any kind of funds on this key, it's only for signing.
 /// 2. payment_vkh - exists only for node operator convenience:
 ///    so that he can pay tx fees and collect node rewards using one vkh.
 pub type Node {

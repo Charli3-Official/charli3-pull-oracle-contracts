@@ -399,8 +399,8 @@ pub fn check_node_received_reward(
   let required_reward = in_reward - out_reward
 
   let actual_reward =
-    assets.quantity_of(out_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(
-      in_value,
+    assets.quantity_of(in_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(
+      out_value,
       fee_token.policy_id,
       fee_token.name,
     )
@@ -410,4 +410,27 @@ pub fn check_node_received_reward(
   let must_receive_reward = required_reward == actual_reward
 
   must_not_modify_other_nodes && must_withdraw_reward && must_receive_reward
+}
+
+pub fn check_platform_received_reward(
+  fee_token: Asset,
+  reward_distribution: List<Int>,
+  in_value: Value,
+  out_value: Value,
+) -> Bool {
+  trace @"check_platform_received_reward"
+
+  let nodes_rewards =
+    list.foldr(reward_distribution, 0, fn(reward, total) { reward + total })
+
+  let in_total_rewards =
+    assets.quantity_of(in_value, fee_token.policy_id, fee_token.name)
+  let out_total_rewards =
+    assets.quantity_of(out_value, fee_token.policy_id, fee_token.name)
+  let actual_reward = in_total_rewards - out_total_rewards
+
+  let must_save_nodes_rewards = out_total_rewards >= nodes_rewards
+  let must_withdraw = actual_reward > 0
+
+  must_save_nodes_rewards && must_withdraw
 }

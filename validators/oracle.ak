@@ -20,12 +20,13 @@ use ext/cardano/value.{Asset}
 use oracle/checks.{
   calculate_minimum_fee_amout, check_closing_does_not_change_settings,
   check_fee_settings_sanity, check_node_received_reward,
-  check_reward_distribution, check_settings_sanity, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_node_id_by_signature, find_out_datum_and_value,
-  find_out_datum_and_value_allowing_asset, is_aggstate_expired,
-  oracle_fees_were_transfered, returns_empty_aggstate_outputs,
-  returns_empty_reward_outputs, validate_message_form,
+  check_platform_received_reward, check_reward_distribution,
+  check_settings_sanity, convert_reward_prices, does_not_produce_own_nft_outputs,
+  find_in_aggregations, find_in_datum, find_node_id_by_signature,
+  find_out_datum_and_value, find_out_datum_and_value_allowing_asset,
+  is_aggstate_expired, oracle_fees_were_transfered,
+  returns_empty_aggstate_outputs, returns_empty_reward_outputs,
+  validate_message_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -471,7 +472,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             name: config.reward_account_token_name,
           }
 
-        expect (RewardAccount(out_core_datum), _out_value) =
+        expect (RewardAccount(out_core_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
@@ -481,8 +482,12 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let datum_left_unchanged = in_core_datum == out_core_datum
 
-        // TODO platform rewards check
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && datum_left_unchanged?
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_platform_received_reward(
+          oracle_conf.fee_token,
+          in_core_datum.nodes_to_rewards,
+          in_value,
+          out_value,
+        ) && datum_left_unchanged?
       }
       // :: UpdateSettings
       (UpdateSettings, OracleSettings(in_core_datum)) -> {

@@ -487,7 +487,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L107-L110"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L108-L111"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -517,13 +517,14 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L102-L105"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L103-L106"></a>
       
     </div>
     <div class="custom-type-constructors">
       <div class="rendered-markdown"><p>An oracle node has two keys:</p>
 <ol>
-<li>feed_vkh - for verification of node feed inside the AggregateMessage.</li>
+<li>feed_vkh - for verification of node feed inside the AggregateMessage.
+Node operator does not store any kind of funds on this key, it’s only for signing.</li>
 <li>payment_vkh - exists only for node operator convenience:
 so that he can pay tx fees and collect node rewards using one vkh.</li>
 </ol>
@@ -834,7 +835,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L112-L115"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L113-L116"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -916,7 +917,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="is_oracle_closing"><pre class="hljs language-aiken">is_oracle_closing(settings: OracleSettingsDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L117-L119"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L118-L120"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -928,7 +929,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="has_no_rewards"><pre class="hljs language-aiken">has_no_rewards(reward_transport: RewardTransportDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L121-L126"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L122-L127"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -1057,9 +1058,9 @@ and transfer user provided fees into RewardAccount utxo.</li>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1729615330"></script>
+    <script src="../js/index.js?v=1729671339"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1729615330"></script>
+    <script src="../search-data.js?v=1729671339"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
