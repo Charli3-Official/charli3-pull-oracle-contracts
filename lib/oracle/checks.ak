@@ -434,3 +434,38 @@ pub fn check_platform_received_reward(
 
   must_save_nodes_rewards && must_withdraw
 }
+
+pub fn check_new_nodes_settings(
+  in_settings: OracleSettingsDatum,
+  out_settings: OracleSettingsDatum,
+) -> Bool {
+  trace @"check_new_nodes_settings"
+
+  let (old_nodes, new_nodes) =
+    list.span(out_settings.nodes, list.length(in_settings.nodes))
+
+  let must_add_nodes = new_nodes != []
+  let must_save_old_nodes = old_nodes == in_settings.nodes
+  let must_not_break_multisig =
+    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
+      out_settings.nodes,
+    )
+
+  in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_add_nodes && must_save_old_nodes && must_not_break_multisig
+}
+
+pub fn check_new_nodes_rewards_distribution(
+  in_distribution: List<Int>,
+  out_distribution: List<Int>,
+) -> Bool {
+  trace @"check_new_nodes_rewards_distribution"
+
+  let (old_nodes, new_nodes) =
+    list.span(out_distribution, list.length(in_distribution))
+
+  let must_save_old_nodes = old_nodes == in_distribution
+  let must_not_reward_new_nodes =
+    new_nodes == list.repeat(0, list.length(new_nodes))
+
+  must_save_old_nodes && must_not_reward_new_nodes
+}

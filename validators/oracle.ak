@@ -19,7 +19,8 @@ use config
 use ext/cardano/value.{Asset}
 use oracle/checks.{
   calculate_minimum_fee_amout, check_closing_does_not_change_settings,
-  check_fee_settings_sanity, check_node_received_reward,
+  check_fee_settings_sanity, check_new_nodes_rewards_distribution,
+  check_new_nodes_settings, check_node_received_reward,
   check_platform_received_reward, check_reward_distribution,
   check_settings_sanity, convert_reward_prices, does_not_produce_own_nft_outputs,
   find_in_aggregations, find_in_datum, find_node_id_by_signature,
@@ -522,6 +523,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
+        // TODO must reopen oracle?
         let must_be_closing = is_oracle_closing(in_core_datum)
 
         let must_conserve_value = in_value == out_value
@@ -532,7 +534,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && must_be_closing? && must_conserve_value?
       }
       // :: AddNodes
-      (AddNodes, RewardAccount(_in_account_datum)) -> {
+      (AddNodes, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
@@ -552,7 +554,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_spend_core_settings_utxo =
           spends_script_utxo_with_nft(own_hash, core_nft, inputs)
 
-        expect (RewardAccount(_out_account_datum), _out_value) =
+        expect (RewardAccount(out_account_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
@@ -560,10 +562,14 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token.policy_id,
           )
 
-        // TODO new reward distribution == 0 check
-        must_spend_core_settings_utxo?
+        let must_conserve_value = in_value == out_value
+
+        check_new_nodes_rewards_distribution(
+          in_account_datum.nodes_to_rewards,
+          out_account_datum.nodes_to_rewards,
+        ) && must_spend_core_settings_utxo? && must_conserve_value?
       }
-      (AddNodes, OracleSettings(OracleSettingsDatum { .. })) -> {
+      (AddNodes, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
@@ -580,12 +586,18 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_spend_reward_account_utxo =
           spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs)
 
-        expect (OracleSettings(_), _out_value) =
+        expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        // TODO check new node pkhs added
-        // TODO should be closing
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_spend_reward_account_utxo?
+        // TODO must reopen oracle?
+        let must_be_closing = is_oracle_closing(in_core_datum)
+
+        let must_conserve_value = in_value == out_value
+
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_new_nodes_settings(
+          in_core_datum,
+          out_core_datum,
+        ) && must_spend_reward_account_utxo? && must_be_closing? && must_conserve_value?
       }
       // :: DelNodes
       (DelNodes, RewardAccount(_in_account_datum)) -> {
