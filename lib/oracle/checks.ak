@@ -435,6 +435,7 @@ pub fn check_platform_received_reward(
   must_save_nodes_rewards && must_withdraw
 }
 
+// TODO required_node_signatures_count is > 0, but should be > 4 instead?
 pub fn check_new_nodes_settings(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
@@ -468,4 +469,67 @@ pub fn check_new_nodes_rewards_distribution(
     new_nodes == list.repeat(0, list.length(new_nodes))
 
   must_save_old_nodes && must_not_reward_new_nodes
+}
+
+pub fn check_deleted_nodes(
+  in_settings: OracleSettingsDatum,
+  out_settings: OracleSettingsDatum,
+  in_distribution: List<Int>,
+  out_distribution: List<Int>,
+) -> Bool {
+  trace @"check_deleted_nodes"
+
+  let (added_nodes, _, deleted_nodes) =
+    list.foldl(in_settings.nodes, (out_settings.nodes, 0, []), get_deleted_node)
+  let (_, expected_distribution) =
+    list.indexed_foldr(
+      in_distribution,
+      (deleted_nodes, []),
+      push_saved_node_reward,
+    )
+
+  let must_keep_other_settings_unchanged =
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
+  let must_not_break_multisig =
+    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
+      out_settings.nodes,
+    )
+  let must_not_add_nodes = added_nodes == []
+  let must_delete_some_nodes = deleted_nodes != []
+  let must_delete_nodes_rewards = out_distribution == expected_distribution
+
+  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes? && must_delete_some_nodes && must_delete_nodes_rewards
+}
+
+fn get_deleted_node(
+  node: Node,
+  acc: (List<Node>, NodeId, List<NodeId>),
+) -> (List<Node>, NodeId, List<NodeId>) {
+  let (out_nodes, node_id, result) = acc
+  when out_nodes is {
+    [] -> ([], node_id + 1, list.push(result, node_id))
+    [x, ..xs] ->
+      if x == node {
+        (xs, node_id + 1, result)
+      } else {
+        (out_nodes, node_id + 1, list.push(result, node_id))
+      }
+  }
+}
+
+fn push_saved_node_reward(
+  node_id: Int,
+  node_reward: Int,
+  acc: (List<NodeId>, List<Int>),
+) -> (List<NodeId>, List<Int>) {
+  let (deleted_nodes, result) = acc
+  when deleted_nodes is {
+    [] -> ([], list.push(result, node_reward))
+    [x, ..xs] ->
+      if x == node_id {
+        (xs, result)
+      } else {
+        (deleted_nodes, list.push(result, node_reward))
+      }
+  }
 }
