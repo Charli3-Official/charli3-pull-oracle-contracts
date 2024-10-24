@@ -11,16 +11,20 @@ use aiken/interval
 use aiken/math.{abs}
 use aiken/option
 use cardano/address
-use cardano/assets.{AssetName, PolicyId}
+use cardano/assets.{PolicyId}
 use cardano/script_context.{ScriptContext}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
+use config
 use ext/cardano/value.{Asset}
 use oracle/checks.{
   calculate_minimum_fee_amout, check_closing_does_not_change_settings,
-  check_fee_settings_sanity, check_reward_distribution, check_settings_sanity,
-  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
-  find_in_datum, find_out_datum_and_value,
+  check_deleted_nodes, check_fee_settings_sanity,
+  check_new_nodes_rewards_distribution, check_new_nodes_settings,
+  check_node_received_reward, check_platform_received_reward,
+  check_reward_distribution, check_settings_sanity, convert_reward_prices,
+  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
+  find_node_id_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_allowing_asset, is_aggstate_expired,
   oracle_fees_were_transfered, returns_empty_aggstate_outputs,
   returns_empty_reward_outputs, validate_message_form,
@@ -32,6 +36,12 @@ use oracle/datum.{
   RewardTransport, is_oracle_closing,
 }
 use oracle/multisig.{check_nodes_multisig}
+use oracle/redeemer.{
+  AddNodes, BurnToken, CalculateRewards, CloseOracle, DelNodes, DismissRewards,
+  MintToken, MintingRedeemer, NodeCollect, OdvAggregate, OracleRedeemer,
+  PlatformCollect, RemoveOracle, ReopenOracle, ScaleDown, ScaleToken,
+  SetFeeConfig, UpdateSettings,
+}
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{
   find_own_protocol_policy_id, spends_protocol_nft_inputs,
@@ -39,59 +49,9 @@ use services/protocol_token.{
 }
 use services/time.{get_current_time}
 
-// TODO move constants to toml config or to env
-pub const core_settings_token_name: AssetName = "CoreSettings"
-
-pub const reward_account_token_name: AssetName = "RewardAccount"
-
-pub const reward_transport_token_name: AssetName = "RewardT"
-
-pub const aggstate_token_name: AssetName = "AggState"
-
-/// Types of actions for Oracle NFTs (protocol tokens)
-/// * Mint  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState
-/// * Scale - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState
-/// * Burn  - Oracle close: all tokens are burned
-pub type MintingRedeemer {
-  Mint
-  Scale
-  Burn
-}
-
-// TODO move redeemers to lib to see documentation
-/// Types of actions for Oracle smart contract
-/// * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain
-/// * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO
-/// * NodeCollect - oracle node collects rewards
-/// * PlatformCollect - oracle platform collects rewards
-/// * UpdateSettings - oracle platform changes consensus settings
-/// * SetFeeConfig - oracle platform changes reward fee configuration
-/// * AddNodes - oracle platform adds new nodes
-/// * DelNodes - oracle platform deletes nodes
-/// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
-/// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
-/// * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards
-/// * ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily
-/// * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs
-pub type OracleRedeemer {
-  OdvAggregate
-  CalculateRewards
-  NodeCollect
-  PlatformCollect
-  UpdateSettings
-  SetFeeConfig
-  AddNodes
-  DelNodes
-  ScaleDown
-  DismissRewards
-  CloseOracle
-  ReopenOracle
-  RemoveOracle
-}
-
 validator oracle_nfts(
   utxo_ref: OutputReference,
-  config: OracleConfiguration,
+  oracle_conf: OracleConfiguration,
   oracle_script_hash: ScriptHash,
 ) {
   mint(redeemer: MintingRedeemer, policy_id: PolicyId, transaction: Transaction) {
@@ -101,18 +61,22 @@ validator oracle_nfts(
     let minted_assets =
       mint
         |> assets.tokens(policy_id)
-    let core_nft = Asset { policy_id, name: core_settings_token_name }
-    let reward_acc_nft = Asset { policy_id, name: reward_account_token_name }
+    let core_nft = Asset { policy_id, name: config.core_settings_token_name }
+    let reward_acc_nft =
+      Asset { policy_id, name: config.reward_account_token_name }
     let reward_transport_nft =
-      Asset { policy_id, name: reward_transport_token_name }
-    let aggstate_nft = Asset { policy_id, name: aggstate_token_name }
+      Asset { policy_id, name: config.reward_transport_token_name }
+    let aggstate_nft = Asset { policy_id, name: config.aggstate_token_name }
 
     when redeemer is {
-      Mint -> {
-        expect Some(1) = minted_assets |> dict.get(core_settings_token_name)
-        expect Some(1) = minted_assets |> dict.get(reward_account_token_name)
-        expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
-        expect Some(m) = minted_assets |> dict.get(aggstate_token_name)
+      MintToken -> {
+        expect Some(1) =
+          minted_assets |> dict.get(config.core_settings_token_name)
+        expect Some(1) =
+          minted_assets |> dict.get(config.reward_account_token_name)
+        expect Some(n) =
+          minted_assets |> dict.get(config.reward_transport_token_name)
+        expect Some(m) = minted_assets |> dict.get(config.aggstate_token_name)
         let must_mint_some_reward_transport = n > 0
         let must_mint_same_amount_aggstate = m == n
 
@@ -140,13 +104,15 @@ validator oracle_nfts(
             outputs,
           )
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
       }
-      Scale -> {
-        expect None = minted_assets |> dict.get(core_settings_token_name)
-        expect None = minted_assets |> dict.get(reward_account_token_name)
-        expect Some(n) = minted_assets |> dict.get(reward_transport_token_name)
-        expect Some(m) = minted_assets |> dict.get(aggstate_token_name)
+      ScaleToken -> {
+        expect None = minted_assets |> dict.get(config.core_settings_token_name)
+        expect None =
+          minted_assets |> dict.get(config.reward_account_token_name)
+        expect Some(n) =
+          minted_assets |> dict.get(config.reward_transport_token_name)
+        expect Some(m) = minted_assets |> dict.get(config.aggstate_token_name)
         let must_mint_same_amount_aggstate = m == n
 
         if n > 0 {
@@ -172,7 +138,7 @@ validator oracle_nfts(
 
           let must_not_be_closing = is_oracle_closing(core_datum) |> not
 
-          auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_not_be_closing? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_not_be_closing? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
         } else {
           trace @"scale down"
 
@@ -194,16 +160,18 @@ validator oracle_nfts(
           must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
         }
       }
-      Burn -> {
-        expect Some(-1) = minted_assets |> dict.get(core_settings_token_name)
-        expect Some(-1) = minted_assets |> dict.get(reward_account_token_name)
+      BurnToken -> {
+        expect Some(-1) =
+          minted_assets |> dict.get(config.core_settings_token_name)
+        expect Some(-1) =
+          minted_assets |> dict.get(config.reward_account_token_name)
         let n =
           minted_assets
-            |> dict.get(reward_transport_token_name)
+            |> dict.get(config.reward_transport_token_name)
             |> option.or_else(0)
         let m =
           minted_assets
-            |> dict.get(aggstate_token_name)
+            |> dict.get(config.aggstate_token_name)
             |> option.or_else(0)
         let must_not_mint_reward_transport = n <= 0
         let must_mint_same_amount_aggstate = m == n
@@ -242,9 +210,7 @@ validator oracle_nfts(
   }
 }
 
-validator oracle_manager(config: OracleConfiguration) {
-  // TODO check some datum pieces had been left immutable
-  // TODO check value is untouched
+validator oracle_manager(oracle_conf: OracleConfiguration) {
   spend(
     own_datum: Option<OracleDatum>,
     redeemer: OracleRedeemer,
@@ -272,11 +238,14 @@ validator oracle_manager(config: OracleConfiguration) {
       // :: OdvAggregate
       (OdvAggregate, AggState(aggstate)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, aggstate_token_name)
+          find_own_protocol_policy_id(in_value, config.aggstate_token_name)
         let reward_transport_nft =
-          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_transport_token_name,
+          }
         let aggstate_nft =
-          Asset { policy_id: nft_policy_id, name: aggstate_token_name }
+          Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
 
         let must_spend_reward_transport_utxo =
           spends_protocol_nft_inputs(own_hash, reward_transport_nft, 1, inputs)
@@ -290,13 +259,22 @@ validator oracle_manager(config: OracleConfiguration) {
       }
       (OdvAggregate, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_transport_token_name,
+          )
         let reward_transport_nft =
-          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_transport_token_name,
+          }
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let aggstate_nft =
-          Asset { policy_id: nft_policy_id, name: aggstate_token_name }
+          Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
 
         let must_spend_only_one_reward_input =
           spends_protocol_nft_inputs(own_hash, reward_transport_nft, 1, inputs)
@@ -314,7 +292,7 @@ validator oracle_manager(config: OracleConfiguration) {
             outputs,
             own_hash,
             reward_transport_nft,
-            config.fee_token.policy_id,
+            oracle_conf.fee_token.policy_id,
           )
 
         expect (AggState(Some(aggstate)), _out_value) =
@@ -340,12 +318,12 @@ validator oracle_manager(config: OracleConfiguration) {
         let fees_transfered =
           assets.quantity_of(
             out_value,
-            config.fee_token.policy_id,
-            config.fee_token.name,
+            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token.name,
           ) - assets.quantity_of(
             in_value,
-            config.fee_token.policy_id,
-            config.fee_token.name,
+            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token.name,
           )
         let minimum_fee_amout =
           convert_reward_prices(
@@ -367,9 +345,15 @@ validator oracle_manager(config: OracleConfiguration) {
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_transport_token_name,
+          )
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
         let must_spend_reward_account_utxo =
           spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs)
@@ -378,13 +362,25 @@ validator oracle_manager(config: OracleConfiguration) {
       }
       (CalculateRewards, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_account_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_account_token_name,
+          )
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_transport_nft =
-          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_transport_token_name,
+          }
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
         expect OracleSettings(core_datum) =
           find_in_datum(reference_inputs, own_hash, core_nft)
@@ -394,7 +390,7 @@ validator oracle_manager(config: OracleConfiguration) {
             outputs,
             own_hash,
             reward_acc_nft,
-            config.fee_token.policy_id,
+            oracle_conf.fee_token.policy_id,
           )
 
         let aggregations =
@@ -409,7 +405,7 @@ validator oracle_manager(config: OracleConfiguration) {
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
         oracle_fees_were_transfered(
-          config.fee_token,
+          oracle_conf.fee_token,
           aggregations,
           in_value,
           out_value,
@@ -424,60 +420,90 @@ validator oracle_manager(config: OracleConfiguration) {
       // :: NodeCollect
       (NodeCollect, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_account_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_account_token_name,
+          )
+        let core_nft =
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
-        expect (RewardAccount(out_account_datum), _out_value) =
+        expect OracleSettings(core_datum) =
+          find_in_datum(reference_inputs, own_hash, core_nft)
+
+        expect (RewardAccount(out_account_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            config.fee_token.policy_id,
+            oracle_conf.fee_token.policy_id,
           )
 
-        let check_nodes_count =
-          list.length(in_account_datum.nodes_to_rewards) == list.length(
-            out_account_datum.nodes_to_rewards,
-          )
+        let rewarded_node =
+          find_node_id_by_signature(extra_signatories, core_datum.nodes)
 
-        // TODO node signature check
-        // TODO node rewards check
-        check_nodes_count?
+        check_node_received_reward(
+          oracle_conf.fee_token,
+          rewarded_node,
+          in_account_datum.nodes_to_rewards,
+          out_account_datum.nodes_to_rewards,
+          in_value,
+          out_value,
+        )
       }
       // :: PlatformCollect
       (PlatformCollect, RewardAccount(in_core_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_account_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_account_token_name,
+          )
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
-        expect (RewardAccount(out_core_datum), _out_value) =
+        expect (RewardAccount(out_core_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            config.fee_token.policy_id,
+            oracle_conf.fee_token.policy_id,
           )
 
         let datum_left_unchanged = in_core_datum == out_core_datum
 
-        // TODO platform rewards check
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && datum_left_unchanged?
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_platform_received_reward(
+          oracle_conf.fee_token,
+          in_core_datum.nodes_to_rewards,
+          in_value,
+          out_value,
+        ) && datum_left_unchanged?
       }
       // :: UpdateSettings
       (UpdateSettings, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, core_settings_token_name)
+          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
 
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         let must_conserve_value = in_value == out_value
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && check_settings_sanity(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_settings_sanity(
           in_core_datum,
           out_core_datum,
         ) && must_conserve_value?
@@ -485,119 +511,183 @@ validator oracle_manager(config: OracleConfiguration) {
       // :: SetFeeConfig
       (SetFeeConfig, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, core_settings_token_name)
+          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
 
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
+        // TODO must reopen oracle?
         let must_be_closing = is_oracle_closing(in_core_datum)
 
         let must_conserve_value = in_value == out_value
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && check_fee_settings_sanity(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_fee_settings_sanity(
           in_core_datum,
           out_core_datum,
         ) && must_be_closing? && must_conserve_value?
       }
       // :: AddNodes
-      (AddNodes, RewardAccount(_in_account_datum)) -> {
+      (AddNodes, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_account_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_account_token_name,
+          )
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
         let must_spend_core_settings_utxo =
           spends_script_utxo_with_nft(own_hash, core_nft, inputs)
 
-        expect (RewardAccount(_out_account_datum), _out_value) =
+        expect (RewardAccount(out_account_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            config.fee_token.policy_id,
+            oracle_conf.fee_token.policy_id,
           )
 
-        // TODO new reward distribution == 0 check
-        must_spend_core_settings_utxo?
+        let must_conserve_value = in_value == out_value
+
+        check_new_nodes_rewards_distribution(
+          in_account_datum.nodes_to_rewards,
+          out_account_datum.nodes_to_rewards,
+        ) && must_spend_core_settings_utxo? && must_conserve_value?
       }
-      (AddNodes, OracleSettings(OracleSettingsDatum { .. })) -> {
+      (AddNodes, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, core_settings_token_name)
+          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
         let must_spend_reward_account_utxo =
           spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs)
 
-        expect (OracleSettings(_), _out_value) =
+        expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        // TODO check new node pkhs added
-        // TODO should be closing
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_spend_reward_account_utxo?
+        // TODO must reopen oracle?
+        let must_be_closing = is_oracle_closing(in_core_datum)
+
+        let must_conserve_value = in_value == out_value
+
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_new_nodes_settings(
+          in_core_datum,
+          out_core_datum,
+        ) && must_spend_reward_account_utxo? && must_be_closing? && must_conserve_value?
       }
       // :: DelNodes
       (DelNodes, RewardAccount(_in_account_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_account_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_account_token_name,
+          )
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
         let must_spend_core_settings_utxo =
           spends_script_utxo_with_nft(own_hash, core_nft, inputs)
 
-        expect (RewardAccount(_out_account_datum), _out_value) =
+        expect (RewardAccount(_out_account_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            config.fee_token.policy_id,
+            oracle_conf.fee_token.policy_id,
           )
 
-        // TODO reward distribution check
-        must_spend_core_settings_utxo?
+        let must_conserve_value = in_value == out_value
+
+        must_spend_core_settings_utxo? && must_conserve_value?
       }
-      (DelNodes, OracleSettings(OracleSettingsDatum { .. })) -> {
+      (DelNodes, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, core_settings_token_name)
+          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
-        let must_spend_reward_account_utxo =
-          spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs)
+        expect RewardAccount(in_account_datum) =
+          find_in_datum(inputs, own_hash, reward_acc_nft)
 
-        expect (OracleSettings(_), _out_value) =
+        expect (RewardAccount(out_account_datum), _) =
+          find_out_datum_and_value_allowing_asset(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            oracle_conf.fee_token.policy_id,
+          )
+
+        expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        // TODO should be closing
-        // TODO check node pkhs removed
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_spend_reward_account_utxo?
+        // TODO must reopen oracle?
+        let must_be_closing = is_oracle_closing(in_core_datum)
+
+        let must_conserve_value = in_value == out_value
+
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_deleted_nodes(
+          in_core_datum,
+          out_core_datum,
+          in_account_datum.nodes_to_rewards,
+          out_account_datum.nodes_to_rewards,
+        ) && must_be_closing? && must_conserve_value?
       }
       // :: ScaleDown
       (ScaleDown, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_transport_token_name,
+          )
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
         )
       }
       (ScaleDown, AggState(aggstate)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, aggstate_token_name)
+          find_own_protocol_policy_id(in_value, config.aggstate_token_name)
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
         ) && is_aggstate_expired(aggstate, validity_range)
@@ -605,9 +695,15 @@ validator oracle_manager(config: OracleConfiguration) {
       // :: DismissRewards
       (DismissRewards, RewardTransport(RewardConsensusPending { message, .. })) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_transport_token_name,
+          )
         let reward_transport_nft =
-          Asset { policy_id: nft_policy_id, name: reward_transport_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_transport_token_name,
+          }
 
         let must_return_empty_reward_utxo =
           returns_empty_reward_outputs(
@@ -620,17 +716,20 @@ validator oracle_manager(config: OracleConfiguration) {
         let must_be_after_dismissing_period =
           interval.is_entirely_after(
             validity_range,
-            message.timestamp + config.reward_dismissing_period_length,
+            message.timestamp + oracle_conf.reward_dismissing_period_length,
           )
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period?
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period?
       }
       // :: CloseOracle
       (CloseOracle, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, core_settings_token_name)
+          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
 
         let must_not_be_closing_already =
           is_oracle_closing(in_core_datum) |> not
@@ -648,7 +747,7 @@ validator oracle_manager(config: OracleConfiguration) {
 
         let must_conserve_value = in_value == out_value
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
           in_core_datum,
           out_core_datum,
         ) && must_not_be_closing_already? && must_start_closing_period? && must_conserve_value?
@@ -656,9 +755,12 @@ validator oracle_manager(config: OracleConfiguration) {
       // :: ReopenOracle
       (ReopenOracle, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, core_settings_token_name)
+          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
 
         let must_be_closing = is_oracle_closing(in_core_datum)
 
@@ -669,7 +771,7 @@ validator oracle_manager(config: OracleConfiguration) {
 
         let must_conserve_value = in_value == out_value
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
           in_core_datum,
           out_core_datum,
         ) && must_be_closing? && must_open_oracle? && must_conserve_value?
@@ -677,9 +779,15 @@ validator oracle_manager(config: OracleConfiguration) {
       // :: RemoveOracle
       (RemoveOracle, RewardAccount(_)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_account_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_account_token_name,
+          )
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
 
         let must_spend_core_settings_utxo =
           spends_script_utxo_with_nft(own_hash, core_nft, inputs)
@@ -690,9 +798,15 @@ validator oracle_manager(config: OracleConfiguration) {
 
       (RemoveOracle, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, reward_transport_token_name)
+          find_own_protocol_policy_id(
+            in_value,
+            config.reward_transport_token_name,
+          )
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
 
         let must_spend_core_settings_utxo =
           spends_script_utxo_with_nft(own_hash, core_nft, inputs)
@@ -701,9 +815,12 @@ validator oracle_manager(config: OracleConfiguration) {
       }
       (RemoveOracle, AggState(aggstate)) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, aggstate_token_name)
+          find_own_protocol_policy_id(in_value, config.aggstate_token_name)
         let core_nft =
-          Asset { policy_id: nft_policy_id, name: core_settings_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
 
         let must_spend_core_settings_utxo =
           spends_script_utxo_with_nft(own_hash, core_nft, inputs)
@@ -715,9 +832,12 @@ validator oracle_manager(config: OracleConfiguration) {
         OracleSettings(OracleSettingsDatum { closing_period_started_at, .. }),
       ) -> {
         let nft_policy_id =
-          find_own_protocol_policy_id(in_value, core_settings_token_name)
+          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let reward_acc_nft =
-          Asset { policy_id: nft_policy_id, name: reward_account_token_name }
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.reward_account_token_name,
+          }
 
         let must_spend_reward_account_utxo =
           spends_script_utxo_with_nft(own_hash, reward_acc_nft, inputs)
@@ -728,13 +848,13 @@ validator oracle_manager(config: OracleConfiguration) {
                 fn(closing_start) {
                   interval.is_entirely_after(
                     validity_range,
-                    closing_start + config.closing_period_length,
+                    closing_start + oracle_conf.closing_period_length,
                   )
                 },
               )
             |> option.or_else(False)
 
-        auth_by_nft(config.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
         ) && is_time_to_be_removed? && must_spend_reward_account_utxo?

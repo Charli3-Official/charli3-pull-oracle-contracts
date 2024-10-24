@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>services/iqr - charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>oracle/redeemer - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
@@ -188,24 +188,18 @@
 
         
 
-
-
-
-
-<h2>Functions</h2>
+<h2>Types</h2>
 <ul>
   
-    
-        <li><a href="#iqr_fence">iqr_fence</a></li>
-
-      
+  <li><a href="#MintingRedeemer">MintingRedeemer</a></li>
   
-    
-        <li><a href="#quantile">quantile</a></li>
-
-      
+  <li><a href="#OracleRedeemer">OracleRedeemer</a></li>
   
 </ul>
+
+
+
+
 
 
 
@@ -310,8 +304,8 @@
         
 	  
 	    
-	      <li data-indent="1"><a href="../oracle/redeemer.html">
-	      redeemer
+	      <li data-indent="1" data-current><a href="../oracle/redeemer.html">
+	      <strong>redeemer</strong>
 	      </a></li>
 	    
 	  
@@ -322,8 +316,8 @@
         
 	  
 	    
-	      <li data-indent="1" data-current><a href="../services/iqr.html">
-	      <strong>iqr</strong>
+	      <li data-indent="1"><a href="../services/iqr.html">
+	      iqr
 	      </a></li>
 	    
 	  
@@ -366,55 +360,216 @@
       <main class="content">
         
 <h1 id="module-name" class="module-name">
-  <a href="#module-name">services/iqr</a>
+  <a href="#module-name">oracle/redeemer</a>
 </h1>
-<p>To ensure a more reliable outlier detection using IQR, it’s advisable to have a sample size of at least 20-30 data points,
-i.e. five points per quartile.
-Naturally, minimum number of points is four, to have at least one element in earch quartile,
-but beware that IQR could become useless for sample sizes of 4-10.</p>
-
-
-
-
 
 
 
 <section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+  <h1 id="module-types" class="module-member-kind">
+    <a href="#module-types">Types</a>
   </h1>
+
   
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="iqr_fence"><pre class="hljs language-aiken">iqr_fence(
-  sorted_input: List&lt;Int&gt;,
-  input_length: Int,
-  iqr_multiplier: Rational,
-) -&gt; (Rational, Rational)</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/iqr.ak#L11-L28"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>See interquartile range (IQR) and Tukey fences methods for outlier detection</p>
+  <div class="member">
+    <div class="member-name">
+      <h2 id="MintingRedeemer">
+        <a href="#MintingRedeemer">
+	  MintingRedeemer
+        </a>
+      </h2>
+      
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/redeemer.ak#L5-L9"></a>
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"><p>Types of actions for Oracle NFTs (protocol tokens)</p>
+<ul>
+<li>MintToken  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState</li>
+<li>ScaleToken - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState</li>
+<li>BurnToken  - Oracle close: all tokens are burned</li>
+</ul>
 </div>
-      </div>
-    
+      
+      <h3>Constructors</h3>
+      <ul class="constructor-list">
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">MintToken</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">ScaleToken</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">BurnToken</code></pre>
+          </div>
+	  
+        </li>
+        
+      </ul>
+      
+    </div>
+  </div>
   
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="quantile"><pre class="hljs language-aiken">quantile(xs: List&lt;Int&gt;, n: Int, q: Rational) -&gt; Rational</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/services/iqr.ak#L31-L59"></a>
-          
-        </div>
-        <div class="rendered-markdown"><p>Returns weighted (by proximity) average of the two elements closest to the quantile index q * (n - 1)</p>
+  <div class="member">
+    <div class="member-name">
+      <h2 id="OracleRedeemer">
+        <a href="#OracleRedeemer">
+	  OracleRedeemer
+        </a>
+      </h2>
+      
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/redeemer.ak#L25-L39"></a>
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"><p>Types of actions for Oracle smart contract</p>
+<ul>
+<li>OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain</li>
+<li>CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO</li>
+<li>NodeCollect - oracle node collects rewards</li>
+<li>PlatformCollect - oracle platform collects rewards</li>
+<li>UpdateSettings - oracle platform changes consensus settings</li>
+<li>SetFeeConfig - oracle platform changes reward fee configuration</li>
+<li>AddNodes - oracle platform adds new nodes</li>
+<li>DelNodes - oracle platform deletes nodes</li>
+<li>ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs</li>
+<li>DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards</li>
+<li>CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards</li>
+<li>ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily</li>
+<li>RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs</li>
+</ul>
 </div>
-      </div>
-    
+      
+      <h3>Constructors</h3>
+      <ul class="constructor-list">
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">OdvAggregate</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">CalculateRewards</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">NodeCollect</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">PlatformCollect</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">UpdateSettings</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">SetFeeConfig</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">AddNodes</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">DelNodes</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">ScaleDown</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">DismissRewards</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">CloseOracle</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">ReopenOracle</code></pre>
+          </div>
+	  
+        </li>
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">RemoveOracle</code></pre>
+          </div>
+	  
+        </li>
+        
+      </ul>
+      
+    </div>
+  </div>
   
 </section>
+
+
+
+
 
 
       </main>
