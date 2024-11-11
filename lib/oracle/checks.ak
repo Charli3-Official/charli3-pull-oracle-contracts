@@ -6,7 +6,8 @@ use aiken/interval
 use aiken/math/rational
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
-use cardano/transaction.{Input, Output, ValidityRange} as tx
+use cardano/transaction.{Input,
+  Output, Redeemer, ScriptPurpose, ValidityRange} as tx
 use ext/aiken/collection/list.{indexed_zip_with} as list_ext
 use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
@@ -16,6 +17,7 @@ use oracle/datum.{
   OracleFeed, OracleSettingsDatum, RewardConsensusPending, RewardPrices,
   RewardTransport, RewardTransportDatum, has_no_rewards,
 }
+use oracle/redeemer.{CalculateRewards, OracleRedeemer}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -25,6 +27,51 @@ pub type AnAggregation {
   median: OracleFeed,
   message: AggregateMessage,
   value: Value,
+}
+
+/// A convenience function that calls find_script_inputs_by_token
+/// and also checks number of spent inputs
+pub fn spends_protocol_nft_inputs(
+  script_hash: ScriptHash,
+  redeemer: OracleRedeemer,
+  protocol_nft: Asset,
+  utxo_count: Int,
+  tx_inputs: List<Input>,
+  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
+) -> Bool {
+  let as_data: Data = redeemer
+  let refs =
+    find_script_inputs_by_token(tx_inputs, script_hash, protocol_nft)
+      |> list.map(fn(i) { i.output_reference })
+
+  let refs_that_have_correct_redeemers =
+    list.filter(
+      refs,
+      fn(ref) {
+        expect Some(r) = pairs.get_first(tx_redeemers, tx.Spend(ref))
+
+        r == as_data
+      },
+    )
+
+  list.length(refs_that_have_correct_redeemers) == utxo_count
+}
+
+/// Find one protocol NFT inside transaction inputs.
+/// Same as spends_protocol_nft_inputs, but more optimized.
+pub fn spends_one_script_utxo_with_nft(
+  script_hash: ScriptHash,
+  redeemer: OracleRedeemer,
+  nft: Asset,
+  tx_inputs: List<Input>,
+  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
+) -> Bool {
+  let as_data: Data = redeemer
+  expect [input] = find_script_inputs_by_token(tx_inputs, script_hash, nft)
+  expect Some(r) =
+    pairs.get_first(tx_redeemers, tx.Spend(input.output_reference))
+
+  r == as_data
 }
 
 pub fn returns_empty_reward_outputs(
@@ -109,15 +156,42 @@ pub fn find_out_datum_and_value_allowing_asset(
   (oracle_datum, script_out.value)
 }
 
+pub fn find_referenced_datum(
+  tx_reference_inputs: List<Input>,
+  script_hash: ScriptHash,
+  protocol_token: Asset,
+) -> OracleDatum {
+  trace @"find_referenced_datum"
+
+  expect [script_in] =
+    find_script_inputs_by_token(
+      tx_reference_inputs,
+      script_hash,
+      protocol_token,
+    )
+  expect tx.InlineDatum(datum) = script_in.output.datum
+  expect oracle_datum: OracleDatum = datum
+
+  oracle_datum
+}
+
 pub fn find_in_datum(
   tx_inputs: List<Input>,
+  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
   script_hash: ScriptHash,
+  redeemer: OracleRedeemer,
   protocol_token: Asset,
 ) -> OracleDatum {
   trace @"find_in_datum"
 
   expect [script_in] =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
+
+  let as_data: Data = redeemer
+  expect Some(r) =
+    pairs.get_first(tx_redeemers, tx.Spend(script_in.output_reference))
+  expect r == as_data
+
   expect tx.InlineDatum(datum) = script_in.output.datum
   expect oracle_datum: OracleDatum = datum
 
@@ -126,6 +200,7 @@ pub fn find_in_datum(
 
 pub fn find_in_aggregations(
   tx_inputs: List<Input>,
+  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -> List<AnAggregation> {
@@ -133,6 +208,21 @@ pub fn find_in_aggregations(
 
   let inputs =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
+
+  let as_data: Data = CalculateRewards
+  let refs = list.map(inputs, fn(i) { i.output_reference })
+
+  let must_have_correct_redeemers =
+    list.all(
+      refs,
+      fn(ref) {
+        expect Some(r) = pairs.get_first(tx_redeemers, tx.Spend(ref))
+
+        r == as_data
+      },
+    )
+  expect must_have_correct_redeemers
+
   let extractor =
     fn(input: Input) -> AnAggregation {
       expect tx.InlineDatum(datum) = input.output.datum

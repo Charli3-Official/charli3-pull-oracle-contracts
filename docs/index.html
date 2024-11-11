@@ -355,7 +355,11 @@
 }
 </code></pre>
 <h3>Building</h3>
+<p>For mainnet:</p>
 <pre><code class="language-sh">aiken build
+</code></pre>
+<p>For testnets:</p>
+<pre><code class="language-sh">aiken build --env testnet --trace-level verbose
 </code></pre>
 <h3>Configuring</h3>
 <p><strong>aiken.toml</strong></p>
@@ -509,9 +513,9 @@ test foo() {
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="./js/lunr.min.js?v=1.1.4"></script>
-    <script src="./js/index.js?v=1729690490"></script>
+    <script src="./js/index.js?v=1731307559"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="./search-data.js?v=1729690490"></script>
+    <script src="./search-data.js?v=1731307559"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {

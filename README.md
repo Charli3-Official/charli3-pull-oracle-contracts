@@ -16,8 +16,16 @@ validator my_first_validator {
 
 ### Building
 
+For mainnet:
+
 ```sh
 aiken build
+```
+
+For testnets:
+
+```sh
+aiken build --env testnet --trace-level verbose
 ```
 
 ### Configuring

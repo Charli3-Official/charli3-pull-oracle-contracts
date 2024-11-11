@@ -203,6 +203,16 @@
 <ul>
   
     
+        <li><a href="#spends_protocol_nft_inputs">spends_protocol_nft_inputs</a></li>
+
+      
+  
+    
+        <li><a href="#spends_one_script_utxo_with_nft">spends_one_script_utxo_with_nft</a></li>
+
+      
+  
+    
         <li><a href="#returns_empty_reward_outputs">returns_empty_reward_outputs</a></li>
 
       
@@ -219,6 +229,11 @@
   
     
         <li><a href="#find_out_datum_and_value_allowing_asset">find_out_datum_and_value_allowing_asset</a></li>
+
+      
+  
+    
+        <li><a href="#find_referenced_datum">find_referenced_datum</a></li>
 
       
   
@@ -492,7 +507,7 @@
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L24-L28"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L27-L31"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -528,6 +543,47 @@
   
       <div class="member">
         <div class="member-name">
+          <h2 id="spends_protocol_nft_inputs"><pre class="hljs language-aiken">spends_protocol_nft_inputs(
+  script_hash: ScriptHash,
+  redeemer: OracleRedeemer,
+  protocol_nft: Asset,
+  utxo_count: Int,
+  tx_inputs: List&lt;Input&gt;,
+  tx_redeemers: Pairs&lt;ScriptPurpose, Redeemer&gt;,
+) -&gt; Bool</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L35-L59"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>A convenience function that calls find_script_inputs_by_token
+and also checks number of spent inputs</p>
+</div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="spends_one_script_utxo_with_nft"><pre class="hljs language-aiken">spends_one_script_utxo_with_nft(
+  script_hash: ScriptHash,
+  redeemer: OracleRedeemer,
+  nft: Asset,
+  tx_inputs: List&lt;Input&gt;,
+  tx_redeemers: Pairs&lt;ScriptPurpose, Redeemer&gt;,
+) -&gt; Bool</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L63-L76"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>Find one protocol NFT inside transaction inputs.
+Same as spends_protocol_nft_inputs, but more optimized.</p>
+</div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
           <h2 id="returns_empty_reward_outputs"><pre class="hljs language-aiken">returns_empty_reward_outputs(
   script_hash: ScriptHash,
   reward_transport_nft: Asset,
@@ -535,7 +591,7 @@
   tx_outputs: List&lt;Output&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L30-L51"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L78-L99"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -552,7 +608,7 @@
   tx_outputs: List&lt;Output&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L53-L74"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L101-L122"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -568,7 +624,7 @@
   protocol_token: Asset,
 ) -&gt; (OracleDatum, Value)</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L76-L89"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L124-L137"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -585,7 +641,23 @@
   allowed_asset: PolicyId,
 ) -&gt; (OracleDatum, Value)</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L91-L110"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L139-L158"></a>
+          
+        </div>
+        <div class="rendered-markdown"></div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="find_referenced_datum"><pre class="hljs language-aiken">find_referenced_datum(
+  tx_reference_inputs: List&lt;Input&gt;,
+  script_hash: ScriptHash,
+  protocol_token: Asset,
+) -&gt; OracleDatum</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L160-L177"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -597,11 +669,13 @@
         <div class="member-name">
           <h2 id="find_in_datum"><pre class="hljs language-aiken">find_in_datum(
   tx_inputs: List&lt;Input&gt;,
+  tx_redeemers: Pairs&lt;ScriptPurpose, Redeemer&gt;,
   script_hash: ScriptHash,
+  redeemer: OracleRedeemer,
   protocol_token: Asset,
 ) -&gt; OracleDatum</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L112-L125"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L179-L200"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -613,11 +687,12 @@
         <div class="member-name">
           <h2 id="find_in_aggregations"><pre class="hljs language-aiken">find_in_aggregations(
   tx_inputs: List&lt;Input&gt;,
+  tx_redeemers: Pairs&lt;ScriptPurpose, Redeemer&gt;,
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -&gt; List&lt;AnAggregation&gt;</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L127-L147"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L202-L242"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -632,7 +707,7 @@
   own_nft_policy_id: PolicyId,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L149-L161"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L244-L256"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -647,7 +722,7 @@
   tx_validity_range: ValidityRange,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L163-L176"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L258-L271"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -664,7 +739,7 @@
   reward_prices: RewardPrices,
 ) -&gt; RewardPrices</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L178-L218"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L273-L313"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -679,7 +754,7 @@
   nodes_count: Int,
 ) -&gt; Int</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L220-L225"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L315-L320"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -696,7 +771,7 @@
   out_value: Value,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L227-L255"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L322-L350"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -714,7 +789,7 @@
   iqr_fence_multiplier: Percent,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L257-L298"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L352-L393"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -726,7 +801,7 @@
         <div class="member-name">
           <h2 id="validate_message_form"><pre class="hljs language-aiken">validate_message_form(message: AggregateMessage) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L300-L308"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L395-L403"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -741,7 +816,7 @@
   out_settings: OracleSettingsDatum,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L333-L349"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L428-L444"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -756,7 +831,7 @@
   out_settings: OracleSettingsDatum,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L351-L361"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L446-L456"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -771,7 +846,7 @@
   out_core_datum: OracleSettingsDatum,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L363-L370"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L458-L465"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -786,7 +861,7 @@
   nodes: List&lt;Node&gt;,
 ) -&gt; NodeId</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L372-L383"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L467-L478"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -805,7 +880,7 @@
   out_value: Value,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L385-L413"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L480-L508"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -822,7 +897,7 @@
   out_value: Value,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L415-L436"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L510-L531"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -837,7 +912,7 @@
   out_settings: OracleSettingsDatum,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L439-L456"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L534-L551"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -852,7 +927,7 @@
   out_distribution: List&lt;Int&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L458-L472"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L553-L567"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -869,7 +944,7 @@
   out_distribution: List&lt;Int&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L474-L502"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L569-L597"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -998,9 +1073,9 @@
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1729690490"></script>
+    <script src="../js/index.js?v=1731307559"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1729690490"></script>
+    <script src="../search-data.js?v=1731307559"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
