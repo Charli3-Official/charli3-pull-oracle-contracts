@@ -323,7 +323,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
         expect (
-          RewardTransport(RewardConsensusPending { message, oracle_feed }),
+          RewardTransport(RewardConsensusPending {
+            message,
+            oracle_feed,
+            node_reward_price,
+          }),
           out_value,
         ) =
           find_out_datum_and_value_allowing_asset(
@@ -363,14 +367,17 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token.policy_id,
             oracle_conf.fee_token.name,
           )
-        let minimum_fee_amout =
+        let reward_prices =
           convert_reward_prices(
             reference_inputs,
             validity_range,
             core_datum.fee_info.rate_nft,
             core_datum.fee_info.reward_prices,
           )
-            |> calculate_minimum_fee_amout(message.node_feeds_count)
+        let must_tell_node_reward_price =
+          reward_prices.node_fee == node_reward_price
+        let minimum_fee_amout =
+          calculate_minimum_fee_amout(reward_prices, message.node_feeds_count)
         let must_transfer_oracle_fees = fees_transfered >= minimum_fee_amout
 
         validate_message_form(message) && check_nodes_multisig(
@@ -378,7 +385,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           extra_signatories,
           core_datum.nodes,
           core_datum.required_node_signatures_count,
-        ) && must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees?
+        ) && must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees? && must_tell_node_reward_price?
       }
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {

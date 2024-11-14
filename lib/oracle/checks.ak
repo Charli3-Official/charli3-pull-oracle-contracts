@@ -26,6 +26,7 @@ use services/protocol_token.{
 pub type AnAggregation {
   median: OracleFeed,
   message: AggregateMessage,
+  node_reward_price: Int,
   value: Value,
 }
 
@@ -227,10 +228,18 @@ pub fn find_in_aggregations(
     fn(input: Input) -> AnAggregation {
       expect tx.InlineDatum(datum) = input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardTransport(RewardConsensusPending { oracle_feed, message }) =
-        oracle_datum
+      expect RewardTransport(RewardConsensusPending {
+        oracle_feed,
+        message,
+        node_reward_price,
+      }) = oracle_datum
 
-      AnAggregation { value: input.output.value, median: oracle_feed, message }
+      AnAggregation {
+        value: input.output.value,
+        median: oracle_feed,
+        message,
+        node_reward_price,
+      }
     }
 
   list.map(inputs, extractor)
@@ -381,6 +390,7 @@ pub fn check_reward_distribution(
         beneficiaries |> list.filter(fn(b) { index == b }) |> list.length
       let required_reward = reward_count * reward_prices.node_fee
 
+      // TODO!! this is unscaled reward
       required_reward == actual_reward
     }
 
