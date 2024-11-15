@@ -24,7 +24,7 @@ use oracle/checks.{
   check_node_received_reward, check_platform_received_reward,
   check_reward_distribution, check_settings_sanity, convert_reward_prices,
   does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_node_id_by_signature, find_out_datum_and_value,
+  find_node_index_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_allowing_asset, find_referenced_datum,
   is_aggstate_expired, oracle_fees_were_transfered,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
@@ -469,7 +469,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           aggregations,
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
-          core_datum.fee_info.reward_prices,
+          core_datum.nodes,
           core_datum.iqr_fence_multiplier,
         ) && must_return_empty_reward_utxos
       }
@@ -503,7 +503,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         let rewarded_node =
-          find_node_id_by_signature(extra_signatories, core_datum.nodes)
+          find_node_index_by_signature(extra_signatories, core_datum.nodes)
 
         check_node_received_reward(
           oracle_conf.fee_token,

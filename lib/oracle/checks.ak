@@ -1,3 +1,4 @@
+use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/collection/pairs
@@ -13,9 +14,9 @@ use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Node, NodeFeed, NodeId, OracleDatum,
-  OracleFeed, OracleSettingsDatum, RewardConsensusPending, RewardPrices,
-  RewardTransport, RewardTransportDatum, has_no_rewards,
+  AggState, AggStateDatum, AggregateMessage, FeedVkh, NodeFeed, Nodes,
+  OracleDatum, OracleFeed, OracleSettingsDatum, RewardConsensusPending,
+  RewardPrices, RewardTransport, RewardTransportDatum, has_no_rewards,
 }
 use oracle/redeemer.{CalculateRewards, OracleRedeemer}
 use services/protocol_token.{
@@ -357,44 +358,52 @@ pub fn check_reward_distribution(
   aggregations: List<AnAggregation>,
   in_distribution: List<Int>,
   out_distribution: List<Int>,
-  reward_prices: RewardPrices,
+  nodes: Nodes,
   iqr_fence_multiplier: Percent,
 ) -> Bool {
   trace @"check_reward_distribution"
 
+  let node_ids = pairs.keys(nodes)
+
   let check_nodes_count =
     list.length(in_distribution) == list.length(out_distribution)
 
-  let node_id_to_reward =
-    indexed_zip_with(
-      out_distribution,
-      in_distribution,
-      fn(index, out, in) { (index, out - in) },
-    )
+  let actual_rewards =
+    list.map2(out_distribution, in_distribution, fn(out, in) { out - in })
 
-  let beneficiaries =
-    list.flat_map(
+  let sum_rewards =
+    fn(_k, a, b) { Some(a + b) }
+  let required_rewards =
+    list.foldr(
       aggregations,
-      fn(a) {
-        consensus_by_iqr(
-          a.message.node_feeds_sorted_by_feed,
-          a.message.node_feeds_count,
-          iqr_fence_multiplier,
+      list.map(node_ids, fn(id) { Pair(id, 0) })
+        |> dict.from_ascending_pairs,
+      fn(aggregation, acc) {
+        let rewarded_nodes =
+          consensus_by_iqr(
+            aggregation.message.node_feeds_sorted_by_feed,
+            aggregation.message.node_feeds_count,
+            iqr_fence_multiplier,
+          )
+        list.foldr(
+          rewarded_nodes,
+          acc,
+          fn(node_id, d) {
+            dict.insert_with(
+              d,
+              node_id,
+              aggregation.node_reward_price,
+              sum_rewards,
+            )
+          },
         )
       },
     )
 
-  let check_node =
-    fn((index, actual_reward)) -> Bool {
-      let reward_count =
-        beneficiaries |> list.filter(fn(b) { index == b }) |> list.length
-      let required_reward = reward_count * reward_prices.node_fee
+  let check_same_nodes = dict.keys(required_rewards) == node_ids
+  let check_rewards_paid = dict.values(required_rewards) == actual_rewards
 
-      // TODO!! this is unscaled reward
-      required_reward == actual_reward
-    }
-
-  list.all(node_id_to_reward, check_node) && check_nodes_count?
+  check_nodes_count? && check_same_nodes? && check_rewards_paid?
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
@@ -469,22 +478,24 @@ pub fn check_closing_does_not_change_settings(
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
 }
 
-pub fn find_node_id_by_signature(
+pub fn find_node_index_by_signature(
   tx_signatories: List<VerificationKeyHash>,
-  nodes: List<Node>,
-) -> NodeId {
-  trace @"find_node_id_by_signature"
+  nodes: Nodes,
+) -> Int {
+  trace @"find_node_index_by_signature"
 
-  expect [(node_id, _)] =
-    list.indexed_map(nodes, fn(index, node) { (index, node.payment_vkh) })
-      |> list.filter(fn((_, node_vkh)) { list.has(tx_signatories, node_vkh) })
+  expect [(node_ix, _)] =
+    list.indexed_map(nodes, fn(index, node) { (index, builtin.snd_pair(node)) })
+      |> list.filter(
+          fn((_, payment_vkh)) { list.has(tx_signatories, payment_vkh) },
+        )
 
-  node_id
+  node_ix
 }
 
 pub fn check_node_received_reward(
   fee_token: Asset,
-  rewarded_node: NodeId,
+  rewarded_node_index: Int,
   in_distribution: List<Int>,
   out_distribution: List<Int>,
   in_value: Value,
@@ -493,9 +504,9 @@ pub fn check_node_received_reward(
   trace @"check_node_received_reward"
 
   expect (in_init, [in_reward, ..in_tail]) =
-    list.span(in_distribution, rewarded_node)
+    list.span(in_distribution, rewarded_node_index)
   expect (out_init, [out_reward, ..out_tail]) =
-    list.span(out_distribution, rewarded_node)
+    list.span(out_distribution, rewarded_node_index)
   let required_reward = in_reward - out_reward
 
   let actual_reward =

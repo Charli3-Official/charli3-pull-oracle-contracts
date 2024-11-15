@@ -8,9 +8,6 @@ use ext/cardano/value.{Asset}
 pub type OracleFeed =
   Int
 
-pub type NodeId =
-  Int
-
 pub type NodeFeed =
   Int
 
@@ -66,15 +63,15 @@ pub type OracleConfiguration {
 }
 
 pub type AggregateMessage {
-  node_feeds_sorted_by_feed: Pairs<NodeId, NodeFeed>,
+  node_feeds_sorted_by_feed: Pairs<FeedVkh, NodeFeed>,
   node_feeds_count: Int,
   timestamp: PosixTime,
 }
 
 /// Mutable oracle settings
 pub type OracleSettingsDatum {
-  /// list of oracle nodes, node id is its index inside nodes list
-  nodes: List<Node>,
+  /// list of oracle nodes, node id is its FeedVkh
+  nodes: Nodes,
   /// distinct node signatures number that passes multisig check
   required_node_signatures_count: Int,
   /// configuration of oracle fees
@@ -97,17 +94,22 @@ pub type RewardAccountDatum {
   nodes_to_rewards: List<Int>,
 }
 
-// TODO consider removing payment_vkh: that way operator uses feed_vkh to authorize collecting node rewards
+// TODO consider removing PaymentVkh: that way operator uses FeedVkh to authorize collecting node rewards
 // and pays tx fees from other address which is not known to the validator
 /// An oracle node has two keys:
-/// 1. feed_vkh - for verification of node feed inside the AggregateMessage.
+/// 1. FeedVkh - for verification of node feed inside the AggregateMessage.
 ///    Node operator does not store any kind of funds on this key, it's only for signing.
-/// 2. payment_vkh - exists only for node operator convenience:
+/// 2. PaymentVkh - exists only for node operator convenience:
 ///    so that he can pay tx fees and collect node rewards using one vkh.
-pub type Node {
-  feed_vkh: VerificationKeyHash,
-  payment_vkh: VerificationKeyHash,
-}
+/// WARNING nodes mapping should be sorted ascendingly by FeedVkh, to use it with aikens dict.from_ascending_pairs
+pub type Nodes =
+  Pairs<FeedVkh, PaymentVkh>
+
+pub type FeedVkh =
+  VerificationKeyHash
+
+pub type PaymentVkh =
+  VerificationKeyHash
 
 pub type FeeConfig {
   rate_nft: Option<Asset>,
