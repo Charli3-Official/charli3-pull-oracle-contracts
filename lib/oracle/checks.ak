@@ -1,5 +1,5 @@
 use aiken/builtin
-use aiken/collection/dict
+use aiken/collection/dict.{Dict}
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
@@ -547,39 +547,64 @@ pub fn check_platform_received_reward(
 }
 
 // TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
-pub fn check_new_nodes_settings(
+pub fn check_added_nodes(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
+  in_distribution: List<Int>,
+  out_distribution: List<Int>,
 ) -> Bool {
-  trace @"check_new_nodes_settings"
+  trace @"check_added_nodes"
 
-  let (old_nodes, new_nodes) =
-    list.span(out_settings.nodes, list.length(in_settings.nodes))
+  let (deleted_nodes, added_nodes) =
+    list.foldl(out_settings.nodes, (in_settings.nodes, []), push_added_node)
+  let old_distribution_dict =
+    list.foldr(
+      added_nodes,
+      list.map2(
+        pairs.keys(out_settings.nodes),
+        out_distribution,
+        fn(id, reward) { Pair(id, reward) },
+      )
+        |> dict.from_ascending_pairs,
+      check_new_node_rewards_distribution,
+    )
 
-  let must_add_nodes = new_nodes != []
-  let must_save_old_nodes = old_nodes == in_settings.nodes
+  let must_keep_other_settings_unchanged =
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
       out_settings.nodes,
     )
+  let must_not_delete_nodes = deleted_nodes == []
+  let must_add_some_nodes = added_nodes != []
+  let must_save_old_nodes =
+    dict.values(old_distribution_dict) == in_distribution
 
-  in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_add_nodes && must_save_old_nodes && must_not_break_multisig
+  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_delete_nodes && must_add_some_nodes && must_save_old_nodes
 }
 
-pub fn check_new_nodes_rewards_distribution(
-  in_distribution: List<Int>,
-  out_distribution: List<Int>,
-) -> Bool {
-  trace @"check_new_nodes_rewards_distribution"
+fn push_added_node(
+  node: Pair<FeedVkh, PaymentVkh>,
+  acc: (Nodes, Nodes),
+) -> (Nodes, Nodes) {
+  let (in_nodes, result) = acc
+  when in_nodes is {
+    [] -> ([], list.push(result, node))
+    [x, ..xs] ->
+      if x == node {
+        (xs, result)
+      } else {
+        (in_nodes, list.push(result, node))
+      }
+  }
+}
 
-  let (old_nodes, new_nodes) =
-    list.span(out_distribution, list.length(in_distribution))
-
-  let must_save_old_nodes = old_nodes == in_distribution
-  let must_not_reward_new_nodes =
-    new_nodes == list.repeat(0, list.length(new_nodes))
-
-  must_save_old_nodes && must_not_reward_new_nodes
+fn check_new_node_rewards_distribution(
+  new_node: Pair<FeedVkh, PaymentVkh>,
+  out_distribution: Dict<FeedVkh, Int>,
+) -> Dict<FeedVkh, Int> {
+  expect (Some(0), acc) = dict.pop(out_distribution, builtin.fst_pair(new_node))
+  acc
 }
 
 // TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
@@ -592,7 +617,11 @@ pub fn check_deleted_nodes(
   trace @"check_deleted_nodes"
 
   let (added_nodes, _, deleted_nodes) =
-    list.foldl(in_settings.nodes, (out_settings.nodes, 0, []), push_changed_node)
+    list.foldl(
+      in_settings.nodes,
+      (out_settings.nodes, 0, []),
+      push_changed_node,
+    )
   let (_, expected_distribution) =
     list.indexed_foldr(
       in_distribution,
@@ -610,7 +639,7 @@ pub fn check_deleted_nodes(
   let must_delete_some_nodes = deleted_nodes != []
   let must_delete_nodes_rewards = out_distribution == expected_distribution
 
-  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes? && must_delete_some_nodes && must_delete_nodes_rewards
+  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes && must_delete_some_nodes && must_delete_nodes_rewards
 }
 
 fn push_changed_node(

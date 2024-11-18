@@ -18,15 +18,14 @@ use cardano/transaction as tx
 use config
 use ext/cardano/value.{Asset}
 use oracle/checks.{
-  calculate_minimum_fee_amout, check_closing_does_not_change_settings,
-  check_deleted_nodes, check_fee_settings_sanity,
-  check_new_nodes_rewards_distribution, check_new_nodes_settings,
-  check_node_received_reward, check_platform_received_reward,
-  check_reward_distribution, check_settings_sanity, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_node_index_by_signature, find_out_datum_and_value,
-  find_out_datum_and_value_allowing_asset, find_referenced_datum,
-  is_aggstate_expired, oracle_fees_were_transfered,
+  calculate_minimum_fee_amout, check_added_nodes,
+  check_closing_does_not_change_settings, check_deleted_nodes,
+  check_fee_settings_sanity, check_node_received_reward,
+  check_platform_received_reward, check_reward_distribution,
+  check_settings_sanity, convert_reward_prices, does_not_produce_own_nft_outputs,
+  find_in_aggregations, find_in_datum, find_node_index_by_signature,
+  find_out_datum_and_value, find_out_datum_and_value_allowing_asset,
+  find_referenced_datum, is_aggstate_expired, oracle_fees_were_transfered,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
   spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
   validate_message_form,
@@ -588,7 +587,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && must_be_closing? && must_conserve_value?
       }
       // :: AddNodes
-      (AddNodes, RewardAccount(in_account_datum)) -> {
+      (AddNodes, RewardAccount(_in_account_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
@@ -614,7 +613,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        expect (RewardAccount(out_account_datum), out_value) =
+        expect (RewardAccount(_out_account_datum), out_value) =
           find_out_datum_and_value_allowing_asset(
             outputs,
             own_hash,
@@ -624,10 +623,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let must_conserve_value = in_value == out_value
 
-        check_new_nodes_rewards_distribution(
-          in_account_datum.nodes_to_rewards,
-          out_account_datum.nodes_to_rewards,
-        ) && must_spend_core_settings_utxo? && must_conserve_value?
+        must_spend_core_settings_utxo? && must_conserve_value?
       }
       (AddNodes, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
@@ -643,27 +639,31 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             name: config.reward_account_token_name,
           }
 
-        let must_spend_reward_account_utxo =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            AddNodes,
-            reward_acc_nft,
-            inputs,
-            redeemers,
-          )
-
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
+
+        expect RewardAccount(in_account_datum) =
+          find_in_datum(inputs, redeemers, own_hash, AddNodes, reward_acc_nft)
+
+        expect (RewardAccount(out_account_datum), _) =
+          find_out_datum_and_value_allowing_asset(
+            outputs,
+            own_hash,
+            reward_acc_nft,
+            oracle_conf.fee_token.policy_id,
+          )
 
         // TODO must reopen oracle?
         let must_be_closing = is_oracle_closing(in_core_datum)
 
         let must_conserve_value = in_value == out_value
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_new_nodes_settings(
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_added_nodes(
           in_core_datum,
           out_core_datum,
-        ) && must_spend_reward_account_utxo? && must_be_closing? && must_conserve_value?
+          in_account_datum.nodes_to_rewards,
+          out_account_datum.nodes_to_rewards,
+        ) && must_be_closing? && must_conserve_value?
       }
       // :: DelNodes
       (DelNodes, RewardAccount(_in_account_datum)) -> {
