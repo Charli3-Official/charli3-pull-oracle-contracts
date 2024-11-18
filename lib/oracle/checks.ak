@@ -9,14 +9,14 @@ use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input,
   Output, Redeemer, ScriptPurpose, ValidityRange} as tx
-use ext/aiken/collection/list.{indexed_zip_with} as list_ext
 use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, FeedVkh, NodeFeed, Nodes,
-  OracleDatum, OracleFeed, OracleSettingsDatum, RewardConsensusPending,
-  RewardPrices, RewardTransport, RewardTransportDatum, has_no_rewards,
+  OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
+  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
+  has_no_rewards,
 }
 use oracle/redeemer.{CalculateRewards, OracleRedeemer}
 use services/protocol_token.{
@@ -546,7 +546,7 @@ pub fn check_platform_received_reward(
   must_save_nodes_rewards && must_withdraw
 }
 
-// TODO required_node_signatures_count is > 0, but should be > 4 instead?
+// TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
 pub fn check_new_nodes_settings(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
@@ -582,6 +582,7 @@ pub fn check_new_nodes_rewards_distribution(
   must_save_old_nodes && must_not_reward_new_nodes
 }
 
+// TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
 pub fn check_deleted_nodes(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
@@ -591,19 +592,19 @@ pub fn check_deleted_nodes(
   trace @"check_deleted_nodes"
 
   let (added_nodes, _, deleted_nodes) =
-    list.foldl(in_settings.nodes, (out_settings.nodes, 0, []), get_deleted_node)
+    list.foldl(in_settings.nodes, (out_settings.nodes, 0, []), push_changed_node)
   let (_, expected_distribution) =
     list.indexed_foldr(
       in_distribution,
       (deleted_nodes, []),
-      push_saved_node_reward,
+      push_unchanged_node_reward,
     )
 
   let must_keep_other_settings_unchanged =
     in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
-    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
-      out_settings.nodes,
+    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
+      pairs.keys(out_settings.nodes),
     )
   let must_not_add_nodes = added_nodes == []
   let must_delete_some_nodes = deleted_nodes != []
@@ -612,35 +613,58 @@ pub fn check_deleted_nodes(
   must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes? && must_delete_some_nodes && must_delete_nodes_rewards
 }
 
-fn get_deleted_node(
-  node: Node,
-  acc: (List<Node>, NodeId, List<NodeId>),
-) -> (List<Node>, NodeId, List<NodeId>) {
-  let (out_nodes, node_id, result) = acc
+fn push_changed_node(
+  node: Pair<FeedVkh, PaymentVkh>,
+  acc: (Nodes, Int, List<Int>),
+) -> (Nodes, Int, List<Int>) {
+  let (out_nodes, node_ix, result) = acc
   when out_nodes is {
-    [] -> ([], node_id + 1, list.push(result, node_id))
+    [] -> ([], node_ix + 1, list.push(result, node_ix))
     [x, ..xs] ->
       if x == node {
-        (xs, node_id + 1, result)
+        (xs, node_ix + 1, result)
       } else {
-        (out_nodes, node_id + 1, list.push(result, node_id))
+        (out_nodes, node_ix + 1, list.push(result, node_ix))
       }
   }
 }
 
-fn push_saved_node_reward(
-  node_id: Int,
+fn push_unchanged_node_reward(
+  node_ix: Int,
   node_reward: Int,
-  acc: (List<NodeId>, List<Int>),
-) -> (List<NodeId>, List<Int>) {
+  acc: (List<Int>, List<Int>),
+) -> (List<Int>, List<Int>) {
   let (deleted_nodes, result) = acc
   when deleted_nodes is {
     [] -> ([], list.push(result, node_reward))
     [x, ..xs] ->
-      if x == node_id {
+      if x == node_ix {
         (xs, result)
       } else {
         (deleted_nodes, list.push(result, node_reward))
+      }
+  }
+}
+
+fn get_length_and_check_strict_order(node_ids_sorted: List<FeedVkh>) -> Int {
+  when node_ids_sorted is {
+    [] -> 0
+    [x, ..xs] -> do_get_length_and_check_strict_order(xs, 1, x)
+  }
+}
+
+fn do_get_length_and_check_strict_order(
+  node_ids_sorted: List<FeedVkh>,
+  n: Int,
+  prev: FeedVkh,
+) -> Int {
+  when node_ids_sorted is {
+    [] -> n
+    [x, ..xs] ->
+      if builtin.less_than_bytearray(prev, x) {
+        do_get_length_and_check_strict_order(xs, n + 1, x)
+      } else {
+        fail @"check node ids order"
       }
   }
 }

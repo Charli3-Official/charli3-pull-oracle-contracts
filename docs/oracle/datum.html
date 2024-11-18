@@ -197,11 +197,11 @@
   
   <li><a href="#FeeConfig">FeeConfig</a></li>
   
-  <li><a href="#Node">Node</a></li>
+  <li><a href="#FeedVkh">FeedVkh</a></li>
   
   <li><a href="#NodeFeed">NodeFeed</a></li>
   
-  <li><a href="#NodeId">NodeId</a></li>
+  <li><a href="#Nodes">Nodes</a></li>
   
   <li><a href="#OracleConfiguration">OracleConfiguration</a></li>
   
@@ -210,6 +210,8 @@
   <li><a href="#OracleFeed">OracleFeed</a></li>
   
   <li><a href="#OracleSettingsDatum">OracleSettingsDatum</a></li>
+  
+  <li><a href="#PaymentVkh">PaymentVkh</a></li>
   
   <li><a href="#RewardAccountDatum">RewardAccountDatum</a></li>
   
@@ -416,7 +418,7 @@
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L49-L53"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L46-L50"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -453,7 +455,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L68-L72"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L65-L69"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -466,7 +468,7 @@ and a created at timestamp for oracle users.</p>
           <div class="constructor-row">
             <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
             <pre class="constructor-name"><code class="hljs aiken">AggregateMessage {
-  node_feeds_sorted_by_feed: Pairs&lt;NodeId, NodeFeed&gt;,
+  node_feeds_sorted_by_feed: Pairs&lt;FeedVkh, NodeFeed&gt;,
   node_feeds_count: Int,
   timestamp: PosixTime,
 }</code></pre>
@@ -487,7 +489,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L112-L115"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L114-L117"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -511,37 +513,23 @@ and a created at timestamp for oracle users.</p>
   
   <div class="member">
     <div class="member-name">
-      <h2 id="Node">
-        <a href="#Node">
-	  Node
+      <h2 id="FeedVkh">
+        <a href="#FeedVkh">
+	  FeedVkh
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L107-L110"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L108-L109"></a>
       
     </div>
     <div class="custom-type-constructors">
-      <div class="rendered-markdown"><p>An oracle node has two keys:</p>
-<ol>
-<li>feed_vkh - for verification of node feed inside the AggregateMessage.
-Node operator does not store any kind of funds on this key, it’s only for signing.</li>
-<li>payment_vkh - exists only for node operator convenience:
-so that he can pay tx fees and collect node rewards using one vkh.</li>
-</ol>
-</div>
+      <div class="rendered-markdown"></div>
       
-      <h3>Constructors</h3>
-      <ul class="constructor-list">
-        
-        <li class="constructor-item">
-          <div class="constructor-row">
-            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
-            <pre class="constructor-name"><code class="hljs aiken">Node { feed_vkh: VerificationKeyHash, payment_vkh: VerificationKeyHash }</code></pre>
-          </div>
-	  
-        </li>
-        
-      </ul>
+      <h3>Alias</h3>
+      <div class="constructor-row">
+        <svg class="icon icon-at"><use xlink:href="#icon-at"></use></svg>
+        <pre class="constructor-name"><code class="hljs aiken">FeedVkh = VerificationKeyHash</code></pre>
+      </div>
       
     </div>
   </div>
@@ -554,7 +542,7 @@ so that he can pay tx fees and collect node rewards using one vkh.</li>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L14-L15"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L11-L12"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -571,22 +559,30 @@ so that he can pay tx fees and collect node rewards using one vkh.</li>
   
   <div class="member">
     <div class="member-name">
-      <h2 id="NodeId">
-        <a href="#NodeId">
-	  NodeId
+      <h2 id="Nodes">
+        <a href="#Nodes">
+	  Nodes
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L11-L12"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L105-L106"></a>
       
     </div>
     <div class="custom-type-constructors">
-      <div class="rendered-markdown"></div>
+      <div class="rendered-markdown"><p>An oracle node has two keys:</p>
+<ol>
+<li>FeedVkh - for verification of node feed inside the AggregateMessage.
+Node operator does not store any kind of funds on this key, it’s only for signing.</li>
+<li>PaymentVkh - exists only for node operator convenience:
+so that he can pay tx fees and collect node rewards using one vkh.
+WARNING nodes mapping should be sorted ascendingly by FeedVkh, to use it with aikens dict.from_ascending_pairs</li>
+</ol>
+</div>
       
       <h3>Alias</h3>
       <div class="constructor-row">
         <svg class="icon icon-at"><use xlink:href="#icon-at"></use></svg>
-        <pre class="constructor-name"><code class="hljs aiken">NodeId = Int</code></pre>
+        <pre class="constructor-name"><code class="hljs aiken">Nodes = Pairs&lt;FeedVkh, PaymentVkh&gt;</code></pre>
       </div>
       
     </div>
@@ -600,7 +596,7 @@ so that he can pay tx fees and collect node rewards using one vkh.</li>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L61-L66"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L58-L63"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -643,7 +639,7 @@ Rationale for immutability:</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L26-L31"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L23-L28"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -731,7 +727,7 @@ that will be referenced by a user of a DApp.</li>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L75-L92"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L72-L89"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -745,7 +741,7 @@ that will be referenced by a user of a DApp.</li>
           <div class="constructor-row">
             <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
             <pre class="constructor-name"><code class="hljs aiken">OracleSettingsDatum {
-  nodes: List&lt;Node&gt;,
+  nodes: Nodes,
   required_node_signatures_count: Int,
   fee_info: FeeConfig,
   aggregation_liveness_period: PosixTimeDiff,
@@ -757,7 +753,7 @@ that will be referenced by a user of a DApp.</li>
 	  
           <div class="constructor-item-docs">
             <h4><code>.nodes</code></h4>
-<p>list of oracle nodes, node id is its index inside nodes list</p>
+<p>list of oracle nodes, node id is its FeedVkh</p>
 <hr/>
 <h4><code>.required_node_signatures_count</code></h4>
 <p>distinct node signatures number that passes multisig check</p>
@@ -791,13 +787,36 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
   
   <div class="member">
     <div class="member-name">
+      <h2 id="PaymentVkh">
+        <a href="#PaymentVkh">
+	  PaymentVkh
+        </a>
+      </h2>
+      
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L111-L112"></a>
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"></div>
+      
+      <h3>Alias</h3>
+      <div class="constructor-row">
+        <svg class="icon icon-at"><use xlink:href="#icon-at"></use></svg>
+        <pre class="constructor-name"><code class="hljs aiken">PaymentVkh = VerificationKeyHash</code></pre>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div class="member">
+    <div class="member-name">
       <h2 id="RewardAccountDatum">
         <a href="#RewardAccountDatum">
 	  RewardAccountDatum
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L95-L98"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L92-L95"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -835,7 +854,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L117-L120"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L119-L122"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -865,7 +884,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L37-L44"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L34-L41"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -921,7 +940,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="is_oracle_closing"><pre class="hljs language-aiken">is_oracle_closing(settings: OracleSettingsDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L122-L124"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L124-L126"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -933,7 +952,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="has_no_rewards"><pre class="hljs language-aiken">has_no_rewards(reward_transport: RewardTransportDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L126-L131"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L128-L133"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -1062,9 +1081,9 @@ and transfer user provided fees into RewardAccount utxo.</li>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1731595455"></script>
+    <script src="../js/index.js?v=1731917487"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1731595455"></script>
+    <script src="../search-data.js?v=1731917487"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
