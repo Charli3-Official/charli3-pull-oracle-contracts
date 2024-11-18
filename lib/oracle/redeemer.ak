@@ -16,7 +16,7 @@ pub type MintingRedeemer {
 /// * UpdateSettings - oracle platform changes consensus settings
 /// * SetFeeConfig - oracle platform changes reward fee configuration
 /// * AddNodes - oracle platform adds new nodes
-/// * DelNodes - oracle platform deletes nodes
+/// * DelNodes - oracle platform deletes nodes, WARNING: before deletion all rewards must be calculated and this is not enforced on-chain
 /// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
 /// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
 /// * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards
