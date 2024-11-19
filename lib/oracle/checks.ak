@@ -389,21 +389,24 @@ pub fn check_reward_distribution(
           rewarded_nodes,
           acc,
           fn(node_id, d) {
-            dict.insert_with(
-              d,
-              node_id,
-              aggregation.node_reward_price,
-              sum_rewards,
-            )
+            if dict.has_key(d, node_id) {
+              dict.insert_with(
+                d,
+                node_id,
+                aggregation.node_reward_price,
+                sum_rewards,
+              )
+            } else {
+              d
+            }
           },
         )
       },
     )
 
-  let check_same_nodes = dict.keys(required_rewards) == node_ids
   let check_rewards_paid = dict.values(required_rewards) == actual_rewards
 
-  check_nodes_count? && check_same_nodes? && check_rewards_paid?
+  check_nodes_count? && check_rewards_paid?
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
