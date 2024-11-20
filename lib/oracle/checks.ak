@@ -1,4 +1,5 @@
-use aiken/collection/dict
+use aiken/builtin
+use aiken/collection/dict.{Dict}
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
@@ -8,14 +9,14 @@ use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input,
   Output, Redeemer, ScriptPurpose, ValidityRange} as tx
-use ext/aiken/collection/list.{indexed_zip_with} as list_ext
 use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Node, NodeFeed, NodeId, OracleDatum,
-  OracleFeed, OracleSettingsDatum, RewardConsensusPending, RewardPrices,
-  RewardTransport, RewardTransportDatum, has_no_rewards,
+  AggState, AggStateDatum, AggregateMessage, FeedVkh, NodeFeed, Nodes,
+  OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
+  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
+  has_no_rewards,
 }
 use oracle/redeemer.{CalculateRewards, OracleRedeemer}
 use services/protocol_token.{
@@ -26,6 +27,7 @@ use services/protocol_token.{
 pub type AnAggregation {
   median: OracleFeed,
   message: AggregateMessage,
+  node_reward_price: Int,
   value: Value,
 }
 
@@ -227,10 +229,18 @@ pub fn find_in_aggregations(
     fn(input: Input) -> AnAggregation {
       expect tx.InlineDatum(datum) = input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardTransport(RewardConsensusPending { oracle_feed, message }) =
-        oracle_datum
+      expect RewardTransport(RewardConsensusPending {
+        oracle_feed,
+        message,
+        node_reward_price,
+      }) = oracle_datum
 
-      AnAggregation { value: input.output.value, median: oracle_feed, message }
+      AnAggregation {
+        value: input.output.value,
+        median: oracle_feed,
+        message,
+        node_reward_price,
+      }
     }
 
   list.map(inputs, extractor)
@@ -348,43 +358,55 @@ pub fn check_reward_distribution(
   aggregations: List<AnAggregation>,
   in_distribution: List<Int>,
   out_distribution: List<Int>,
-  reward_prices: RewardPrices,
+  nodes: Nodes,
   iqr_fence_multiplier: Percent,
 ) -> Bool {
   trace @"check_reward_distribution"
 
+  let node_ids = pairs.keys(nodes)
+
   let check_nodes_count =
     list.length(in_distribution) == list.length(out_distribution)
 
-  let node_id_to_reward =
-    indexed_zip_with(
-      out_distribution,
-      in_distribution,
-      fn(index, out, in) { (index, out - in) },
-    )
+  let actual_rewards =
+    list.map2(out_distribution, in_distribution, fn(out, in) { out - in })
 
-  let beneficiaries =
-    list.flat_map(
+  let sum_rewards =
+    fn(_k, a, b) { Some(a + b) }
+  let required_rewards =
+    list.foldr(
       aggregations,
-      fn(a) {
-        consensus_by_iqr(
-          a.message.node_feeds_sorted_by_feed,
-          a.message.node_feeds_count,
-          iqr_fence_multiplier,
+      list.map(node_ids, fn(id) { Pair(id, 0) })
+        |> dict.from_ascending_pairs,
+      fn(aggregation, acc) {
+        let rewarded_nodes =
+          consensus_by_iqr(
+            aggregation.message.node_feeds_sorted_by_feed,
+            aggregation.message.node_feeds_count,
+            iqr_fence_multiplier,
+          )
+        list.foldr(
+          rewarded_nodes,
+          acc,
+          fn(node_id, d) {
+            if dict.has_key(d, node_id) {
+              dict.insert_with(
+                d,
+                node_id,
+                aggregation.node_reward_price,
+                sum_rewards,
+              )
+            } else {
+              d
+            }
+          },
         )
       },
     )
 
-  let check_node =
-    fn((index, actual_reward)) -> Bool {
-      let reward_count =
-        beneficiaries |> list.filter(fn(b) { index == b }) |> list.length
-      let required_reward = reward_count * reward_prices.node_fee
+  let check_rewards_paid = dict.values(required_rewards) == actual_rewards
 
-      required_reward == actual_reward
-    }
-
-  list.all(node_id_to_reward, check_node) && check_nodes_count?
+  check_nodes_count? && check_rewards_paid?
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
@@ -459,22 +481,24 @@ pub fn check_closing_does_not_change_settings(
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
 }
 
-pub fn find_node_id_by_signature(
+pub fn find_node_index_by_signature(
   tx_signatories: List<VerificationKeyHash>,
-  nodes: List<Node>,
-) -> NodeId {
-  trace @"find_node_id_by_signature"
+  nodes: Nodes,
+) -> Int {
+  trace @"find_node_index_by_signature"
 
-  expect [(node_id, _)] =
-    list.indexed_map(nodes, fn(index, node) { (index, node.payment_vkh) })
-      |> list.filter(fn((_, node_vkh)) { list.has(tx_signatories, node_vkh) })
+  expect [(node_ix, _)] =
+    list.indexed_map(nodes, fn(index, node) { (index, builtin.snd_pair(node)) })
+      |> list.filter(
+          fn((_, payment_vkh)) { list.has(tx_signatories, payment_vkh) },
+        )
 
-  node_id
+  node_ix
 }
 
 pub fn check_node_received_reward(
   fee_token: Asset,
-  rewarded_node: NodeId,
+  rewarded_node_index: Int,
   in_distribution: List<Int>,
   out_distribution: List<Int>,
   in_value: Value,
@@ -483,9 +507,9 @@ pub fn check_node_received_reward(
   trace @"check_node_received_reward"
 
   expect (in_init, [in_reward, ..in_tail]) =
-    list.span(in_distribution, rewarded_node)
+    list.span(in_distribution, rewarded_node_index)
   expect (out_init, [out_reward, ..out_tail]) =
-    list.span(out_distribution, rewarded_node)
+    list.span(out_distribution, rewarded_node_index)
   let required_reward = in_reward - out_reward
 
   let actual_reward =
@@ -525,42 +549,68 @@ pub fn check_platform_received_reward(
   must_save_nodes_rewards && must_withdraw
 }
 
-// TODO required_node_signatures_count is > 0, but should be > 4 instead?
-pub fn check_new_nodes_settings(
+// TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
+pub fn check_added_nodes(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
+  in_distribution: List<Int>,
+  out_distribution: List<Int>,
 ) -> Bool {
-  trace @"check_new_nodes_settings"
+  trace @"check_added_nodes"
 
-  let (old_nodes, new_nodes) =
-    list.span(out_settings.nodes, list.length(in_settings.nodes))
+  let (deleted_nodes, added_nodes) =
+    list.foldl(out_settings.nodes, (in_settings.nodes, []), push_added_node)
+  let old_distribution_dict =
+    list.foldr(
+      added_nodes,
+      list.map2(
+        pairs.keys(out_settings.nodes),
+        out_distribution,
+        fn(id, reward) { Pair(id, reward) },
+      )
+        |> dict.from_ascending_pairs,
+      check_new_node_rewards_distribution,
+    )
 
-  let must_add_nodes = new_nodes != []
-  let must_save_old_nodes = old_nodes == in_settings.nodes
+  let must_keep_other_settings_unchanged =
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
       out_settings.nodes,
     )
+  let must_not_delete_nodes = deleted_nodes == []
+  let must_add_some_nodes = added_nodes != []
+  let must_save_old_nodes =
+    dict.values(old_distribution_dict) == in_distribution
 
-  in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_add_nodes && must_save_old_nodes && must_not_break_multisig
+  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_delete_nodes && must_add_some_nodes && must_save_old_nodes
 }
 
-pub fn check_new_nodes_rewards_distribution(
-  in_distribution: List<Int>,
-  out_distribution: List<Int>,
-) -> Bool {
-  trace @"check_new_nodes_rewards_distribution"
-
-  let (old_nodes, new_nodes) =
-    list.span(out_distribution, list.length(in_distribution))
-
-  let must_save_old_nodes = old_nodes == in_distribution
-  let must_not_reward_new_nodes =
-    new_nodes == list.repeat(0, list.length(new_nodes))
-
-  must_save_old_nodes && must_not_reward_new_nodes
+fn push_added_node(
+  node: Pair<FeedVkh, PaymentVkh>,
+  acc: (Nodes, Nodes),
+) -> (Nodes, Nodes) {
+  let (in_nodes, result) = acc
+  when in_nodes is {
+    [] -> ([], list.push(result, node))
+    [x, ..xs] ->
+      if x == node {
+        (xs, result)
+      } else {
+        (in_nodes, list.push(result, node))
+      }
+  }
 }
 
+fn check_new_node_rewards_distribution(
+  new_node: Pair<FeedVkh, PaymentVkh>,
+  out_distribution: Dict<FeedVkh, Int>,
+) -> Dict<FeedVkh, Int> {
+  expect (Some(0), acc) = dict.pop(out_distribution, builtin.fst_pair(new_node))
+  acc
+}
+
+// TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
 pub fn check_deleted_nodes(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
@@ -570,56 +620,83 @@ pub fn check_deleted_nodes(
   trace @"check_deleted_nodes"
 
   let (added_nodes, _, deleted_nodes) =
-    list.foldl(in_settings.nodes, (out_settings.nodes, 0, []), get_deleted_node)
+    list.foldl(
+      in_settings.nodes,
+      (out_settings.nodes, 0, []),
+      push_changed_node,
+    )
   let (_, expected_distribution) =
     list.indexed_foldr(
       in_distribution,
       (deleted_nodes, []),
-      push_saved_node_reward,
+      push_unchanged_node_reward,
     )
 
   let must_keep_other_settings_unchanged =
     in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
-    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
-      out_settings.nodes,
+    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
+      pairs.keys(out_settings.nodes),
     )
   let must_not_add_nodes = added_nodes == []
   let must_delete_some_nodes = deleted_nodes != []
   let must_delete_nodes_rewards = out_distribution == expected_distribution
 
-  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes? && must_delete_some_nodes && must_delete_nodes_rewards
+  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes && must_delete_some_nodes && must_delete_nodes_rewards
 }
 
-fn get_deleted_node(
-  node: Node,
-  acc: (List<Node>, NodeId, List<NodeId>),
-) -> (List<Node>, NodeId, List<NodeId>) {
-  let (out_nodes, node_id, result) = acc
+fn push_changed_node(
+  node: Pair<FeedVkh, PaymentVkh>,
+  acc: (Nodes, Int, List<Int>),
+) -> (Nodes, Int, List<Int>) {
+  let (out_nodes, node_ix, result) = acc
   when out_nodes is {
-    [] -> ([], node_id + 1, list.push(result, node_id))
+    [] -> ([], node_ix + 1, list.push(result, node_ix))
     [x, ..xs] ->
       if x == node {
-        (xs, node_id + 1, result)
+        (xs, node_ix + 1, result)
       } else {
-        (out_nodes, node_id + 1, list.push(result, node_id))
+        (out_nodes, node_ix + 1, list.push(result, node_ix))
       }
   }
 }
 
-fn push_saved_node_reward(
-  node_id: Int,
+fn push_unchanged_node_reward(
+  node_ix: Int,
   node_reward: Int,
-  acc: (List<NodeId>, List<Int>),
-) -> (List<NodeId>, List<Int>) {
+  acc: (List<Int>, List<Int>),
+) -> (List<Int>, List<Int>) {
   let (deleted_nodes, result) = acc
   when deleted_nodes is {
     [] -> ([], list.push(result, node_reward))
     [x, ..xs] ->
-      if x == node_id {
+      if x == node_ix {
         (xs, result)
       } else {
         (deleted_nodes, list.push(result, node_reward))
+      }
+  }
+}
+
+fn get_length_and_check_strict_order(node_ids_sorted: List<FeedVkh>) -> Int {
+  when node_ids_sorted is {
+    [] -> 0
+    [x, ..xs] -> do_get_length_and_check_strict_order(xs, 1, x)
+  }
+}
+
+fn do_get_length_and_check_strict_order(
+  node_ids_sorted: List<FeedVkh>,
+  n: Int,
+  prev: FeedVkh,
+) -> Int {
+  when node_ids_sorted is {
+    [] -> n
+    [x, ..xs] ->
+      if builtin.less_than_bytearray(prev, x) {
+        do_get_length_and_check_strict_order(xs, n + 1, x)
+      } else {
+        fail @"check node ids order"
       }
   }
 }

@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
-    <link rel="stylesheet" href="../css/index.css?v=1.1.4" type="text/css"/>
-    <link id="syntax-theme" rel="stylesheet" href="../css/atom-one-light.min.css?v=1.1.4"/>
+    <link rel="stylesheet" href="../css/index.css?v=1.1.6" type="text/css"/>
+    <link id="syntax-theme" rel="stylesheet" href="../css/atom-one-light.min.css?v=1.1.6"/>
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -298,7 +298,7 @@
       
   
     
-        <li><a href="#find_node_id_by_signature">find_node_id_by_signature</a></li>
+        <li><a href="#find_node_index_by_signature">find_node_index_by_signature</a></li>
 
       
   
@@ -313,12 +313,7 @@
       
   
     
-        <li><a href="#check_new_nodes_settings">check_new_nodes_settings</a></li>
-
-      
-  
-    
-        <li><a href="#check_new_nodes_rewards_distribution">check_new_nodes_rewards_distribution</a></li>
+        <li><a href="#check_added_nodes">check_added_nodes</a></li>
 
       
   
@@ -507,7 +502,7 @@
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L27-L31"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L27-L32"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -519,7 +514,12 @@
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
-            <pre class="constructor-name"><code class="hljs aiken">AnAggregation { median: OracleFeed, message: AggregateMessage, value: Value }</code></pre>
+            <pre class="constructor-name"><code class="hljs aiken">AnAggregation {
+  median: OracleFeed,
+  message: AggregateMessage,
+  node_reward_price: Int,
+  value: Value,
+}</code></pre>
           </div>
 	  
         </li>
@@ -552,7 +552,7 @@
   tx_redeemers: Pairs&lt;ScriptPurpose, Redeemer&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L35-L59"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L36-L60"></a>
           
         </div>
         <div class="rendered-markdown"><p>A convenience function that calls find_script_inputs_by_token
@@ -572,7 +572,7 @@ and also checks number of spent inputs</p>
   tx_redeemers: Pairs&lt;ScriptPurpose, Redeemer&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L63-L76"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L64-L77"></a>
           
         </div>
         <div class="rendered-markdown"><p>Find one protocol NFT inside transaction inputs.
@@ -591,7 +591,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   tx_outputs: List&lt;Output&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L78-L99"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L79-L100"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -608,7 +608,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   tx_outputs: List&lt;Output&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L101-L122"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L102-L123"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -624,7 +624,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   protocol_token: Asset,
 ) -&gt; (OracleDatum, Value)</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L124-L137"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L125-L138"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -641,7 +641,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   allowed_asset: PolicyId,
 ) -&gt; (OracleDatum, Value)</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L139-L158"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L140-L159"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -657,7 +657,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   protocol_token: Asset,
 ) -&gt; OracleDatum</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L160-L177"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L161-L178"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -675,7 +675,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   protocol_token: Asset,
 ) -&gt; OracleDatum</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L179-L200"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L180-L201"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -692,7 +692,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   protocol_token: Asset,
 ) -&gt; List&lt;AnAggregation&gt;</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L202-L242"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L203-L247"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -707,7 +707,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   own_nft_policy_id: PolicyId,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L244-L256"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L249-L261"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -722,7 +722,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   tx_validity_range: ValidityRange,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L258-L271"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L263-L276"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -739,7 +739,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   reward_prices: RewardPrices,
 ) -&gt; RewardPrices</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L273-L313"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L278-L318"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -754,7 +754,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   nodes_count: Int,
 ) -&gt; Int</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L315-L320"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L320-L325"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -771,7 +771,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   out_value: Value,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L322-L350"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L327-L355"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -785,11 +785,11 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   aggregations: List&lt;AnAggregation&gt;,
   in_distribution: List&lt;Int&gt;,
   out_distribution: List&lt;Int&gt;,
-  reward_prices: RewardPrices,
+  nodes: Nodes,
   iqr_fence_multiplier: Percent,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L352-L393"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L357-L410"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -801,7 +801,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
         <div class="member-name">
           <h2 id="validate_message_form"><pre class="hljs language-aiken">validate_message_form(message: AggregateMessage) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L395-L403"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L412-L420"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -816,7 +816,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   out_settings: OracleSettingsDatum,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L428-L444"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L445-L461"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -831,7 +831,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   out_settings: OracleSettingsDatum,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L446-L456"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L463-L473"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -846,7 +846,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   out_core_datum: OracleSettingsDatum,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L458-L465"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L475-L482"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -856,12 +856,12 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   
       <div class="member">
         <div class="member-name">
-          <h2 id="find_node_id_by_signature"><pre class="hljs language-aiken">find_node_id_by_signature(
+          <h2 id="find_node_index_by_signature"><pre class="hljs language-aiken">find_node_index_by_signature(
   tx_signatories: List&lt;VerificationKeyHash&gt;,
-  nodes: List&lt;Node&gt;,
-) -&gt; NodeId</pre></h2>
+  nodes: Nodes,
+) -&gt; Int</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L467-L478"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L484-L497"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -873,14 +873,14 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
         <div class="member-name">
           <h2 id="check_node_received_reward"><pre class="hljs language-aiken">check_node_received_reward(
   fee_token: Asset,
-  rewarded_node: NodeId,
+  rewarded_node_index: Int,
   in_distribution: List&lt;Int&gt;,
   out_distribution: List&lt;Int&gt;,
   in_value: Value,
   out_value: Value,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L480-L508"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L499-L527"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -897,7 +897,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   out_value: Value,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L510-L531"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L529-L550"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -907,27 +907,14 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   
       <div class="member">
         <div class="member-name">
-          <h2 id="check_new_nodes_settings"><pre class="hljs language-aiken">check_new_nodes_settings(
+          <h2 id="check_added_nodes"><pre class="hljs language-aiken">check_added_nodes(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
-) -&gt; Bool</pre></h2>
-          
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L534-L551"></a>
-          
-        </div>
-        <div class="rendered-markdown"></div>
-      </div>
-    
-  
-  
-      <div class="member">
-        <div class="member-name">
-          <h2 id="check_new_nodes_rewards_distribution"><pre class="hljs language-aiken">check_new_nodes_rewards_distribution(
   in_distribution: List&lt;Int&gt;,
   out_distribution: List&lt;Int&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L553-L567"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L553-L587"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -944,7 +931,7 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
   out_distribution: List&lt;Int&gt;,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L569-L597"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/checks.ak#L614-L646"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -1029,8 +1016,8 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
       </defs>
     </svg>
 
-    <script src="../js/highlight.min.js?v=1.1.4"></script>
-    <script src="../js/highlightjs-aiken.js?v=1.1.4"></script>
+    <script src="../js/highlight.min.js?v=1.1.6"></script>
+    <script src="../js/highlightjs-aiken.js?v=1.1.6"></script>
     <script>
       document.querySelectorAll("pre code").forEach((elem) => {
         if (elem.className === "") {
@@ -1072,10 +1059,10 @@ Same as spends_protocol_nft_inputs, but more optimized.</p>
     </script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
-    <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1731307559"></script>
+    <script src="../js/lunr.min.js?v=1.1.6"></script>
+    <script src="../js/index.js?v=1732083557"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1731307559"></script>
+    <script src="../search-data.js?v=1732083557"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {

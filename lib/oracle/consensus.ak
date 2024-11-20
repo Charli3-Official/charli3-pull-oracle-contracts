@@ -4,7 +4,7 @@ use aiken/collection/pairs
 use aiken/math/rational
 use config
 use ext/aiken/math/rational.{Percent, per_cent} as ext
-use oracle/datum.{NodeFeed, NodeId, OracleFeed}
+use oracle/datum.{FeedVkh, NodeFeed, OracleFeed}
 use services/iqr.{iqr_fence, quantile}
 
 pub fn median(
@@ -27,10 +27,10 @@ pub fn median(
 
 /// Returns list of nodes which are not outliers using interquartile range algorithm (IQR).
 pub fn consensus_by_iqr(
-  node_feeds: Pairs<NodeId, NodeFeed>,
+  node_feeds: Pairs<FeedVkh, NodeFeed>,
   node_feeds_count: Int,
   iqr_fence_multiplier: Percent,
-) -> List<NodeId> {
+) -> List<FeedVkh> {
   if node_feeds_count < 4 {
     if config.disallow_less_than_four_nodes {
       fail @"consensus_by_iqr: less than four nodes"

@@ -7,8 +7,8 @@
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../favicon.svg"/>
-    <link rel="stylesheet" href="../css/index.css?v=1.1.4" type="text/css"/>
-    <link id="syntax-theme" rel="stylesheet" href="../css/atom-one-light.min.css?v=1.1.4"/>
+    <link rel="stylesheet" href="../css/index.css?v=1.1.6" type="text/css"/>
+    <link id="syntax-theme" rel="stylesheet" href="../css/atom-one-light.min.css?v=1.1.6"/>
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -379,13 +379,13 @@
       <div class="member">
         <div class="member-name">
           <h2 id="check_nodes_multisig"><pre class="hljs language-aiken">check_nodes_multisig(
-  node_feeds: Pairs&lt;NodeId, NodeFeed&gt;,
+  node_feeds: Pairs&lt;FeedVkh, NodeFeed&gt;,
   tx_signatories: List&lt;VerificationKeyHash&gt;,
-  nodes: List&lt;Node&gt;,
+  nodes: Nodes,
   required_node_signatures_count: Int,
 ) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/multisig.ak#L7-L38"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/multisig.ak#L8-L30"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -470,8 +470,8 @@
       </defs>
     </svg>
 
-    <script src="../js/highlight.min.js?v=1.1.4"></script>
-    <script src="../js/highlightjs-aiken.js?v=1.1.4"></script>
+    <script src="../js/highlight.min.js?v=1.1.6"></script>
+    <script src="../js/highlightjs-aiken.js?v=1.1.6"></script>
     <script>
       document.querySelectorAll("pre code").forEach((elem) => {
         if (elem.className === "") {
@@ -513,10 +513,10 @@
     </script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
-    <script src="../js/lunr.min.js?v=1.1.4"></script>
-    <script src="../js/index.js?v=1731307559"></script>
+    <script src="../js/lunr.min.js?v=1.1.6"></script>
+    <script src="../js/index.js?v=1732083557"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1731307559"></script>
+    <script src="../search-data.js?v=1732083557"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
