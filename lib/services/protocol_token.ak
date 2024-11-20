@@ -86,8 +86,6 @@ pub fn check_own_protocol_token(
   output_value: Value,
   protocol_token: Asset,
 ) -> Bool {
-  trace @"check_own_protocol_token"
-
   let tokens =
     output_value
       |> assets.without_lovelace
