@@ -15,16 +15,21 @@ name = "aiken-lang/stdlib"
 version = "v2.1.0"
 source = "github"
 
+[[dependencies]]
+name = "aiken-lang/fuzz"
+version = "v2.1.0"
+source = "github"
+
 [config.default]
 disallow_less_than_four_nodes = true
+aggstate_token_name = "C3AS"
 core_settings_token_name = "C3CS"
 reward_account_token_name = "C3RA"
 reward_transport_token_name = "C3RT"
-aggstate_token_name = "C3AS"
 
 [config.testnet]
 disallow_less_than_four_nodes = false
+aggstate_token_name = "AggregationState"
 core_settings_token_name = "CoreSettings"
 reward_account_token_name = "RewardAccount"
 reward_transport_token_name = "RewardTransport"
-aggstate_token_name = "AggregationState"

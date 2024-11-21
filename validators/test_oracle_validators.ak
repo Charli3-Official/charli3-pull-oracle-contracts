@@ -1,19 +1,26 @@
+use aiken/builtin
 use aiken/collection/list
+use aiken/collection/pairs
 use aiken/crypto.{ScriptHash}
+use aiken/fuzz
+use aiken/interval
+use aiken/primitive/int
 use cardano/address
 use cardano/assets.{PolicyId}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use config
+use ext/aiken/math/rational.{coin_precision}
 use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle
 use oracle/datum.{
-  AggState, FeeConfig, NoRewards, OracleConfiguration, OracleSettings,
-  OracleSettingsDatum, RewardAccount, RewardAccountDatum, RewardPrices,
+  AggState, AggStateDatum, AggregateMessage, FeeConfig, FeedVkh, NoRewards,
+  NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
+  RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
   RewardTransport,
 }
-use oracle/redeemer.{MintToken}
+use oracle/redeemer.{MintToken, OdvAggregate}
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
 
@@ -29,40 +36,70 @@ const mock_auth_script_hash: ScriptHash = "platform auth script hash"
 
 const mock_platform_auth_policy_id: PolicyId = "platform auth NFT policy id"
 
+const mock_fee_token_policy_id = "C3 policy id"
+
+const mock_fee_token_name = "C3"
+
 const mock_oracle_conf =
   OracleConfiguration {
     platform_auth_nft: mock_platform_auth_policy_id,
     closing_period_length: twenty_four_hours,
     reward_dismissing_period_length: twenty_four_hours,
-    fee_token: Asset { policy_id: "C3 policy id", name: "C3" },
+    fee_token: Asset {
+      policy_id: mock_fee_token_policy_id,
+      name: mock_fee_token_name,
+    },
   }
+
+const mock_nodes =
+  [
+    Pair("node01 FeedVkh", "node01 PaymentVkh"),
+    Pair("node02 FeedVkh", "node02 PaymentVkh"),
+    Pair("node03 FeedVkh", "node03 PaymentVkh"),
+    Pair("node04 FeedVkh", "node04 PaymentVkh"),
+    Pair("node05 FeedVkh", "node05 PaymentVkh"),
+    Pair("node06 FeedVkh", "node06 PaymentVkh"),
+    Pair("node07 FeedVkh", "node07 PaymentVkh"),
+    Pair("node08 FeedVkh", "node08 PaymentVkh"),
+    Pair("node09 FeedVkh", "node09 PaymentVkh"),
+    Pair("node10 FeedVkh", "node10 PaymentVkh"),
+    Pair("node11 FeedVkh", "node11 PaymentVkh"),
+    Pair("node12 FeedVkh", "node12 PaymentVkh"),
+    Pair("node13 FeedVkh", "node13 PaymentVkh"),
+    Pair("node14 FeedVkh", "node14 PaymentVkh"),
+    Pair("node15 FeedVkh", "node15 PaymentVkh"),
+    Pair("node16 FeedVkh", "node16 PaymentVkh"),
+    Pair("node17 FeedVkh", "node17 PaymentVkh"),
+  ]
+
+const mock_node_feeds: Pairs<FeedVkh, NodeFeed> =
+  [
+    449998, 449999, 449982, 449996, 450027, 449998, 450024, 449974, 450015,
+    450026, 450000, 449991, 450014, 450009, 450013, 449989, 449994,
+  ]
+    |> list.map2(
+        mock_nodes,
+        _,
+        fn(node, feed) { Pair(builtin.fst_pair(node), feed) },
+      )
+    |> list.sort(
+        fn(p1, p2) { int.compare(builtin.snd_pair(p1), builtin.snd_pair(p2)) },
+      )
+
+const mock_median = 449999
+
+const mock_node_feeds_count = 17
+
+const mock_node_fee = 10_000_000
 
 const mock_oracle_settings =
   OracleSettingsDatum {
-    nodes: [
-      Pair("node01 FeedVkh", "node01 PaymentVkh"),
-      Pair("node02 FeedVkh", "node02 PaymentVkh"),
-      Pair("node03 FeedVkh", "node03 PaymentVkh"),
-      Pair("node04 FeedVkh", "node04 PaymentVkh"),
-      Pair("node05 FeedVkh", "node05 PaymentVkh"),
-      Pair("node06 FeedVkh", "node06 PaymentVkh"),
-      Pair("node07 FeedVkh", "node07 PaymentVkh"),
-      Pair("node08 FeedVkh", "node08 PaymentVkh"),
-      Pair("node09 FeedVkh", "node09 PaymentVkh"),
-      Pair("node10 FeedVkh", "node10 PaymentVkh"),
-      Pair("node11 FeedVkh", "node11 PaymentVkh"),
-      Pair("node12 FeedVkh", "node12 PaymentVkh"),
-      Pair("node13 FeedVkh", "node13 PaymentVkh"),
-      Pair("node14 FeedVkh", "node14 PaymentVkh"),
-      Pair("node15 FeedVkh", "node15 PaymentVkh"),
-      Pair("node16 FeedVkh", "node16 PaymentVkh"),
-      Pair("node17 FeedVkh", "node17 PaymentVkh"),
-    ],
-    required_node_signatures_count: 17,
+    nodes: mock_nodes,
+    required_node_signatures_count: mock_node_feeds_count,
     fee_info: FeeConfig {
       rate_nft: None,
       reward_prices: RewardPrices {
-        node_fee: 10_000_000,
+        node_fee: mock_node_fee,
         platform_fee: 2_000_000,
       },
     },
@@ -71,6 +108,9 @@ const mock_oracle_settings =
     iqr_fence_multiplier: 150,
     closing_period_started_at: None,
   }
+
+const mock_minimum_fee_amount =
+  mock_node_feeds_count * mock_node_fee + 2_000_000
 
 const mock_platform_nft_value =
   assets.from_asset(mock_platform_auth_policy_id, "Admin", 1)
@@ -90,6 +130,23 @@ const mock_core_settings_token_value =
     1,
   )
 
+const mock_core_settings_output =
+  tx.Output {
+    address: address.from_script(mock_manager_script_hash),
+    value: mock_core_settings_token_value,
+    datum: tx.InlineDatum(OracleSettings(mock_oracle_settings)),
+    reference_script: None,
+  }
+
+const mock_core_settings_input =
+  tx.Input {
+    output_reference: OutputReference {
+      transaction_id: "some tx",
+      output_index: 1,
+    },
+    output: mock_core_settings_output,
+  }
+
 const mock_reward_account_token_value =
   assets.from_asset(
     mock_oracle_nft_script_hash,
@@ -107,27 +164,42 @@ const mock_reward_transport_token_value =
 const mock_aggstate_token_value =
   assets.from_asset(mock_oracle_nft_script_hash, config.aggstate_token_name, 1)
 
+const mock_empty_reward_transport_output =
+  tx.Output {
+    address: address.from_script(mock_manager_script_hash),
+    value: mock_reward_transport_token_value,
+    datum: tx.InlineDatum(RewardTransport(NoRewards)),
+    reference_script: None,
+  }
+
 fn mock_empty_reward_transport_outputs(count: Int) {
-  list.repeat(
-    tx.Output {
-      address: address.from_script(mock_manager_script_hash),
-      value: mock_reward_transport_token_value,
-      datum: tx.InlineDatum(RewardTransport(NoRewards)),
-      reference_script: None,
-    },
-    count,
-  )
+  list.repeat(mock_empty_reward_transport_output, count)
 }
 
+const mock_empty_aggstate_output =
+  tx.Output {
+    address: address.from_script(mock_manager_script_hash),
+    value: mock_aggstate_token_value,
+    datum: tx.InlineDatum(AggState(None)),
+    reference_script: None,
+  }
+
 fn mock_empty_aggstate_outputs(count: Int) {
-  list.repeat(
-    tx.Output {
-      address: address.from_script(mock_manager_script_hash),
-      value: mock_aggstate_token_value,
-      datum: tx.InlineDatum(AggState(None)),
-      reference_script: None,
-    },
-    count,
+  list.repeat(mock_empty_aggstate_output, count)
+}
+
+const mock_precise_tx_validity_interval =
+  interval.between(1732195907000, 1732195907000 + three_minutes)
+
+const mock_current_time = ( 1732195907000 + 1732195907000 + three_minutes ) / 2
+
+// TODO Convert a uniform distribution to a normal distribution
+// TODO Use in aggregation tests
+fn node_feeds_fuzzer(feeds_count: Int) -> Fuzzer<List<Int>> {
+  fuzz.list_between(
+    fuzz.int_between(1, coin_precision),
+    feeds_count,
+    feeds_count,
   )
 }
 
@@ -153,19 +225,12 @@ test successful_oracle_start() {
         ),
       ],
     )
-  let core_settings_output =
-    tx.Output {
-      address: address.from_script(mock_manager_script_hash),
-      value: mock_core_settings_token_value,
-      datum: tx.InlineDatum(OracleSettings(mock_oracle_settings)),
-      reference_script: None,
-    }
   let reward_account_output =
     tx.Output {
       address: address.from_script(mock_manager_script_hash),
       value: mock_reward_account_token_value,
       datum: tx.InlineDatum(
-        RewardAccount(RewardAccountDatum(list.repeat(0, 17))),
+        RewardAccount(RewardAccountDatum(list.repeat(0, mock_node_feeds_count))),
       ),
       reference_script: None,
     }
@@ -177,7 +242,8 @@ test successful_oracle_start() {
       ..tx.placeholder,
       inputs: [platform_input],
       outputs: [
-        mock_platform_nft_output, core_settings_output, reward_account_output,
+        mock_platform_nft_output, mock_core_settings_output,
+        reward_account_output,
       ]
         |> list.concat(reward_transport_outputs)
         |> list.concat(aggstate_outputs),
@@ -190,5 +256,102 @@ test successful_oracle_start() {
     MintToken,
     mock_oracle_nft_script_hash,
     start_tx,
+  )
+}
+
+test successful_odv_aggregation() {
+  let aggstate_ref =
+    OutputReference {
+      transaction_id: "aggstate before odv aggregation tx",
+      output_index: 0,
+    }
+  let aggstate_before = AggState(None)
+  let aggstate_after =
+    AggState(
+      Some(
+        AggStateDatum {
+          oracle_feed: mock_median,
+          expiry_timestamp: mock_current_time + one_hour,
+          created_at: mock_current_time,
+        },
+      ),
+    )
+  let aggstate_input =
+    tx.Input {
+      output_reference: aggstate_ref,
+      output: mock_empty_aggstate_output,
+    }
+  let aggstate_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: mock_aggstate_token_value,
+      datum: tx.InlineDatum(aggstate_after),
+      reference_script: None,
+    }
+
+  let reward_transport_ref =
+    OutputReference {
+      transaction_id: "reward transport before odv aggregation tx",
+      output_index: 0,
+    }
+  let reward_transport_before = RewardTransport(NoRewards)
+  let reward_transport_after =
+    RewardTransport(
+      RewardConsensusPending {
+        oracle_feed: mock_median,
+        message: AggregateMessage {
+          node_feeds_sorted_by_feed: mock_node_feeds,
+          node_feeds_count: mock_node_feeds_count,
+          timestamp: mock_current_time,
+        },
+        node_reward_price: mock_node_fee,
+      },
+    )
+  let reward_transport_input =
+    tx.Input {
+      output_reference: reward_transport_ref,
+      output: mock_empty_reward_transport_output,
+    }
+  let reward_transport_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(
+        mock_reward_transport_token_value,
+        assets.from_asset(
+          mock_fee_token_policy_id,
+          mock_fee_token_name,
+          mock_minimum_fee_amount,
+        ),
+      ),
+      datum: tx.InlineDatum(reward_transport_after),
+      reference_script: None,
+    }
+
+  let odv_aggregate_redeemer: Data = OdvAggregate
+  let aggregation_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input],
+      inputs: [reward_transport_input, aggstate_input],
+      redeemers: [
+        Pair(tx.Spend(aggstate_ref), odv_aggregate_redeemer),
+        Pair(tx.Spend(reward_transport_ref), odv_aggregate_redeemer),
+      ],
+      outputs: [reward_transport_output, aggstate_output],
+      validity_range: mock_precise_tx_validity_interval,
+      extra_signatories: pairs.keys(mock_nodes),
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(aggstate_before),
+    OdvAggregate,
+    aggstate_ref,
+    aggregation_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_transport_before),
+    OdvAggregate,
+    reward_transport_ref,
+    aggregation_tx,
   )
 }

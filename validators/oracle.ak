@@ -375,9 +375,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
         let must_tell_node_reward_price =
           reward_prices.node_fee == node_reward_price
-        let minimum_fee_amout =
+        let minimum_fee_amount =
           calculate_minimum_fee_amout(reward_prices, message.node_feeds_count)
-        let must_transfer_oracle_fees = fees_transfered >= minimum_fee_amout
+        let must_transfer_oracle_fees = fees_transfered >= minimum_fee_amount
 
         validate_message_form(message) && check_nodes_multisig(
           message.node_feeds_sorted_by_feed,
