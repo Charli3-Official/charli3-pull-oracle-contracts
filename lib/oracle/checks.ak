@@ -404,9 +404,9 @@ pub fn check_reward_distribution(
       },
     )
 
-  let check_rewards_paid = dict.values(required_rewards) == actual_rewards
+  let check_exact_rewards_paid = dict.values(required_rewards) == actual_rewards
 
-  check_nodes_count? && check_rewards_paid?
+  check_nodes_count? && check_exact_rewards_paid?
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
