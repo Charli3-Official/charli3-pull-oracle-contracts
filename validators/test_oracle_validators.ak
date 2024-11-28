@@ -20,11 +20,14 @@ use oracle/datum.{
 }
 use oracle/redeemer.{
   CalculateRewards, MintToken, NodeCollect, OdvAggregate, PlatformCollect,
+  UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
 
 const one_hour: PosixTimeDiff = 60 * 60 * 1000
+
+const thirty_minutes: PosixTimeDiff = 30 * 60 * 1000
 
 const three_minutes: PosixTimeDiff = 3 * 60 * 1000
 
@@ -568,5 +571,47 @@ test successful_platform_collect() {
     PlatformCollect,
     reward_account_ref,
     platform_collect_tx,
+  )
+}
+
+test successful_update_settings() {
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before update settings tx",
+      output_index: 0,
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: mock_core_settings_output,
+    }
+  let core_settings_after =
+    OracleSettingsDatum {
+      ..mock_oracle_settings,
+      aggregation_liveness_period: thirty_minutes,
+      iqr_fence_multiplier: 170,
+    }
+  let core_settings_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: mock_core_settings_token_value,
+      datum: tx.InlineDatum(OracleSettings(core_settings_after)),
+      reference_script: None,
+    }
+
+  let update_settings_redeemer: Data = UpdateSettings
+  let update_settings_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, mock_platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), update_settings_redeemer)],
+      outputs: [core_settings_output, mock_platform_nft_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(OracleSettings(mock_oracle_settings)),
+    UpdateSettings,
+    core_settings_ref,
+    update_settings_tx,
   )
 }
