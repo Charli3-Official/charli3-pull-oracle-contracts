@@ -20,7 +20,7 @@ use oracle/datum.{
 }
 use oracle/redeemer.{
   CalculateRewards, MintToken, NodeCollect, OdvAggregate, PlatformCollect,
-  UpdateSettings,
+  SetFeeConfig, UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -273,6 +273,7 @@ test successful_oracle_start() {
   )
 }
 
+// TODO test successful OdvAggregate with dynamic oracle fees calculation
 test successful_odv_aggregation() {
   let aggstate_ref =
     OutputReference {
@@ -370,6 +371,8 @@ test successful_odv_aggregation() {
   )
 }
 
+// TODO test successful CalculateRewards with dynamic oracle fees calculation
+// TODO test successful CalculateRewards with multiple aggregations
 test successful_reward_calculation() {
   let rewards_value =
     assets.from_asset(
@@ -613,5 +616,67 @@ test successful_update_settings() {
     UpdateSettings,
     core_settings_ref,
     update_settings_tx,
+  )
+}
+
+test successful_set_fee_config() {
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before set fee config tx",
+      output_index: 0,
+    }
+  let core_settings_before =
+    OracleSettingsDatum {
+      ..mock_oracle_settings,
+      closing_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(OracleSettings(core_settings_before)),
+        reference_script: None,
+      },
+    }
+  let core_settings_after =
+    OracleSettingsDatum {
+      ..core_settings_before,
+      fee_info: FeeConfig {
+        rate_nft: Some(
+          Asset {
+            policy_id: "USD/C3 policy id",
+            name: config.aggstate_token_name,
+          },
+        ),
+        reward_prices: RewardPrices {
+          node_fee: mock_node_fee / 10,
+          platform_fee: mock_platform_fee / 10,
+        },
+      },
+    }
+  let core_settings_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: mock_core_settings_token_value,
+      datum: tx.InlineDatum(OracleSettings(core_settings_after)),
+      reference_script: None,
+    }
+
+  let set_fee_config_redeemer: Data = SetFeeConfig
+  let set_fee_config_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, mock_platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), set_fee_config_redeemer)],
+      outputs: [core_settings_output, mock_platform_nft_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(OracleSettings(core_settings_before)),
+    SetFeeConfig,
+    core_settings_ref,
+    set_fee_config_tx,
   )
 }
