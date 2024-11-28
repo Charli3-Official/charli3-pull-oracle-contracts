@@ -18,7 +18,9 @@ use oracle/datum.{
   RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
   RewardTransport,
 }
-use oracle/redeemer.{CalculateRewards, MintToken, NodeCollect, OdvAggregate}
+use oracle/redeemer.{
+  CalculateRewards, MintToken, NodeCollect, OdvAggregate, PlatformCollect,
+}
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
 
@@ -90,6 +92,8 @@ const mock_node_feeds_count = 17
 
 const mock_node_fee = 10_000_000
 
+const mock_platform_fee = 2_000_000
+
 const mock_nodes_rewards =
   [
     mock_node_fee, mock_node_fee, mock_node_fee, mock_node_fee, mock_node_fee,
@@ -106,7 +110,7 @@ const mock_oracle_settings =
       rate_nft: None,
       reward_prices: RewardPrices {
         node_fee: mock_node_fee,
-        platform_fee: 2_000_000,
+        platform_fee: mock_platform_fee,
       },
     },
     aggregation_liveness_period: one_hour,
@@ -127,6 +131,15 @@ const mock_platform_nft_output =
     value: mock_platform_nft_value,
     datum: tx.NoDatum,
     reference_script: None,
+  }
+
+const mock_platform_nft_input =
+  tx.Input {
+    output_reference: OutputReference {
+      transaction_id: "some platform tx",
+      output_index: 0,
+    },
+    output: mock_platform_nft_output,
   }
 
 const mock_core_settings_token_value =
@@ -497,5 +510,63 @@ test successful_node_collect() {
     NodeCollect,
     reward_account_ref,
     node_collect_tx,
+  )
+}
+
+test successful_platform_collect() {
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before platform collect tx",
+      output_index: 0,
+    }
+  let reward_account = RewardAccount(RewardAccountDatum(mock_nodes_rewards))
+  let rewards_value_before =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount,
+    )
+  let rewards_value_after =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount - mock_platform_fee,
+    )
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(
+          mock_reward_account_token_value,
+          rewards_value_before,
+        ),
+        datum: tx.InlineDatum(reward_account),
+        reference_script: None,
+      },
+    }
+  let reward_account_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(mock_reward_account_token_value, rewards_value_after),
+      datum: tx.InlineDatum(reward_account),
+      reference_script: None,
+    }
+
+  let platform_collect_redeemer: Data = PlatformCollect
+  let platform_collect_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input],
+      inputs: [reward_account_input, mock_platform_nft_input],
+      redeemers: [Pair(tx.Spend(reward_account_ref), platform_collect_redeemer)],
+      outputs: [reward_account_output, mock_platform_nft_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_account),
+    PlatformCollect,
+    reward_account_ref,
+    platform_collect_tx,
   )
 }
