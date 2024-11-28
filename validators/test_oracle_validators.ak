@@ -2,7 +2,6 @@ use aiken/builtin
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/crypto.{ScriptHash}
-use aiken/fuzz
 use aiken/interval
 use aiken/primitive/int
 use cardano/address
@@ -10,7 +9,6 @@ use cardano/assets.{PolicyId}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use config
-use ext/aiken/math/rational.{coin_precision}
 use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle
@@ -211,16 +209,6 @@ const mock_precise_tx_validity_interval =
   interval.between(1732195907000, 1732195907000 + three_minutes)
 
 const mock_current_time = ( 1732195907000 + 1732195907000 + three_minutes ) / 2
-
-// TODO Convert a uniform distribution to a normal distribution
-// TODO Use in aggregation tests
-fn node_feeds_fuzzer(feeds_count: Int) -> Fuzzer<List<Int>> {
-  fuzz.list_between(
-    fuzz.int_between(1, coin_precision),
-    feeds_count,
-    feeds_count,
-  )
-}
 
 test successful_oracle_start() {
   let platform_utxo =
