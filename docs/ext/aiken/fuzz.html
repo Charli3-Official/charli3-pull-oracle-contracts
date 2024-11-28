@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>ext/cardano/value - charli3-official/odv-multisig-charli3-oracle-onchain</title>
+    <title>ext/aiken/fuzz - charli3-official/odv-multisig-charli3-oracle-onchain</title>
     <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#1e1e2e" media="(prefers-color-scheme: dark)"/>
     <link rel="icon" type="image/svg+xml" sizes="any" href="../../favicon.svg"/>
@@ -188,16 +188,24 @@
 
         
 
-<h2>Types</h2>
+
+
+
+
+<h2>Functions</h2>
 <ul>
   
-  <li><a href="#Asset">Asset</a></li>
+    
+        <li><a href="#list_normal">list_normal</a></li>
+
+      
+  
+    
+        <li><a href="#int_normal">int_normal</a></li>
+
+      
   
 </ul>
-
-
-
-
 
 
 
@@ -234,8 +242,8 @@
         
 	  
 	    
-	      <li data-indent="2"><a href="../../ext/aiken/fuzz.html">
-	      fuzz
+	      <li data-indent="2" data-current><a href="../../ext/aiken/fuzz.html">
+	      <strong>fuzz</strong>
 	      </a></li>
 	    
 	  
@@ -266,8 +274,8 @@
         
 	  
 	    
-	      <li data-indent="2" data-current><a href="../../ext/cardano/value.html">
-	      <strong>value</strong>
+	      <li data-indent="2"><a href="../../ext/cardano/value.html">
+	      value
 	      </a></li>
 	    
 	  
@@ -366,52 +374,46 @@
       <main class="content">
         
 <h1 id="module-name" class="module-name">
-  <a href="#module-name">ext/cardano/value</a>
+  <a href="#module-name">ext/aiken/fuzz</a>
 </h1>
 
 
 
-<section class="module-members">
-  <h1 id="module-types" class="module-member-kind">
-    <a href="#module-types">Types</a>
-  </h1>
 
+
+
+
+<section class="module-members">
+  <h1 id="module-functions" class="module-member-kind">
+    <a href="#module-functions">Functions</a>
+  </h1>
   
-  <div class="member">
-    <div class="member-name">
-      <h2 id="Asset">
-        <a href="#Asset">
-	  Asset
-        </a>
-      </h2>
-      
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/ext/cardano/value.ak#L3-L6"></a>
-      
-    </div>
-    <div class="custom-type-constructors">
-      <div class="rendered-markdown"></div>
-      
-      <h3>Constructors</h3>
-      <ul class="constructor-list">
-        
-        <li class="constructor-item">
-          <div class="constructor-row">
-            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
-            <pre class="constructor-name"><code class="hljs aiken">Asset { policy_id: PolicyId, name: AssetName }</code></pre>
-          </div>
-	  
-        </li>
-        
-      </ul>
-      
-    </div>
-  </div>
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="list_normal"><pre class="hljs language-aiken">list_normal(median: Int, variance: Int, sample_size: Int) -&gt; Fuzzer&lt;List&lt;Int&gt;&gt;</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/ext/aiken/fuzz.ak#L6-L18"></a>
+          
+        </div>
+        <div class="rendered-markdown"></div>
+      </div>
+    
+  
+  
+      <div class="member">
+        <div class="member-name">
+          <h2 id="int_normal"><pre class="hljs language-aiken">int_normal(median: Int, variance: Int, accuracy: Int) -&gt; Fuzzer&lt;Int&gt;</pre></h2>
+          
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/ext/aiken/fuzz.ak#L21-L30"></a>
+          
+        </div>
+        <div class="rendered-markdown"><p>This function converts uniform integer distribution to normal</p>
+</div>
+      </div>
+    
   
 </section>
-
-
-
-
 
 
       </main>

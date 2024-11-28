@@ -18,7 +18,7 @@ use oracle/datum.{
   RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
   RewardTransport,
 }
-use oracle/redeemer.{CalculateRewards, MintToken, OdvAggregate}
+use oracle/redeemer.{CalculateRewards, MintToken, NodeCollect, OdvAggregate}
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
 
@@ -434,5 +434,68 @@ test successful_reward_calculation() {
     CalculateRewards,
     reward_account_ref,
     rewards_consensus_tx,
+  )
+}
+
+test successful_node_collect() {
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before node collect tx",
+      output_index: 0,
+    }
+  let reward_account_before =
+    RewardAccount(RewardAccountDatum(mock_nodes_rewards))
+  let rewards_value_before =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount,
+    )
+  expect (init, [_, ..tail]) = list.span(mock_nodes_rewards, 4)
+  let reward_account_after =
+    RewardAccount(RewardAccountDatum(list.concat(init, [0, ..tail])))
+  let rewards_value_after =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount - mock_node_fee,
+    )
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(
+          mock_reward_account_token_value,
+          rewards_value_before,
+        ),
+        datum: tx.InlineDatum(reward_account_before),
+        reference_script: None,
+      },
+    }
+  let reward_account_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(mock_reward_account_token_value, rewards_value_after),
+      datum: tx.InlineDatum(reward_account_after),
+      reference_script: None,
+    }
+
+  let node_collect_redeemer: Data = NodeCollect
+  let node_collect_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input],
+      inputs: [reward_account_input],
+      redeemers: [Pair(tx.Spend(reward_account_ref), node_collect_redeemer)],
+      outputs: [reward_account_output],
+      extra_signatories: ["node05 PaymentVkh"],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_account_before),
+    NodeCollect,
+    reward_account_ref,
+    node_collect_tx,
   )
 }
