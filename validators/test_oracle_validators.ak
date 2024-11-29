@@ -20,7 +20,7 @@ use oracle/datum.{
 }
 use oracle/redeemer.{
   AddNodes, CalculateRewards, DelNodes, MintToken, NodeCollect, OdvAggregate,
-  PlatformCollect, ScaleToken, SetFeeConfig, UpdateSettings,
+  PlatformCollect, ScaleDown, ScaleToken, SetFeeConfig, UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -920,5 +920,84 @@ test successful_scale_up() {
     ScaleToken,
     mock_oracle_nft_script_hash,
     scale_up_tx,
+  )
+}
+
+// TODO successful scale down when AggState is empty
+test successful_scale_down() {
+  let burned_tokens_value =
+    assets.from_asset_list(
+      [
+        Pair(
+          mock_oracle_nft_script_hash,
+          [
+            Pair(config.aggstate_token_name, -1),
+            Pair(config.reward_transport_token_name, -1),
+          ],
+        ),
+      ],
+    )
+  let reward_transport_ref =
+    OutputReference { transaction_id: "before scale down tx", output_index: 0 }
+  let reward_transport_input =
+    tx.Input {
+      output_reference: reward_transport_ref,
+      output: mock_empty_reward_transport_output,
+    }
+  let aggstate_ref =
+    OutputReference { transaction_id: "before scale down tx", output_index: 1 }
+  let aggstate =
+    AggState(
+      Some(
+        AggStateDatum {
+          oracle_feed: mock_median,
+          expiry_timestamp: mock_current_time + one_hour,
+          created_at: mock_current_time,
+        },
+      ),
+    )
+  let aggstate_input =
+    tx.Input {
+      output_reference: aggstate_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_aggstate_token_value,
+        datum: tx.InlineDatum(aggstate),
+        reference_script: None,
+      },
+    }
+
+  let scale_down_redeemer: Data = ScaleDown
+  let scale_down_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [mock_platform_nft_input, aggstate_input, reward_transport_input],
+      redeemers: [
+        Pair(tx.Spend(aggstate_ref), scale_down_redeemer),
+        Pair(tx.Spend(reward_transport_ref), scale_down_redeemer),
+      ],
+      outputs: [mock_platform_nft_output],
+      mint: burned_tokens_value,
+      validity_range: interval.after(mock_current_time + twenty_four_hours),
+    }
+  oracle.oracle_nfts.mint(
+    mock_starting_platform_utxo,
+    mock_oracle_conf,
+    mock_manager_script_hash,
+    ScaleToken,
+    mock_oracle_nft_script_hash,
+    scale_down_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(RewardTransport(NoRewards)),
+    ScaleDown,
+    reward_transport_ref,
+    scale_down_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(aggstate),
+    ScaleDown,
+    aggstate_ref,
+    scale_down_tx,
   )
 }
