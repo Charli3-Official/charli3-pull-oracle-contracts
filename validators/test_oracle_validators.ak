@@ -19,9 +19,9 @@ use oracle/datum.{
   RewardTransport,
 }
 use oracle/redeemer.{
-  AddNodes, CalculateRewards, DelNodes, DismissRewards, MintToken, NodeCollect,
-  OdvAggregate, PlatformCollect, ScaleDown, ScaleToken, SetFeeConfig,
-  UpdateSettings,
+  AddNodes, CalculateRewards, CloseOracle, DelNodes, DismissRewards, MintToken,
+  NodeCollect, OdvAggregate, PlatformCollect, ScaleDown, ScaleToken,
+  SetFeeConfig, UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -1056,5 +1056,47 @@ test successful_reward_dismissing() {
     DismissRewards,
     reward_transport_ref,
     dismiss_rewards_tx,
+  )
+}
+
+test successful_oracle_close() {
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before oracle close tx",
+      output_index: 0,
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: mock_core_settings_output,
+    }
+  let core_settings_after =
+    OracleSettingsDatum {
+      ..mock_oracle_settings,
+      closing_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: mock_core_settings_token_value,
+      datum: tx.InlineDatum(OracleSettings(core_settings_after)),
+      reference_script: None,
+    }
+
+  let oracle_close_redeemer: Data = CloseOracle
+  let oracle_close_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, mock_platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), oracle_close_redeemer)],
+      outputs: [core_settings_output, mock_platform_nft_output],
+      validity_range: mock_precise_tx_validity_interval,
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(OracleSettings(mock_oracle_settings)),
+    CloseOracle,
+    core_settings_ref,
+    oracle_close_tx,
   )
 }
