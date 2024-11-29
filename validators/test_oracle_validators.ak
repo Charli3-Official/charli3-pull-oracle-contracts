@@ -19,8 +19,9 @@ use oracle/datum.{
   RewardTransport,
 }
 use oracle/redeemer.{
-  AddNodes, CalculateRewards, DelNodes, MintToken, NodeCollect, OdvAggregate,
-  PlatformCollect, ScaleDown, ScaleToken, SetFeeConfig, UpdateSettings,
+  AddNodes, CalculateRewards, DelNodes, DismissRewards, MintToken, NodeCollect,
+  OdvAggregate, PlatformCollect, ScaleDown, ScaleToken, SetFeeConfig,
+  UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -39,6 +40,7 @@ const mock_auth_script_hash: ScriptHash = "platform auth script hash"
 
 const mock_platform_auth_policy_id: PolicyId = "platform auth NFT policy id"
 
+// TODO test also with ada
 const mock_fee_token_policy_id = "C3 policy id"
 
 const mock_fee_token_name = "C3"
@@ -999,5 +1001,60 @@ test successful_scale_down() {
     ScaleDown,
     aggstate_ref,
     scale_down_tx,
+  )
+}
+
+test successful_reward_dismissing() {
+  let rewards_value =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount,
+    )
+  let reward_transport_ref =
+    OutputReference {
+      transaction_id: "some odv aggregation tx",
+      output_index: 0,
+    }
+  let reward_transport_before =
+    RewardTransport(
+      RewardConsensusPending {
+        oracle_feed: mock_median,
+        message: AggregateMessage {
+          node_feeds_sorted_by_feed: mock_node_feeds,
+          node_feeds_count: mock_node_feeds_count,
+          timestamp: mock_current_time,
+        },
+        node_reward_price: mock_node_fee,
+      },
+    )
+  let reward_transport_input =
+    tx.Input {
+      output_reference: reward_transport_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(mock_reward_transport_token_value, rewards_value),
+        datum: tx.InlineDatum(reward_transport_before),
+        reference_script: None,
+      },
+    }
+
+  let dismiss_rewards_redeemer: Data = DismissRewards
+  let dismiss_rewards_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [reward_transport_input, mock_platform_nft_input],
+      redeemers: [
+        Pair(tx.Spend(reward_transport_ref), dismiss_rewards_redeemer),
+      ],
+      outputs: [mock_empty_reward_transport_output, mock_platform_nft_output],
+      validity_range: interval.after(mock_current_time + 2 * twenty_four_hours),
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_transport_before),
+    DismissRewards,
+    reward_transport_ref,
+    dismiss_rewards_tx,
   )
 }

@@ -875,7 +875,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         // nodes which are interested in collecting the rewards should do so during closing period
         must_spend_core_settings_utxo?
       }
-
       (RemoveOracle, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
