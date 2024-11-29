@@ -20,8 +20,8 @@ use oracle/datum.{
 }
 use oracle/redeemer.{
   AddNodes, CalculateRewards, CloseOracle, DelNodes, DismissRewards, MintToken,
-  NodeCollect, OdvAggregate, PlatformCollect, ScaleDown, ScaleToken,
-  SetFeeConfig, UpdateSettings,
+  NodeCollect, OdvAggregate, PlatformCollect, ReopenOracle, ScaleDown,
+  ScaleToken, SetFeeConfig, UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -1098,5 +1098,44 @@ test successful_oracle_close() {
     CloseOracle,
     core_settings_ref,
     oracle_close_tx,
+  )
+}
+
+test successful_reopen_oracle() {
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before reopen oracle tx",
+      output_index: 0,
+    }
+  let core_settings_before =
+    OracleSettingsDatum {
+      ..mock_oracle_settings,
+      closing_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(OracleSettings(core_settings_before)),
+        reference_script: None,
+      },
+    }
+
+  let reopen_oracle_redeemer: Data = ReopenOracle
+  let reopen_oracle_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, mock_platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), reopen_oracle_redeemer)],
+      outputs: [mock_core_settings_output, mock_platform_nft_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(OracleSettings(core_settings_before)),
+    ReopenOracle,
+    core_settings_ref,
+    reopen_oracle_tx,
   )
 }
