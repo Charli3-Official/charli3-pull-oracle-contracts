@@ -19,7 +19,7 @@ use oracle/datum.{
   RewardTransport,
 }
 use oracle/redeemer.{
-  AddNodes, CalculateRewards, MintToken, NodeCollect, OdvAggregate,
+  AddNodes, CalculateRewards, DelNodes, MintToken, NodeCollect, OdvAggregate,
   PlatformCollect, SetFeeConfig, UpdateSettings,
 }
 
@@ -781,5 +781,106 @@ test successful_add_nodes() {
     AddNodes,
     core_settings_ref,
     add_nodes_tx,
+  )
+}
+
+test successful_del_nodes() {
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before del nodes tx",
+      output_index: 0,
+    }
+  let reward_account_before =
+    RewardAccount(RewardAccountDatum(mock_nodes_rewards))
+  let reward_account_after =
+    RewardAccount(RewardAccountDatum(list.drop(mock_nodes_rewards, 1)))
+  let rewards_value =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount,
+    )
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(mock_reward_account_token_value, rewards_value),
+        datum: tx.InlineDatum(reward_account_before),
+        reference_script: None,
+      },
+    }
+  let reward_account_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(mock_reward_account_token_value, rewards_value),
+      datum: tx.InlineDatum(reward_account_after),
+      reference_script: None,
+    }
+
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before del nodes tx",
+      output_index: 0,
+    }
+  let core_settings_before =
+    OracleSettingsDatum {
+      ..mock_oracle_settings,
+      closing_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(OracleSettings(core_settings_before)),
+        reference_script: None,
+      },
+    }
+  let core_settings_after =
+    OracleSettingsDatum {
+      ..core_settings_before,
+      nodes: list.delete(
+        mock_nodes,
+        Pair("node02 FeedVkh", "node02 PaymentVkh"),
+      ),
+      required_node_signatures_count: mock_node_feeds_count - 1,
+    }
+  let core_settings_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: mock_core_settings_token_value,
+      datum: tx.InlineDatum(OracleSettings(core_settings_after)),
+      reference_script: None,
+    }
+
+  let del_nodes_redeemer: Data = DelNodes
+  let del_nodes_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [
+        core_settings_input, reward_account_input, mock_platform_nft_input,
+      ],
+      redeemers: [
+        Pair(tx.Spend(core_settings_ref), del_nodes_redeemer),
+        Pair(tx.Spend(reward_account_ref), del_nodes_redeemer),
+      ],
+      outputs: [
+        core_settings_output, reward_account_output, mock_platform_nft_output,
+      ],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_account_before),
+    DelNodes,
+    reward_account_ref,
+    del_nodes_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(OracleSettings(core_settings_before)),
+    DelNodes,
+    core_settings_ref,
+    del_nodes_tx,
   )
 }
