@@ -19,9 +19,9 @@ use oracle/datum.{
   RewardTransport,
 }
 use oracle/redeemer.{
-  AddNodes, CalculateRewards, CloseOracle, DelNodes, DismissRewards, MintToken,
-  NodeCollect, OdvAggregate, PlatformCollect, ReopenOracle, ScaleDown,
-  ScaleToken, SetFeeConfig, UpdateSettings,
+  AddNodes, BurnToken, CalculateRewards, CloseOracle, DelNodes, DismissRewards,
+  MintToken, NodeCollect, OdvAggregate, PlatformCollect, RemoveOracle,
+  ReopenOracle, ScaleDown, ScaleToken, SetFeeConfig, UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -1137,5 +1137,162 @@ test successful_reopen_oracle() {
     ReopenOracle,
     core_settings_ref,
     reopen_oracle_tx,
+  )
+}
+
+// TODO test successful remove oracle when no aggstate and reward transport utxos removed
+test successful_remove_oracle() {
+  let remove_oracle_redeemer: Data = RemoveOracle
+  let burned_tokens_value =
+    assets.from_asset_list(
+      [
+        Pair(
+          mock_oracle_nft_script_hash,
+          [
+            Pair(config.aggstate_token_name, -3),
+            Pair(config.core_settings_token_name, -1),
+            Pair(config.reward_account_token_name, -1),
+            Pair(config.reward_transport_token_name, -3),
+          ],
+        ),
+      ],
+    )
+
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before remove oracle tx",
+      output_index: 0,
+    }
+  let core_settings =
+    OracleSettingsDatum {
+      ..mock_oracle_settings,
+      closing_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(OracleSettings(core_settings)),
+        reference_script: None,
+      },
+    }
+
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before remove oracle tx",
+      output_index: 0,
+    }
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: mock_empty_reward_account_output,
+    }
+
+  let reward_transport_tx_id = "reward transport before remove oracle tx"
+  let reward_transport_inputs =
+    mock_empty_reward_transport_outputs(3)
+      |> list.indexed_map(
+          fn(ix, output) {
+            tx.Input {
+              output_reference: OutputReference {
+                transaction_id: reward_transport_tx_id,
+                output_index: ix,
+              },
+              output,
+            }
+          },
+        )
+  let reward_transport_redeemers =
+    list.map(
+      list.range(0, 2),
+      fn(ix) {
+        Pair(
+          tx.Spend(
+            OutputReference {
+              transaction_id: reward_transport_tx_id,
+              output_index: ix,
+            },
+          ),
+          remove_oracle_redeemer,
+        )
+      },
+    )
+
+  let aggstate_tx_id = "aggstate before remove oracle tx"
+  let aggstate_inputs =
+    mock_empty_aggstate_outputs(3)
+      |> list.indexed_map(
+          fn(ix, output) {
+            tx.Input {
+              output_reference: OutputReference {
+                transaction_id: aggstate_tx_id,
+                output_index: ix,
+              },
+              output,
+            }
+          },
+        )
+  let aggstate_redeemers =
+    list.map(
+      list.range(0, 2),
+      fn(ix) {
+        Pair(
+          tx.Spend(
+            OutputReference { transaction_id: aggstate_tx_id, output_index: ix },
+          ),
+          remove_oracle_redeemer,
+        )
+      },
+    )
+
+  let remove_oracle_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [
+        core_settings_input, reward_account_input, mock_platform_nft_input,
+        ..list.concat(aggstate_inputs, reward_transport_inputs)
+      ],
+      redeemers: [
+        Pair(tx.Spend(core_settings_ref), remove_oracle_redeemer),
+        Pair(tx.Spend(reward_account_ref), remove_oracle_redeemer),
+        ..list.concat(aggstate_redeemers, reward_transport_redeemers)
+      ],
+      outputs: [mock_platform_nft_output],
+      mint: burned_tokens_value,
+      validity_range: interval.after(mock_current_time + 2 * twenty_four_hours),
+    }
+  oracle.oracle_nfts.mint(
+    mock_starting_platform_utxo,
+    mock_oracle_conf,
+    mock_manager_script_hash,
+    BurnToken,
+    mock_oracle_nft_script_hash,
+    remove_oracle_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(RewardAccount(mock_empty_reward_account_datum)),
+    RemoveOracle,
+    reward_account_ref,
+    remove_oracle_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(RewardTransport(NoRewards)),
+    RemoveOracle,
+    OutputReference { transaction_id: reward_transport_tx_id, output_index: 0 },
+    remove_oracle_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(AggState(None)),
+    RemoveOracle,
+    OutputReference { transaction_id: aggstate_tx_id, output_index: 0 },
+    remove_oracle_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(OracleSettings(core_settings)),
+    RemoveOracle,
+    core_settings_ref,
+    remove_oracle_tx,
   )
 }

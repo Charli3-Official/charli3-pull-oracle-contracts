@@ -180,7 +180,7 @@ validator oracle_nfts(
             |> dict.get(config.aggstate_token_name)
             |> option.or_else(0)
         let must_not_mint_reward_transport = n <= 0
-        let must_mint_same_amount_aggstate = m == n
+        let must_burn_same_amount_aggstate = m == n
 
         let must_spend_core_settings_input =
           spends_one_script_utxo_with_nft(
@@ -218,7 +218,7 @@ validator oracle_nfts(
             redeemers,
           )
 
-        must_spend_core_settings_input? && must_spend_reward_account_input? && must_not_mint_reward_transport? && must_mint_same_amount_aggstate? && must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
+        must_spend_core_settings_input? && must_spend_reward_account_input? && must_not_mint_reward_transport? && must_burn_same_amount_aggstate? && must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
       }
     }
   }
