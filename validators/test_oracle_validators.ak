@@ -20,7 +20,7 @@ use oracle/datum.{
 }
 use oracle/redeemer.{
   AddNodes, CalculateRewards, DelNodes, MintToken, NodeCollect, OdvAggregate,
-  PlatformCollect, SetFeeConfig, UpdateSettings,
+  PlatformCollect, ScaleToken, SetFeeConfig, UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -226,12 +226,13 @@ const mock_precise_tx_validity_interval =
 
 const mock_current_time = ( 1732195907000 + 1732195907000 + three_minutes ) / 2
 
+const mock_starting_platform_utxo =
+  OutputReference { transaction_id: "before start tx", output_index: 0 }
+
 test successful_oracle_start() {
-  let platform_utxo =
-    OutputReference { transaction_id: "before start tx", output_index: 0 }
   let platform_input =
     tx.Input {
-      output_reference: platform_utxo,
+      output_reference: mock_starting_platform_utxo,
       output: mock_platform_nft_output,
     }
   let minted_tokens_value =
@@ -264,7 +265,7 @@ test successful_oracle_start() {
       mint: minted_tokens_value,
     }
   oracle.oracle_nfts.mint(
-    platform_utxo,
+    mock_starting_platform_utxo,
     mock_oracle_conf,
     mock_manager_script_hash,
     MintToken,
@@ -882,5 +883,42 @@ test successful_del_nodes() {
     DelNodes,
     core_settings_ref,
     del_nodes_tx,
+  )
+}
+
+test successful_scale_up() {
+  let minted_tokens_value =
+    assets.from_asset_list(
+      [
+        Pair(
+          mock_oracle_nft_script_hash,
+          [
+            Pair(config.aggstate_token_name, 2),
+            Pair(config.reward_transport_token_name, 2),
+          ],
+        ),
+      ],
+    )
+  let reward_transport_outputs = mock_empty_reward_transport_outputs(2)
+  let aggstate_outputs = mock_empty_aggstate_outputs(2)
+
+  let scale_up_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input],
+      inputs: [mock_platform_nft_input],
+      outputs: [
+        mock_platform_nft_output,
+        ..list.concat(aggstate_outputs, reward_transport_outputs)
+      ],
+      mint: minted_tokens_value,
+    }
+  oracle.oracle_nfts.mint(
+    mock_starting_platform_utxo,
+    mock_oracle_conf,
+    mock_manager_script_hash,
+    ScaleToken,
+    mock_oracle_nft_script_hash,
+    scale_up_tx,
   )
 }
