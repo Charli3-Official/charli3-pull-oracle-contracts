@@ -125,7 +125,7 @@ const mock_oracle_settings =
   }
 
 const mock_minimum_fee_amount =
-  mock_node_feeds_count * mock_node_fee + 2_000_000
+  mock_node_feeds_count * mock_node_fee + mock_platform_fee
 
 const mock_platform_nft_value =
   assets.from_asset(mock_platform_auth_policy_id, "Admin", 1)
@@ -375,7 +375,6 @@ test successful_odv_aggregation() {
 }
 
 // TODO test successful CalculateRewards with dynamic oracle fees calculation
-// TODO test successful CalculateRewards with multiple aggregations
 test successful_reward_calculation() {
   let rewards_value =
     assets.from_asset(
@@ -443,6 +442,156 @@ test successful_reward_calculation() {
         Pair(tx.Spend(reward_transport_ref), calculate_rewards_redeemer),
       ],
       outputs: [reward_account_output, mock_empty_reward_transport_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_transport_before),
+    CalculateRewards,
+    reward_transport_ref,
+    rewards_consensus_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(RewardAccount(mock_empty_reward_account_datum)),
+    CalculateRewards,
+    reward_account_ref,
+    rewards_consensus_tx,
+  )
+}
+
+test successful_reward_calculation_with_multiple_aggregations() {
+  let rewards_value =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount,
+    )
+
+  let reward_transport_ref =
+    OutputReference {
+      transaction_id: "some odv aggregation tx",
+      output_index: 0,
+    }
+  let reward_transport_before =
+    RewardTransport(
+      RewardConsensusPending {
+        oracle_feed: mock_median,
+        message: AggregateMessage {
+          node_feeds_sorted_by_feed: mock_node_feeds,
+          node_feeds_count: mock_node_feeds_count,
+          timestamp: mock_current_time,
+        },
+        node_reward_price: mock_node_fee,
+      },
+    )
+  let reward_transport_input =
+    tx.Input {
+      output_reference: reward_transport_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(mock_reward_transport_token_value, rewards_value),
+        datum: tx.InlineDatum(reward_transport_before),
+        reference_script: None,
+      },
+    }
+
+  let mock_node_feeds01: Pairs<FeedVkh, NodeFeed> =
+    [
+      430003, 419990, 430000, 430004, 429997, 430011, 430008, 430013, 429989,
+      430001, 430013, 429985, 430004, 430001, 429999, 429992, 429997,
+    ]
+      |> list.map2(
+          mock_nodes,
+          _,
+          fn(node, feed) { Pair(builtin.fst_pair(node), feed) },
+        )
+      |> list.sort(
+          fn(p1, p2) { int.compare(builtin.snd_pair(p1), builtin.snd_pair(p2)) },
+        )
+  let reward_transport_ref01 =
+    OutputReference {
+      transaction_id: "some odv aggregation tx",
+      output_index: 1,
+    }
+  let reward_transport_before01 =
+    RewardTransport(
+      RewardConsensusPending {
+        oracle_feed: 430001,
+        message: AggregateMessage {
+          node_feeds_sorted_by_feed: mock_node_feeds01,
+          node_feeds_count: mock_node_feeds_count,
+          timestamp: mock_current_time,
+        },
+        node_reward_price: mock_node_fee,
+      },
+    )
+  let reward_transport_input01 =
+    tx.Input {
+      output_reference: reward_transport_ref01,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(mock_reward_transport_token_value, rewards_value),
+        datum: tx.InlineDatum(reward_transport_before01),
+        reference_script: None,
+      },
+    }
+
+  let nodes_rewards =
+    [
+      mock_node_fee * 2,
+      mock_node_fee,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+      mock_node_fee,
+      mock_node_fee * 2,
+      mock_node_fee * 2,
+    ]
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before calculate rewards tx",
+      output_index: 0,
+    }
+  let reward_account_after = RewardAccount(RewardAccountDatum(nodes_rewards))
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: mock_empty_reward_account_output,
+    }
+  let reward_account_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(mock_reward_account_token_value, rewards_value)
+        |> assets.merge(rewards_value),
+      datum: tx.InlineDatum(reward_account_after),
+      reference_script: None,
+    }
+
+  let calculate_rewards_redeemer: Data = CalculateRewards
+  let rewards_consensus_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input],
+      inputs: [
+        reward_account_input, reward_transport_input01, reward_transport_input,
+      ],
+      redeemers: [
+        Pair(tx.Spend(reward_account_ref), calculate_rewards_redeemer),
+        Pair(tx.Spend(reward_transport_ref), calculate_rewards_redeemer),
+        Pair(tx.Spend(reward_transport_ref01), calculate_rewards_redeemer),
+      ],
+      outputs: [
+        reward_account_output, mock_empty_reward_transport_output,
+        mock_empty_reward_transport_output,
+      ],
     }
   oracle.oracle_manager.spend(
     mock_oracle_conf,
