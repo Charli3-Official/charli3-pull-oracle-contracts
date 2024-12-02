@@ -3,12 +3,14 @@ use aiken/collection/list
 use aiken/collection/pairs
 use aiken/crypto.{ScriptHash}
 use aiken/interval
+use aiken/math/rational
 use aiken/primitive/int
 use cardano/address
 use cardano/assets.{PolicyId}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use config
+use ext/aiken/math/rational.{coin_precision} as ext
 use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle
@@ -123,6 +125,9 @@ const mock_oracle_settings =
     iqr_fence_multiplier: 150,
     closing_period_started_at: None,
   }
+
+const mock_rate_nft =
+  Asset { policy_id: "C3/USD policy id", name: config.aggstate_token_name }
 
 const mock_minimum_fee_amount =
   mock_node_feeds_count * mock_node_fee + mock_platform_fee
@@ -276,7 +281,6 @@ test successful_oracle_start() {
   )
 }
 
-// TODO test successful OdvAggregate with dynamic oracle fees calculation
 test successful_odv_aggregation() {
   let aggstate_ref =
     OutputReference {
@@ -374,7 +378,163 @@ test successful_odv_aggregation() {
   )
 }
 
-// TODO test successful CalculateRewards with dynamic oracle fees calculation
+test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
+  let core_settings_input =
+    tx.Input {
+      output_reference: OutputReference {
+        transaction_id: "some tx",
+        output_index: 1,
+      },
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(
+          OracleSettings(
+            OracleSettingsDatum {
+              ..mock_oracle_settings,
+              fee_info: FeeConfig {
+                rate_nft: Some(mock_rate_nft),
+                reward_prices: RewardPrices {
+                  node_fee: mock_node_fee,
+                  platform_fee: mock_platform_fee,
+                },
+              },
+            },
+          ),
+        ),
+        reference_script: None,
+      },
+    }
+  let c3_rate = 130_000
+  let convert_to_rate =
+    fn(amount: Int) -> Int {
+      expect Some(rate) = rational.new(c3_rate, coin_precision)
+      rational.from_int(amount) |> rational.mul(rate) |> rational.ceil
+    }
+  let c3_rate_input =
+    tx.Input {
+      output_reference: OutputReference {
+        transaction_id: "some tx",
+        output_index: 2,
+      },
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.from_asset(
+          mock_rate_nft.policy_id,
+          config.aggstate_token_name,
+          1,
+        ),
+        datum: tx.InlineDatum(
+          AggState(
+            Some(
+              AggStateDatum {
+                oracle_feed: c3_rate,
+                expiry_timestamp: mock_current_time - thirty_minutes / 2 + one_hour,
+                created_at: mock_current_time - thirty_minutes / 2,
+              },
+            ),
+          ),
+        ),
+        reference_script: None,
+      },
+    }
+
+  let aggstate_ref =
+    OutputReference {
+      transaction_id: "aggstate before odv aggregation tx",
+      output_index: 0,
+    }
+  let aggstate_before = AggState(None)
+  let aggstate_after =
+    AggState(
+      Some(
+        AggStateDatum {
+          oracle_feed: mock_median,
+          expiry_timestamp: mock_current_time + one_hour,
+          created_at: mock_current_time,
+        },
+      ),
+    )
+  let aggstate_input =
+    tx.Input {
+      output_reference: aggstate_ref,
+      output: mock_empty_aggstate_output,
+    }
+  let aggstate_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: mock_aggstate_token_value,
+      datum: tx.InlineDatum(aggstate_after),
+      reference_script: None,
+    }
+
+  let reward_transport_ref =
+    OutputReference {
+      transaction_id: "reward transport before odv aggregation tx",
+      output_index: 0,
+    }
+  let reward_transport_before = RewardTransport(NoRewards)
+  let reward_transport_after =
+    RewardTransport(
+      RewardConsensusPending {
+        oracle_feed: mock_median,
+        message: AggregateMessage {
+          node_feeds_sorted_by_feed: mock_node_feeds,
+          node_feeds_count: mock_node_feeds_count,
+          timestamp: mock_current_time,
+        },
+        node_reward_price: convert_to_rate(mock_node_fee),
+      },
+    )
+  let reward_transport_input =
+    tx.Input {
+      output_reference: reward_transport_ref,
+      output: mock_empty_reward_transport_output,
+    }
+  let reward_transport_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(
+        mock_reward_transport_token_value,
+        assets.from_asset(
+          mock_fee_token_policy_id,
+          mock_fee_token_name,
+          convert_to_rate(mock_minimum_fee_amount),
+        ),
+      ),
+      datum: tx.InlineDatum(reward_transport_after),
+      reference_script: None,
+    }
+
+  let odv_aggregate_redeemer: Data = OdvAggregate
+  let aggregation_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [core_settings_input, c3_rate_input],
+      inputs: [reward_transport_input, aggstate_input],
+      redeemers: [
+        Pair(tx.Spend(aggstate_ref), odv_aggregate_redeemer),
+        Pair(tx.Spend(reward_transport_ref), odv_aggregate_redeemer),
+      ],
+      outputs: [reward_transport_output, aggstate_output],
+      validity_range: mock_precise_tx_validity_interval,
+      extra_signatories: pairs.keys(mock_nodes),
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(aggstate_before),
+    OdvAggregate,
+    aggstate_ref,
+    aggregation_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_transport_before),
+    OdvAggregate,
+    reward_transport_ref,
+    aggregation_tx,
+  )
+}
+
 test successful_reward_calculation() {
   let rewards_value =
     assets.from_asset(
@@ -796,12 +956,7 @@ test successful_set_fee_config() {
     OracleSettingsDatum {
       ..core_settings_before,
       fee_info: FeeConfig {
-        rate_nft: Some(
-          Asset {
-            policy_id: "USD/C3 policy id",
-            name: config.aggstate_token_name,
-          },
-        ),
+        rate_nft: Some(mock_rate_nft),
         reward_prices: RewardPrices {
           node_fee: mock_node_fee / 10,
           platform_fee: mock_platform_fee / 10,
