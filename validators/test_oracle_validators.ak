@@ -925,7 +925,6 @@ test successful_scale_up() {
   )
 }
 
-// TODO successful scale down when AggState is empty
 test successful_scale_down() {
   let burned_tokens_value =
     assets.from_asset_list(
@@ -958,6 +957,75 @@ test successful_scale_down() {
         },
       ),
     )
+  let aggstate_input =
+    tx.Input {
+      output_reference: aggstate_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_aggstate_token_value,
+        datum: tx.InlineDatum(aggstate),
+        reference_script: None,
+      },
+    }
+
+  let scale_down_redeemer: Data = ScaleDown
+  let scale_down_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [mock_platform_nft_input, aggstate_input, reward_transport_input],
+      redeemers: [
+        Pair(tx.Spend(aggstate_ref), scale_down_redeemer),
+        Pair(tx.Spend(reward_transport_ref), scale_down_redeemer),
+      ],
+      outputs: [mock_platform_nft_output],
+      mint: burned_tokens_value,
+      validity_range: interval.after(mock_current_time + twenty_four_hours),
+    }
+  oracle.oracle_nfts.mint(
+    mock_starting_platform_utxo,
+    mock_oracle_conf,
+    mock_manager_script_hash,
+    ScaleToken,
+    mock_oracle_nft_script_hash,
+    scale_down_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(RewardTransport(NoRewards)),
+    ScaleDown,
+    reward_transport_ref,
+    scale_down_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(aggstate),
+    ScaleDown,
+    aggstate_ref,
+    scale_down_tx,
+  )
+}
+
+test successful_scale_down_when_aggstate_is_empty() {
+  let burned_tokens_value =
+    assets.from_asset_list(
+      [
+        Pair(
+          mock_oracle_nft_script_hash,
+          [
+            Pair(config.aggstate_token_name, -1),
+            Pair(config.reward_transport_token_name, -1),
+          ],
+        ),
+      ],
+    )
+  let reward_transport_ref =
+    OutputReference { transaction_id: "before scale down tx", output_index: 0 }
+  let reward_transport_input =
+    tx.Input {
+      output_reference: reward_transport_ref,
+      output: mock_empty_reward_transport_output,
+    }
+  let aggstate_ref =
+    OutputReference { transaction_id: "before scale down tx", output_index: 1 }
+  let aggstate = AggState(None)
   let aggstate_input =
     tx.Input {
       output_reference: aggstate_ref,
@@ -1140,7 +1208,6 @@ test successful_reopen_oracle() {
   )
 }
 
-// TODO test successful remove oracle when no aggstate and reward transport utxos removed
 test successful_remove_oracle() {
   let remove_oracle_redeemer: Data = RemoveOracle
   let burned_tokens_value =
@@ -1287,6 +1354,89 @@ test successful_remove_oracle() {
     Some(AggState(None)),
     RemoveOracle,
     OutputReference { transaction_id: aggstate_tx_id, output_index: 0 },
+    remove_oracle_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(OracleSettings(core_settings)),
+    RemoveOracle,
+    core_settings_ref,
+    remove_oracle_tx,
+  )
+}
+
+test successful_remove_oracle_when_no_aggstate_removed() {
+  let remove_oracle_redeemer: Data = RemoveOracle
+  let burned_tokens_value =
+    assets.from_asset_list(
+      [
+        Pair(
+          mock_oracle_nft_script_hash,
+          [
+            Pair(config.core_settings_token_name, -1),
+            Pair(config.reward_account_token_name, -1),
+          ],
+        ),
+      ],
+    )
+
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before remove oracle tx",
+      output_index: 0,
+    }
+  let core_settings =
+    OracleSettingsDatum {
+      ..mock_oracle_settings,
+      closing_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(OracleSettings(core_settings)),
+        reference_script: None,
+      },
+    }
+
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before remove oracle tx",
+      output_index: 0,
+    }
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: mock_empty_reward_account_output,
+    }
+
+  let remove_oracle_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [
+        core_settings_input, reward_account_input, mock_platform_nft_input,
+      ],
+      redeemers: [
+        Pair(tx.Spend(core_settings_ref), remove_oracle_redeemer),
+        Pair(tx.Spend(reward_account_ref), remove_oracle_redeemer),
+      ],
+      outputs: [mock_platform_nft_output],
+      mint: burned_tokens_value,
+      validity_range: interval.after(mock_current_time + 2 * twenty_four_hours),
+    }
+  oracle.oracle_nfts.mint(
+    mock_starting_platform_utxo,
+    mock_oracle_conf,
+    mock_manager_script_hash,
+    BurnToken,
+    mock_oracle_nft_script_hash,
+    remove_oracle_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(RewardAccount(mock_empty_reward_account_datum)),
+    RemoveOracle,
+    reward_account_ref,
     remove_oracle_tx,
   ) && oracle.oracle_manager.spend(
     mock_oracle_conf,

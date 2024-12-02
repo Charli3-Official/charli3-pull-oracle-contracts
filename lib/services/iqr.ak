@@ -29,7 +29,7 @@ pub fn iqr_fence(
 
 /// Returns weighted (by proximity) average of the two elements closest to the quantile index q * (n - 1)
 pub fn quantile(
-  // The input list
+  // The input list sorted
   xs: List<Int>,
   // Length of the list
   n: Int,
