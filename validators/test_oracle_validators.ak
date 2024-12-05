@@ -15,8 +15,8 @@ use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, FeeConfig, FeedVkh, NoRewards,
-  NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
+  AggState, AggStateDatum, AggregateMessage, Aggregation, FeeConfig, FeedVkh,
+  NoRewards, NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
   RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
   RewardTransport,
 }
@@ -52,10 +52,9 @@ const mock_oracle_conf =
     platform_auth_nft: mock_platform_auth_policy_id,
     closing_period_length: twenty_four_hours,
     reward_dismissing_period_length: twenty_four_hours,
-    fee_token: Asset {
-      policy_id: mock_fee_token_policy_id,
-      name: mock_fee_token_name,
-    },
+    fee_token: Some(
+      Asset { policy_id: mock_fee_token_policy_id, name: mock_fee_token_name },
+    ),
   }
 
 const mock_nodes =
@@ -123,6 +122,7 @@ const mock_oracle_settings =
     aggregation_liveness_period: one_hour,
     time_absolute_uncertainty: three_minutes,
     iqr_fence_multiplier: 150,
+    utxo_size_safety_buffer: 0,
     closing_period_started_at: None,
   }
 
@@ -319,15 +319,18 @@ test successful_odv_aggregation() {
   let reward_transport_before = RewardTransport(NoRewards)
   let reward_transport_after =
     RewardTransport(
-      RewardConsensusPending {
-        oracle_feed: mock_median,
-        message: AggregateMessage {
-          node_feeds_sorted_by_feed: mock_node_feeds,
-          node_feeds_count: mock_node_feeds_count,
-          timestamp: mock_current_time,
+      RewardConsensusPending(
+        Aggregation {
+          oracle_feed: mock_median,
+          message: AggregateMessage {
+            node_feeds_sorted_by_feed: mock_node_feeds,
+            node_feeds_count: mock_node_feeds_count,
+            timestamp: mock_current_time,
+          },
+          node_reward_price: mock_node_fee,
+          rewards_amount_paid: mock_minimum_fee_amount,
         },
-        node_reward_price: mock_node_fee,
-      },
+      ),
     )
   let reward_transport_input =
     tx.Input {
@@ -476,15 +479,18 @@ test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
   let reward_transport_before = RewardTransport(NoRewards)
   let reward_transport_after =
     RewardTransport(
-      RewardConsensusPending {
-        oracle_feed: mock_median,
-        message: AggregateMessage {
-          node_feeds_sorted_by_feed: mock_node_feeds,
-          node_feeds_count: mock_node_feeds_count,
-          timestamp: mock_current_time,
+      RewardConsensusPending(
+        Aggregation {
+          oracle_feed: mock_median,
+          message: AggregateMessage {
+            node_feeds_sorted_by_feed: mock_node_feeds,
+            node_feeds_count: mock_node_feeds_count,
+            timestamp: mock_current_time,
+          },
+          node_reward_price: convert_to_rate(mock_node_fee),
+          rewards_amount_paid: convert_to_rate(mock_minimum_fee_amount),
         },
-        node_reward_price: convert_to_rate(mock_node_fee),
-      },
+      ),
     )
   let reward_transport_input =
     tx.Input {
@@ -550,15 +556,18 @@ test successful_reward_calculation() {
     }
   let reward_transport_before =
     RewardTransport(
-      RewardConsensusPending {
-        oracle_feed: mock_median,
-        message: AggregateMessage {
-          node_feeds_sorted_by_feed: mock_node_feeds,
-          node_feeds_count: mock_node_feeds_count,
-          timestamp: mock_current_time,
+      RewardConsensusPending(
+        Aggregation {
+          oracle_feed: mock_median,
+          message: AggregateMessage {
+            node_feeds_sorted_by_feed: mock_node_feeds,
+            node_feeds_count: mock_node_feeds_count,
+            timestamp: mock_current_time,
+          },
+          node_reward_price: mock_node_fee,
+          rewards_amount_paid: mock_minimum_fee_amount,
         },
-        node_reward_price: mock_node_fee,
-      },
+      ),
     )
   let reward_transport_input =
     tx.Input {
@@ -633,15 +642,18 @@ test successful_reward_calculation_with_multiple_aggregations() {
     }
   let reward_transport_before =
     RewardTransport(
-      RewardConsensusPending {
-        oracle_feed: mock_median,
-        message: AggregateMessage {
-          node_feeds_sorted_by_feed: mock_node_feeds,
-          node_feeds_count: mock_node_feeds_count,
-          timestamp: mock_current_time,
+      RewardConsensusPending(
+        Aggregation {
+          oracle_feed: mock_median,
+          message: AggregateMessage {
+            node_feeds_sorted_by_feed: mock_node_feeds,
+            node_feeds_count: mock_node_feeds_count,
+            timestamp: mock_current_time,
+          },
+          node_reward_price: mock_node_fee,
+          rewards_amount_paid: mock_minimum_fee_amount,
         },
-        node_reward_price: mock_node_fee,
-      },
+      ),
     )
   let reward_transport_input =
     tx.Input {
@@ -674,15 +686,18 @@ test successful_reward_calculation_with_multiple_aggregations() {
     }
   let reward_transport_before01 =
     RewardTransport(
-      RewardConsensusPending {
-        oracle_feed: 430001,
-        message: AggregateMessage {
-          node_feeds_sorted_by_feed: mock_node_feeds01,
-          node_feeds_count: mock_node_feeds_count,
-          timestamp: mock_current_time,
+      RewardConsensusPending(
+        Aggregation {
+          oracle_feed: 430001,
+          message: AggregateMessage {
+            node_feeds_sorted_by_feed: mock_node_feeds01,
+            node_feeds_count: mock_node_feeds_count,
+            timestamp: mock_current_time,
+          },
+          node_reward_price: mock_node_fee,
+          rewards_amount_paid: mock_minimum_fee_amount,
         },
-        node_reward_price: mock_node_fee,
-      },
+      ),
     )
   let reward_transport_input01 =
     tx.Input {
@@ -1390,15 +1405,18 @@ test successful_reward_dismissing() {
     }
   let reward_transport_before =
     RewardTransport(
-      RewardConsensusPending {
-        oracle_feed: mock_median,
-        message: AggregateMessage {
-          node_feeds_sorted_by_feed: mock_node_feeds,
-          node_feeds_count: mock_node_feeds_count,
-          timestamp: mock_current_time,
+      RewardConsensusPending(
+        Aggregation {
+          oracle_feed: mock_median,
+          message: AggregateMessage {
+            node_feeds_sorted_by_feed: mock_node_feeds,
+            node_feeds_count: mock_node_feeds_count,
+            timestamp: mock_current_time,
+          },
+          node_reward_price: mock_node_fee,
+          rewards_amount_paid: mock_minimum_fee_amount,
         },
-        node_reward_price: mock_node_fee,
-      },
+      ),
     )
   let reward_transport_input =
     tx.Input {

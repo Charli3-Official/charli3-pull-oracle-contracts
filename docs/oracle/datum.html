@@ -195,6 +195,8 @@
   
   <li><a href="#AggregateMessage">AggregateMessage</a></li>
   
+  <li><a href="#Aggregation">Aggregation</a></li>
+  
   <li><a href="#FeeConfig">FeeConfig</a></li>
   
   <li><a href="#FeedVkh">FeedVkh</a></li>
@@ -426,7 +428,7 @@
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L46-L50"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L49-L53"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -463,7 +465,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L65-L69"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L72-L76"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -491,13 +493,48 @@ and a created at timestamp for oracle users.</p>
   
   <div class="member">
     <div class="member-name">
+      <h2 id="Aggregation">
+        <a href="#Aggregation">
+	  Aggregation
+        </a>
+      </h2>
+      
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L39-L44"></a>
+      
+    </div>
+    <div class="custom-type-constructors">
+      <div class="rendered-markdown"></div>
+      
+      <h3>Constructors</h3>
+      <ul class="constructor-list">
+        
+        <li class="constructor-item">
+          <div class="constructor-row">
+            <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
+            <pre class="constructor-name"><code class="hljs aiken">Aggregation {
+  oracle_feed: OracleFeed,
+  message: AggregateMessage,
+  node_reward_price: Int,
+  rewards_amount_paid: Int,
+}</code></pre>
+          </div>
+	  
+        </li>
+        
+      </ul>
+      
+    </div>
+  </div>
+  
+  <div class="member">
+    <div class="member-name">
       <h2 id="FeeConfig">
         <a href="#FeeConfig">
 	  FeeConfig
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L114-L117"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L125-L128"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -527,7 +564,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L108-L109"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L119-L120"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -573,7 +610,7 @@ and a created at timestamp for oracle users.</p>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L105-L106"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L116-L117"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -604,7 +641,7 @@ WARNING nodes mapping should be sorted ascendingly by FeedVkh, to use it with ai
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L58-L63"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L61-L70"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -628,8 +665,24 @@ Rationale for immutability:</p>
   platform_auth_nft: PolicyId,
   closing_period_length: PosixTimeDiff,
   reward_dismissing_period_length: PosixTimeDiff,
-  fee_token: Asset,
+  fee_token: Option&lt;Asset&gt;,
 }</code></pre>
+          </div>
+	  
+          <div class="constructor-item-docs">
+            <h4><code>.platform_auth_nft</code></h4>
+<p>platform is authorized by providing its input with specific NFT inside the transaction</p>
+<hr/>
+<h4><code>.closing_period_length</code></h4>
+<p>closing period is when oracle can no longer do aggregations, but rewards can still be calculated</p>
+<hr/>
+<h4><code>.reward_dismissing_period_length</code></h4>
+<p>after this period rewards can be dismissed with DismissRewards redeemer</p>
+<hr/>
+<h4><code>.fee_token</code></h4>
+<p>oracle fees are paid using this asset, if it’s None then ada is used</p>
+<hr/>
+
           </div>
 	  
         </li>
@@ -658,8 +711,8 @@ acts as single point of truth for oracle settings and node list.</p>
 <li>RewardAccount - one for each oracle,
 acts as single point of truth for reward distribution.</li>
 <li>RewardTransport - many for each oracle, with possibility of scaling their number on demand,
-users permorm ODV aggregation with those by providing node feeds list constructed off-chain.</li>
-<li>AggState - each AggState utxo is complementary to RewardTransport, it containts the oracle feed value,
+users perform ODV aggregation with those by providing node feeds list constructed off-chain.</li>
+<li>AggState - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,
 that will be referenced by a user of a DApp.</li>
 </ol>
 </div>
@@ -735,7 +788,7 @@ that will be referenced by a user of a DApp.</li>
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L72-L89"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L79-L100"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -755,6 +808,7 @@ that will be referenced by a user of a DApp.</li>
   aggregation_liveness_period: PosixTimeDiff,
   time_absolute_uncertainty: PosixTimeDiff,
   iqr_fence_multiplier: Percent,
+  utxo_size_safety_buffer: Int,
   closing_period_started_at: Option&lt;PosixTime&gt;,
 }</code></pre>
           </div>
@@ -778,7 +832,12 @@ because we are taking tx validity interval middle as current time value</p>
 <hr/>
 <h4><code>.iqr_fence_multiplier</code></h4>
 <p>see interquartile range (IQR) and Tukey fences methods for outlier detection,
-recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution</p>
+recommended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution</p>
+<hr/>
+<h4><code>.utxo_size_safety_buffer</code></h4>
+<p>this value equals zero when oracle fee token is any native asset (e.g. C3);
+in case oracle fee paid in ada it should be equal to a minimum ada amount held at maximum expected reward account utxo size,
+otherwise platform can withdraw more rewards than should be left for nodes</p>
 <hr/>
 <h4><code>.closing_period_started_at</code></h4>
 <p>if oracle is in closing state, then this field will have a certain timestamp value</p>
@@ -801,7 +860,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L111-L112"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L122-L123"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -824,7 +883,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L92-L95"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L103-L106"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -862,7 +921,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L119-L122"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L130-L133"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -892,7 +951,7 @@ recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal d
         </a>
       </h2>
       
-        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L34-L41"></a>
+        <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L34-L37"></a>
       
     </div>
     <div class="custom-type-constructors">
@@ -918,11 +977,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <li class="constructor-item">
           <div class="constructor-row">
             <svg class="icon icon-box"><use xlink:href="#icon-box"></use></svg>
-            <pre class="constructor-name"><code class="hljs aiken">RewardConsensusPending {
-  oracle_feed: OracleFeed,
-  message: AggregateMessage,
-  node_reward_price: Int,
-}</code></pre>
+            <pre class="constructor-name"><code class="hljs aiken">RewardConsensusPending(Aggregation)</code></pre>
           </div>
 	  
         </li>
@@ -948,7 +1003,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="is_oracle_closing"><pre class="hljs language-aiken">is_oracle_closing(settings: OracleSettingsDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L124-L126"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L135-L137"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -960,7 +1015,7 @@ and transfer user provided fees into RewardAccount utxo.</li>
         <div class="member-name">
           <h2 id="has_no_rewards"><pre class="hljs language-aiken">has_no_rewards(reward_transport: RewardTransportDatum) -&gt; Bool</pre></h2>
           
-      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L128-L133"></a>
+      	    <a class="member-source" alt="view source" title="view source" target="_blank" href="https://github.com/charli3-official/odv-multisig-charli3-oracle-onchain/blob/0.0.0/lib/oracle/datum.ak#L139-L144"></a>
           
         </div>
         <div class="rendered-markdown"></div>
@@ -1089,9 +1144,9 @@ and transfer user provided fees into RewardAccount utxo.</li>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="../js/lunr.min.js?v=1.1.6"></script>
-    <script src="../js/index.js?v=1732782670"></script>
+    <script src="../js/index.js?v=1733389335"></script>
     <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="../search-data.js?v=1732782670"></script>
+    <script src="../search-data.js?v=1733389335"></script>
     <script>
       void function() {
         if (typeof tippy !== "undefined") {
