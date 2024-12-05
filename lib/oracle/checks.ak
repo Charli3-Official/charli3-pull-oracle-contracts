@@ -469,8 +469,10 @@ pub fn check_settings_sanity(
     out_settings.aggregation_liveness_period > out_settings.time_absolute_uncertainty
   let must_have_positive_intervals = out_settings.time_absolute_uncertainty > 0
   let must_be_fair_about_outliers = out_settings.iqr_fence_multiplier > 100
+  let must_not_have_negative_utxo_buffer =
+    out_settings.utxo_size_safety_buffer >= 0
 
-  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers
+  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers && must_not_have_negative_utxo_buffer
 }
 
 pub fn check_fee_settings_sanity(
@@ -482,7 +484,7 @@ pub fn check_fee_settings_sanity(
   let must_not_have_negative_price =
     out_settings.fee_info.reward_prices.node_fee >= 0 && out_settings.fee_info.reward_prices.platform_fee >= 0
 
-  in_settings.nodes == out_settings.nodes && in_settings.required_node_signatures_count == out_settings.required_node_signatures_count && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_have_negative_price
+  in_settings.nodes == out_settings.nodes && in_settings.required_node_signatures_count == out_settings.required_node_signatures_count && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_have_negative_price
 }
 
 pub fn check_closing_does_not_change_settings(
@@ -491,7 +493,7 @@ pub fn check_closing_does_not_change_settings(
 ) -> Bool {
   trace @"check_closing_does_not_change_settings"
 
-  in_core_datum.nodes == out_core_datum.nodes && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
+  in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
 }
 
 pub fn find_node_index_by_signature(
@@ -586,7 +588,7 @@ pub fn check_added_nodes(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
       out_settings.nodes,
@@ -646,7 +648,7 @@ pub fn check_deleted_nodes(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
       pairs.keys(out_settings.nodes),
