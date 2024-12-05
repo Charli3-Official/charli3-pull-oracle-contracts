@@ -536,7 +536,7 @@
           "fields": [
             {
               "title": "nodes_to_rewards",
-              "description": "oracle node id mapped to node reward amount",
+              "description": "we get oracle node id (FeedVkh) mapped to node reward amount\n if we zip together Nodes keys (i.e. pairs first elements) and this list of reward amounts",
               "$ref": "#/definitions/List$Int"
             }
           ]

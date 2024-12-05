@@ -101,7 +101,8 @@ pub type OracleSettingsDatum {
 
 /// Reward distribution datum
 pub type RewardAccountDatum {
-  /// oracle node id mapped to node reward amount
+  /// we get oracle node id (FeedVkh) mapped to node reward amount
+  /// if we zip together Nodes keys (i.e. pairs first elements) and this list of reward amounts
   nodes_to_rewards: List<Int>,
 }
 
