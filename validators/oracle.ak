@@ -18,14 +18,14 @@ use cardano/transaction as tx
 use config
 use ext/cardano/value.{Asset}
 use oracle/checks.{
-  calculate_minimum_fee_amout, check_added_nodes,
-  check_closing_does_not_change_settings, check_deleted_nodes,
+  calculate_asset_net_change_with_default, calculate_minimum_fee_amount,
+  check_added_nodes, check_closing_does_not_change_settings, check_deleted_nodes,
   check_fee_settings_sanity, check_node_received_reward,
   check_platform_received_reward, check_reward_distribution,
   check_settings_sanity, convert_reward_prices, does_not_produce_own_nft_outputs,
   find_in_aggregations, find_in_datum, find_node_index_by_signature,
-  find_out_datum_and_value, find_out_datum_and_value_allowing_asset,
-  find_referenced_datum, is_aggstate_expired, oracle_fees_were_transfered,
+  find_out_datum_and_value, find_out_datum_and_value_with_allowing_asset,
+  find_referenced_datum, is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
   spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
   validate_message_form,
@@ -321,19 +321,12 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
-        expect (
-          RewardTransport(RewardConsensusPending {
-            message,
-            oracle_feed,
-            node_reward_price,
-          }),
-          out_value,
-        ) =
-          find_out_datum_and_value_allowing_asset(
+        expect (RewardTransport(RewardConsensusPending(aggregation)), out_value) =
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_transport_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
         expect (AggState(Some(aggstate)), _out_value) =
@@ -343,28 +336,24 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           get_current_time(core_datum.time_absolute_uncertainty, validity_range)
 
         let must_have_current_time_as_timestamp =
-          current_time == message.timestamp && current_time == aggstate.created_at
+          current_time == aggregation.message.timestamp && current_time == aggstate.created_at
         let must_expire_in_liveness_period =
           aggstate.expiry_timestamp == current_time + core_datum.aggregation_liveness_period
 
         let must_not_be_closing = is_oracle_closing(core_datum) |> not
 
         let median =
-          message.node_feeds_sorted_by_feed
+          aggregation.message.node_feeds_sorted_by_feed
             |> pairs.values
-            |> consensus.median(message.node_feeds_count)
+            |> consensus.median(aggregation.message.node_feeds_count)
         let must_have_correct_median =
-          median == oracle_feed && median == aggstate.oracle_feed
+          median == aggregation.oracle_feed && median == aggstate.oracle_feed
 
-        let fees_transfered =
-          assets.quantity_of(
-            out_value,
-            oracle_conf.fee_token.policy_id,
-            oracle_conf.fee_token.name,
-          ) - assets.quantity_of(
+        let fees_transferred =
+          calculate_asset_net_change_with_default(
+            oracle_conf.fee_token,
             in_value,
-            oracle_conf.fee_token.policy_id,
-            oracle_conf.fee_token.name,
+            out_value,
           )
         let reward_prices =
           convert_reward_prices(
@@ -374,13 +363,17 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             core_datum.fee_info.reward_prices,
           )
         let must_tell_node_reward_price =
-          reward_prices.node_fee == node_reward_price
+          reward_prices.node_fee == aggregation.node_reward_price
         let minimum_fee_amount =
-          calculate_minimum_fee_amout(reward_prices, message.node_feeds_count)
-        let must_transfer_oracle_fees = fees_transfered >= minimum_fee_amount
+          calculate_minimum_fee_amount(
+            reward_prices,
+            aggregation.message.node_feeds_count,
+          )
+        let must_transfer_oracle_fees =
+          fees_transferred >= aggregation.rewards_amount_paid && aggregation.rewards_amount_paid >= minimum_fee_amount
 
-        validate_message_form(message) && check_nodes_multisig(
-          message.node_feeds_sorted_by_feed,
+        validate_message_form(aggregation.message) && check_nodes_multisig(
+          aggregation.message.node_feeds_sorted_by_feed,
           extra_signatories,
           core_datum.nodes,
           core_datum.required_node_signatures_count,
@@ -436,11 +429,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
         expect (RewardAccount(out_account_datum), out_value) =
-          find_out_datum_and_value_allowing_asset(
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
         let aggregations =
@@ -459,7 +452,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
-        oracle_fees_were_transfered(
+        oracle_fees_were_transferred(
           oracle_conf.fee_token,
           aggregations,
           in_value,
@@ -494,11 +487,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
         expect (RewardAccount(out_account_datum), out_value) =
-          find_out_datum_and_value_allowing_asset(
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
         let rewarded_node =
@@ -514,31 +507,40 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         )
       }
       // :: PlatformCollect
-      (PlatformCollect, RewardAccount(in_core_datum)) -> {
+      (PlatformCollect, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
             config.reward_account_token_name,
           )
+        let core_nft =
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_acc_nft =
           Asset {
             policy_id: nft_policy_id,
             name: config.reward_account_token_name,
           }
 
-        expect (RewardAccount(out_core_datum), out_value) =
-          find_out_datum_and_value_allowing_asset(
+        expect OracleSettings(core_datum) =
+          find_referenced_datum(reference_inputs, own_hash, core_nft)
+
+        expect (RewardAccount(out_account_datum), out_value) =
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
-        let datum_left_unchanged = in_core_datum == out_core_datum
+        let datum_left_unchanged = in_account_datum == out_account_datum
 
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_platform_received_reward(
           oracle_conf.fee_token,
-          in_core_datum.nodes_to_rewards,
+          core_datum.utxo_size_safety_buffer,
+          in_account_datum.nodes_to_rewards,
           in_value,
           out_value,
         ) && datum_left_unchanged?
@@ -614,11 +616,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         expect (RewardAccount(_out_account_datum), out_value) =
-          find_out_datum_and_value_allowing_asset(
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
         let must_conserve_value = in_value == out_value
@@ -646,11 +648,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_in_datum(inputs, redeemers, own_hash, AddNodes, reward_acc_nft)
 
         expect (RewardAccount(out_account_datum), _) =
-          find_out_datum_and_value_allowing_asset(
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
         // TODO must reopen oracle?
@@ -693,11 +695,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         expect (RewardAccount(_out_account_datum), out_value) =
-          find_out_datum_and_value_allowing_asset(
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
         let must_conserve_value = in_value == out_value
@@ -722,11 +724,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_in_datum(inputs, redeemers, own_hash, DelNodes, reward_acc_nft)
 
         expect (RewardAccount(out_account_datum), _) =
-          find_out_datum_and_value_allowing_asset(
+          find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
             reward_acc_nft,
-            oracle_conf.fee_token.policy_id,
+            oracle_conf.fee_token,
           )
 
         expect (OracleSettings(out_core_datum), out_value) =
@@ -767,7 +769,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && is_aggstate_expired(aggstate, validity_range)
       }
       // :: DismissRewards
-      (DismissRewards, RewardTransport(RewardConsensusPending { message, .. })) -> {
+      (DismissRewards, RewardTransport(RewardConsensusPending(aggregation))) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
@@ -790,7 +792,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_be_after_dismissing_period =
           interval.is_entirely_after(
             validity_range,
-            message.timestamp + oracle_conf.reward_dismissing_period_length,
+            aggregation.message.timestamp + oracle_conf.reward_dismissing_period_length,
           )
 
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period?
