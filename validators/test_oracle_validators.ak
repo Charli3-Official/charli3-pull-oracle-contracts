@@ -1081,6 +1081,63 @@ test successful_node_collect() {
   )
 }
 
+test successful_node_collect_with_ada_fees() {
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before node collect tx",
+      output_index: 0,
+    }
+  let reward_account_before =
+    RewardAccount(RewardAccountDatum(mock_nodes_rewards))
+  let rewards_value_before =
+    assets.from_lovelace(mock_minimum_fee_amount + mock_utxo_size_safety_buffer)
+  expect (init, [_, ..tail]) = list.span(mock_nodes_rewards, 4)
+  let reward_account_after =
+    RewardAccount(RewardAccountDatum(list.concat(init, [0, ..tail])))
+  let rewards_value_after =
+    assets.from_lovelace(
+      mock_minimum_fee_amount - mock_node_fee + mock_utxo_size_safety_buffer,
+    )
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(
+          mock_reward_account_token_value,
+          rewards_value_before,
+        ),
+        datum: tx.InlineDatum(reward_account_before),
+        reference_script: None,
+      },
+    }
+  let reward_account_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(mock_reward_account_token_value, rewards_value_after),
+      datum: tx.InlineDatum(reward_account_after),
+      reference_script: None,
+    }
+
+  let node_collect_redeemer: Data = NodeCollect
+  let node_collect_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input_using_ada_fee],
+      inputs: [reward_account_input],
+      redeemers: [Pair(tx.Spend(reward_account_ref), node_collect_redeemer)],
+      outputs: [reward_account_output],
+      extra_signatories: ["node05 PaymentVkh"],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf_using_ada_fee,
+    Some(reward_account_before),
+    NodeCollect,
+    reward_account_ref,
+    node_collect_tx,
+  )
+}
+
 test successful_platform_collect() {
   let reward_account_ref =
     OutputReference {
@@ -1132,6 +1189,58 @@ test successful_platform_collect() {
     }
   oracle.oracle_manager.spend(
     mock_oracle_conf,
+    Some(reward_account),
+    PlatformCollect,
+    reward_account_ref,
+    platform_collect_tx,
+  )
+}
+
+test successful_platform_collect_with_ada_fees() {
+  let reward_account_ref =
+    OutputReference {
+      transaction_id: "reward account before platform collect tx",
+      output_index: 0,
+    }
+  let reward_account = RewardAccount(RewardAccountDatum(mock_nodes_rewards))
+  let rewards_value_before =
+    assets.from_lovelace(mock_minimum_fee_amount + mock_utxo_size_safety_buffer)
+  let rewards_value_after =
+    assets.from_lovelace(
+      mock_minimum_fee_amount - mock_platform_fee + mock_utxo_size_safety_buffer,
+    )
+  let reward_account_input =
+    tx.Input {
+      output_reference: reward_account_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(
+          mock_reward_account_token_value,
+          rewards_value_before,
+        ),
+        datum: tx.InlineDatum(reward_account),
+        reference_script: None,
+      },
+    }
+  let reward_account_output =
+    tx.Output {
+      address: address.from_script(mock_manager_script_hash),
+      value: assets.merge(mock_reward_account_token_value, rewards_value_after),
+      datum: tx.InlineDatum(reward_account),
+      reference_script: None,
+    }
+
+  let platform_collect_redeemer: Data = PlatformCollect
+  let platform_collect_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input_using_ada_fee],
+      inputs: [reward_account_input, mock_platform_nft_input],
+      redeemers: [Pair(tx.Spend(reward_account_ref), platform_collect_redeemer)],
+      outputs: [reward_account_output, mock_platform_nft_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_oracle_conf_using_ada_fee,
     Some(reward_account),
     PlatformCollect,
     reward_account_ref,
