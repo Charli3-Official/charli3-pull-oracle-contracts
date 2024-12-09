@@ -1,5 +1,3 @@
 #!/bin/bash
 
 aiken docs
-sleep 2
-git add docs
