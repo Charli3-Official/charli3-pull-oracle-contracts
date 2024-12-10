@@ -13,22 +13,14 @@ use ext/aiken/math/rational.{Percent, coin_precision} as ext
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, FeedVkh, NodeFeed, Nodes,
-  OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
-  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
-  has_no_rewards,
+  AggState, AggStateDatum, AggregateMessage, Aggregation, FeedVkh, NodeFeed,
+  Nodes, OracleDatum, OracleSettingsDatum, PaymentVkh, RewardConsensusPending,
+  RewardPrices, RewardTransport, RewardTransportDatum, has_no_rewards,
 }
 use oracle/redeemer.{CalculateRewards, OracleRedeemer}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
-}
-
-pub type AnAggregation {
-  median: OracleFeed,
-  message: AggregateMessage,
-  node_reward_price: Int,
-  value: Value,
 }
 
 /// A convenience function that calls find_script_inputs_by_token
@@ -137,25 +129,30 @@ pub fn find_out_datum_and_value(
   (oracle_datum, script_out.value)
 }
 
-pub fn find_out_datum_and_value_allowing_asset(
+pub fn find_out_datum_and_value_with_allowing_asset(
   tx_outputs: List<Output>,
   script_hash: ScriptHash,
   protocol_token: Asset,
-  allowed_asset: PolicyId,
+  allowed_asset: Option<Asset>,
 ) -> (OracleDatum, Value) {
-  trace @"find_out_datum_and_value_allowing_asset"
+  trace @"find_out_datum_and_value_with_allowing_asset"
 
-  expect [script_out] =
-    find_script_outputs_by_token_allowing_asset(
-      tx_outputs,
-      script_hash,
-      allowed_asset,
-      protocol_token,
-    )
-  expect tx.InlineDatum(datum) = script_out.datum
-  expect oracle_datum: OracleDatum = datum
+  when allowed_asset is {
+    None -> find_out_datum_and_value(tx_outputs, script_hash, protocol_token)
+    Some(asset) -> {
+      expect [script_out] =
+        find_script_outputs_by_token_allowing_asset(
+          tx_outputs,
+          script_hash,
+          asset.policy_id,
+          protocol_token,
+        )
+      expect tx.InlineDatum(datum) = script_out.datum
+      expect oracle_datum: OracleDatum = datum
 
-  (oracle_datum, script_out.value)
+      (oracle_datum, script_out.value)
+    }
+  }
 }
 
 pub fn find_referenced_datum(
@@ -205,7 +202,7 @@ pub fn find_in_aggregations(
   tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
   script_hash: ScriptHash,
   protocol_token: Asset,
-) -> List<AnAggregation> {
+) -> List<Aggregation> {
   trace @"find_in_aggregations"
 
   let inputs =
@@ -226,21 +223,12 @@ pub fn find_in_aggregations(
   expect must_have_correct_redeemers
 
   let extractor =
-    fn(input: Input) -> AnAggregation {
+    fn(input: Input) -> Aggregation {
       expect tx.InlineDatum(datum) = input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardTransport(RewardConsensusPending {
-        oracle_feed,
-        message,
-        node_reward_price,
-      }) = oracle_datum
+      expect RewardTransport(RewardConsensusPending(aggregation)) = oracle_datum
 
-      AnAggregation {
-        value: input.output.value,
-        median: oracle_feed,
-        message,
-        node_reward_price,
-      }
+      aggregation
     }
 
   list.map(inputs, extractor)
@@ -317,45 +305,70 @@ pub fn convert_reward_prices(
   }
 }
 
-pub fn calculate_minimum_fee_amout(
+pub fn calculate_minimum_fee_amount(
   reward_prices: RewardPrices,
   nodes_count: Int,
 ) -> Int {
   reward_prices.node_fee * nodes_count + reward_prices.platform_fee
 }
 
-pub fn oracle_fees_were_transfered(
-  fee_token: Asset,
-  aggregations: List<AnAggregation>,
+pub fn calculate_asset_net_change(
+  asset: Asset,
+  in_value: Value,
+  out_value: Value,
+) -> Int {
+  assets.quantity_of(out_value, asset.policy_id, asset.name) - assets.quantity_of(
+    in_value,
+    asset.policy_id,
+    asset.name,
+  )
+}
+
+pub fn calculate_asset_net_change_with_default(
+  asset: Option<Asset>,
+  in_value: Value,
+  out_value: Value,
+) -> Int {
+  option.or_else(
+    asset,
+    Asset { policy_id: assets.ada_policy_id, name: assets.ada_asset_name },
+  )
+    |> calculate_asset_net_change(in_value, out_value)
+}
+
+pub fn calculate_asset_quantity_with_default(
+  value: Value,
+  optional_asset: Option<Asset>,
+) -> Int {
+  when optional_asset is {
+    None ->
+      assets.quantity_of(value, assets.ada_policy_id, assets.ada_asset_name)
+    Some(asset) -> assets.quantity_of(value, asset.policy_id, asset.name)
+  }
+}
+
+pub fn oracle_fees_were_transferred(
+  fee_token: Option<Asset>,
+  aggregations: List<Aggregation>,
   in_value: Value,
   out_value: Value,
 ) -> Bool {
-  trace @"oracle_fees_were_transfered"
+  trace @"oracle_fees_were_transferred"
 
   let actual_fee =
-    assets.quantity_of(out_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(
-      in_value,
-      fee_token.policy_id,
-      fee_token.name,
-    )
+    calculate_asset_net_change_with_default(fee_token, in_value, out_value)
   let required_fee =
     list.foldr(
       aggregations,
       0,
-      fn(aggregation, acc) {
-        acc + assets.quantity_of(
-          aggregation.value,
-          fee_token.policy_id,
-          fee_token.name,
-        )
-      },
+      fn(aggregation, acc) { acc + aggregation.rewards_amount_paid },
     )
 
-  actual_fee == required_fee
+  actual_fee >= required_fee
 }
 
 pub fn check_reward_distribution(
-  aggregations: List<AnAggregation>,
+  aggregations: List<Aggregation>,
   in_distribution: List<Int>,
   out_distribution: List<Int>,
   nodes: Nodes,
@@ -456,8 +469,10 @@ pub fn check_settings_sanity(
     out_settings.aggregation_liveness_period > out_settings.time_absolute_uncertainty
   let must_have_positive_intervals = out_settings.time_absolute_uncertainty > 0
   let must_be_fair_about_outliers = out_settings.iqr_fence_multiplier > 100
+  let must_not_have_negative_utxo_buffer =
+    out_settings.utxo_size_safety_buffer >= 0
 
-  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers
+  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers && must_not_have_negative_utxo_buffer
 }
 
 pub fn check_fee_settings_sanity(
@@ -469,7 +484,7 @@ pub fn check_fee_settings_sanity(
   let must_not_have_negative_price =
     out_settings.fee_info.reward_prices.node_fee >= 0 && out_settings.fee_info.reward_prices.platform_fee >= 0
 
-  in_settings.nodes == out_settings.nodes && in_settings.required_node_signatures_count == out_settings.required_node_signatures_count && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_have_negative_price
+  in_settings.nodes == out_settings.nodes && in_settings.required_node_signatures_count == out_settings.required_node_signatures_count && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_have_negative_price
 }
 
 pub fn check_closing_does_not_change_settings(
@@ -478,7 +493,7 @@ pub fn check_closing_does_not_change_settings(
 ) -> Bool {
   trace @"check_closing_does_not_change_settings"
 
-  in_core_datum.nodes == out_core_datum.nodes && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
+  in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
 }
 
 pub fn find_node_index_by_signature(
@@ -497,7 +512,7 @@ pub fn find_node_index_by_signature(
 }
 
 pub fn check_node_received_reward(
-  fee_token: Asset,
+  fee_token: Option<Asset>,
   rewarded_node_index: Int,
   in_distribution: List<Int>,
   out_distribution: List<Int>,
@@ -513,21 +528,20 @@ pub fn check_node_received_reward(
   let required_reward = in_reward - out_reward
 
   let actual_reward =
-    assets.quantity_of(in_value, fee_token.policy_id, fee_token.name) - assets.quantity_of(
-      out_value,
-      fee_token.policy_id,
-      fee_token.name,
-    )
+    calculate_asset_net_change_with_default(fee_token, in_value, out_value)
+      |> fn(v) { -v }
 
   let must_not_modify_other_nodes = in_init == out_init && in_tail == out_tail
   let must_withdraw_reward = required_reward > 0
+  let must_not_take_installments = out_reward >= 0
   let must_receive_reward = required_reward == actual_reward
 
-  must_not_modify_other_nodes && must_withdraw_reward && must_receive_reward
+  must_not_modify_other_nodes && must_withdraw_reward && must_receive_reward && must_not_take_installments
 }
 
 pub fn check_platform_received_reward(
-  fee_token: Asset,
+  fee_token: Option<Asset>,
+  utxo_size_safety_buffer: Int,
   reward_distribution: List<Int>,
   in_value: Value,
   out_value: Value,
@@ -538,12 +552,13 @@ pub fn check_platform_received_reward(
     list.foldr(reward_distribution, 0, fn(reward, total) { reward + total })
 
   let in_total_rewards =
-    assets.quantity_of(in_value, fee_token.policy_id, fee_token.name)
+    calculate_asset_quantity_with_default(in_value, fee_token)
   let out_total_rewards =
-    assets.quantity_of(out_value, fee_token.policy_id, fee_token.name)
+    calculate_asset_quantity_with_default(out_value, fee_token)
   let actual_reward = in_total_rewards - out_total_rewards
 
-  let must_save_nodes_rewards = out_total_rewards >= nodes_rewards
+  let must_save_nodes_rewards =
+    out_total_rewards - utxo_size_safety_buffer >= nodes_rewards
   let must_withdraw = actual_reward > 0
 
   must_save_nodes_rewards && must_withdraw
@@ -573,7 +588,7 @@ pub fn check_added_nodes(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
       out_settings.nodes,
@@ -633,7 +648,7 @@ pub fn check_deleted_nodes(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.closing_period_started_at == out_settings.closing_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
       pairs.keys(out_settings.nodes),
