@@ -1,6 +1,6 @@
 //// To ensure a more reliable outlier detection using IQR, it's advisable to have a sample size of at least 20-30 data points,
 //// i.e. five points per quartile.
-//// Naturally, minimum number of points is four, to have at least one element in earch quartile,
+//// Naturally, minimum number of points is four, to have at least one element in each quartile,
 //// but beware that IQR could become useless for sample sizes of 4-10.
 
 use aiken/collection/list
@@ -29,7 +29,7 @@ pub fn iqr_fence(
 
 /// Returns weighted (by proximity) average of the two elements closest to the quantile index q * (n - 1)
 pub fn quantile(
-  // The input list
+  // The input list sorted
   xs: List<Int>,
   // Length of the list
   n: Int,
@@ -49,7 +49,7 @@ pub fn quantile(
   // Get the (j+1)-th element of xs
   expect [x_j_1, ..] = ys
 
-  // Linearly intertepolate between x_j
+  // Linearly interpolate between x_j
   // and x_j_1, using g as the mixing factor.
   let fst =
     rational.sub(rational.from_int(1), g)

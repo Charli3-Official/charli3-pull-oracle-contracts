@@ -17,8 +17,8 @@ pub type NodeFeed =
 /// 1. RewardAccount - one for each oracle,
 ///    acts as single point of truth for reward distribution.
 /// 2. RewardTransport - many for each oracle, with possibility of scaling their number on demand,
-///    users permorm ODV aggregation with those by providing node feeds list constructed off-chain.
-/// 3. AggState - each AggState utxo is complementary to RewardTransport, it containts the oracle feed value,
+///    users perform ODV aggregation with those by providing node feeds list constructed off-chain.
+/// 3. AggState - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,
 ///    that will be referenced by a user of a DApp.
 pub type OracleDatum {
   OracleSettings(OracleSettingsDatum)
@@ -33,11 +33,14 @@ pub type OracleDatum {
 ///    and transfer user provided fees into RewardAccount utxo.
 pub type RewardTransportDatum {
   NoRewards
-  RewardConsensusPending {
-    oracle_feed: OracleFeed,
-    message: AggregateMessage,
-    node_reward_price: Int,
-  }
+  RewardConsensusPending(Aggregation)
+}
+
+pub type Aggregation {
+  oracle_feed: OracleFeed,
+  message: AggregateMessage,
+  node_reward_price: Int,
+  rewards_amount_paid: Int,
 }
 
 /// AggStateDatum contains an oracle feed - median taken from individual node feeds,
@@ -56,10 +59,14 @@ pub type AggStateDatum {
 /// * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * fee_token - oracle nodes will be sure that platform won't update reward currency
 pub type OracleConfiguration {
+  /// platform is authorized by providing its input with specific NFT inside the transaction
   platform_auth_nft: PolicyId,
+  /// closing period is when oracle can no longer do aggregations, but rewards can still be calculated
   closing_period_length: PosixTimeDiff,
+  /// after this period rewards can be dismissed with DismissRewards redeemer
   reward_dismissing_period_length: PosixTimeDiff,
-  fee_token: Asset,
+  /// oracle fees are paid using this asset, if it's None then ada is used
+  fee_token: Option<Asset>,
 }
 
 pub type AggregateMessage {
@@ -82,15 +89,20 @@ pub type OracleSettingsDatum {
   /// because we are taking tx validity interval middle as current time value
   time_absolute_uncertainty: PosixTimeDiff,
   /// see interquartile range (IQR) and Tukey fences methods for outlier detection,
-  /// recomended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
+  /// recommended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
   iqr_fence_multiplier: Percent,
+  /// this value equals zero when oracle fee token is any native asset (e.g. C3);
+  /// in case oracle fee paid in ada it should be equal to a minimum ada amount held at maximum expected reward account utxo size,
+  /// otherwise platform can withdraw more rewards than should be left for nodes
+  utxo_size_safety_buffer: Int,
   /// if oracle is in closing state, then this field will have a certain timestamp value
   closing_period_started_at: Option<PosixTime>,
 }
 
 /// Reward distribution datum
 pub type RewardAccountDatum {
-  /// oracle node id mapped to node reward amount
+  /// we get oracle node id (FeedVkh) mapped to node reward amount
+  /// if we zip together Nodes keys (i.e. pairs first elements) and this list of reward amounts
   nodes_to_rewards: List<Int>,
 }
 
