@@ -25,7 +25,7 @@ aiken build
 For testnets:
 
 ```sh
-aiken build --env testnet --trace-level verbose
+aiken build --env testnet --trace-filter user-defined
 ```
 
 ### Configuring
