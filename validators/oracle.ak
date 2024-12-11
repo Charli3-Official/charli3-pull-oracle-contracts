@@ -102,7 +102,7 @@ validator oracle_nfts(
             outputs,
           )
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport && must_mint_same_amount_aggstate && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
       }
       ScaleToken -> {
         expect None = minted_assets |> dict.get(config.core_settings_token_name)
@@ -114,7 +114,7 @@ validator oracle_nfts(
         let must_mint_same_amount_aggstate = m == n
 
         if n > 0 {
-          trace @"scale up"
+          trace @"T1"
 
           expect OracleSettings(core_datum) =
             find_referenced_datum(
@@ -140,9 +140,9 @@ validator oracle_nfts(
 
           let must_not_be_closing = is_oracle_closing(core_datum) |> not
 
-          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_not_be_closing? && must_mint_same_amount_aggstate? && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_not_be_closing && must_mint_same_amount_aggstate && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
         } else {
-          trace @"scale down"
+          trace @"T2"
 
           let must_spend_reward_transport_inputs =
             spends_protocol_nft_inputs(
@@ -163,7 +163,7 @@ validator oracle_nfts(
               redeemers,
             )
 
-          must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
+          must_spend_reward_transport_inputs && must_spend_aggstate_inputs
         }
       }
       BurnToken -> {
@@ -218,13 +218,13 @@ validator oracle_nfts(
             redeemers,
           )
 
-        must_spend_core_settings_input? && must_spend_reward_account_input? && must_not_mint_reward_transport? && must_burn_same_amount_aggstate? && must_spend_reward_transport_inputs? && must_spend_aggstate_inputs?
+        must_spend_core_settings_input && must_spend_reward_account_input && must_not_mint_reward_transport && must_burn_same_amount_aggstate && must_spend_reward_transport_inputs && must_spend_aggstate_inputs
       }
     }
   }
 
   else(_ctx: ScriptContext) {
-    fail @"validator supports only mint purpose"
+    fail @"E1"
   }
 }
 
@@ -280,7 +280,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let must_conserve_value = in_value == out_value
 
-        is_aggstate_expired(aggstate, validity_range) && must_spend_reward_transport_utxo? && must_conserve_value?
+        is_aggstate_expired(aggstate, validity_range) && must_spend_reward_transport_utxo && must_conserve_value
       }
       (OdvAggregate, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
@@ -377,7 +377,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           extra_signatories,
           core_datum.nodes,
           core_datum.required_node_signatures_count,
-        ) && must_spend_only_one_reward_input? && must_spend_only_one_aggstate_input? && must_have_current_time_as_timestamp? && must_expire_in_liveness_period? && must_not_be_closing? && must_have_correct_median? && must_transfer_oracle_fees? && must_tell_node_reward_price?
+        ) && must_spend_only_one_reward_input && must_spend_only_one_aggstate_input && must_have_current_time_as_timestamp && must_expire_in_liveness_period && must_not_be_closing && must_have_correct_median && must_transfer_oracle_fees && must_tell_node_reward_price
       }
       // :: CalculateRewards
       (CalculateRewards, RewardTransport(RewardConsensusPending { .. })) -> {
@@ -401,7 +401,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        must_spend_reward_account_utxo?
+        must_spend_reward_account_utxo
       }
       (CalculateRewards, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
@@ -543,7 +543,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           in_account_datum.nodes_to_rewards,
           in_value,
           out_value,
-        ) && datum_left_unchanged?
+        ) && datum_left_unchanged
       }
       // :: UpdateSettings
       (UpdateSettings, OracleSettings(in_core_datum)) -> {
@@ -563,7 +563,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_settings_sanity(
           in_core_datum,
           out_core_datum,
-        ) && must_conserve_value?
+        ) && must_conserve_value
       }
       // :: SetFeeConfig
       (SetFeeConfig, OracleSettings(in_core_datum)) -> {
@@ -578,7 +578,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        // TODO must reopen oracle?
         let must_be_closing = is_oracle_closing(in_core_datum)
 
         let must_conserve_value = in_value == out_value
@@ -586,7 +585,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_fee_settings_sanity(
           in_core_datum,
           out_core_datum,
-        ) && must_be_closing? && must_conserve_value?
+        ) && must_be_closing && must_conserve_value
       }
       // :: AddNodes
       (AddNodes, RewardAccount(_in_account_datum)) -> {
@@ -625,7 +624,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let must_conserve_value = in_value == out_value
 
-        must_spend_core_settings_utxo? && must_conserve_value?
+        must_spend_core_settings_utxo && must_conserve_value
       }
       (AddNodes, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
@@ -655,7 +654,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token,
           )
 
-        // TODO must reopen oracle?
         let must_be_closing = is_oracle_closing(in_core_datum)
 
         let must_conserve_value = in_value == out_value
@@ -665,7 +663,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           out_core_datum,
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
-        ) && must_be_closing? && must_conserve_value?
+        ) && must_be_closing && must_conserve_value
       }
       // :: DelNodes
       (DelNodes, RewardAccount(_in_account_datum)) -> {
@@ -704,7 +702,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let must_conserve_value = in_value == out_value
 
-        must_spend_core_settings_utxo? && must_conserve_value?
+        must_spend_core_settings_utxo && must_conserve_value
       }
       (DelNodes, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
@@ -734,7 +732,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        // TODO must reopen oracle?
         let must_be_closing = is_oracle_closing(in_core_datum)
 
         let must_conserve_value = in_value == out_value
@@ -744,7 +741,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           out_core_datum,
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
-        ) && must_be_closing? && must_conserve_value?
+        ) && must_be_closing && must_conserve_value
       }
       // :: ScaleDown
       (ScaleDown, RewardTransport(NoRewards)) -> {
@@ -795,7 +792,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             aggregation.message.timestamp + oracle_conf.reward_dismissing_period_length,
           )
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period?
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period
       }
       // :: CloseOracle
       (CloseOracle, OracleSettings(in_core_datum)) -> {
@@ -826,7 +823,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
           in_core_datum,
           out_core_datum,
-        ) && must_not_be_closing_already? && must_start_closing_period? && must_conserve_value?
+        ) && must_not_be_closing_already && must_start_closing_period && must_conserve_value
       }
       // :: ReopenOracle
       (ReopenOracle, OracleSettings(in_core_datum)) -> {
@@ -850,7 +847,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_closing_does_not_change_settings(
           in_core_datum,
           out_core_datum,
-        ) && must_be_closing? && must_open_oracle? && must_conserve_value?
+        ) && must_be_closing && must_open_oracle && must_conserve_value
       }
       // :: RemoveOracle
       (RemoveOracle, RewardAccount(_)) -> {
@@ -875,7 +872,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         // nodes which are interested in collecting the rewards should do so during closing period
-        must_spend_core_settings_utxo?
+        must_spend_core_settings_utxo
       }
       (RemoveOracle, RewardTransport(NoRewards)) -> {
         let nft_policy_id =
@@ -898,7 +895,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        must_spend_core_settings_utxo?
+        must_spend_core_settings_utxo
       }
       (RemoveOracle, AggState(aggstate)) -> {
         let nft_policy_id =
@@ -918,7 +915,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        is_aggstate_expired(aggstate, validity_range) && must_spend_core_settings_utxo?
+        is_aggstate_expired(aggstate, validity_range) && must_spend_core_settings_utxo
       }
       (
         RemoveOracle,
@@ -956,14 +953,14 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
-        ) && is_time_to_be_removed? && must_spend_reward_account_utxo?
+        ) && is_time_to_be_removed && must_spend_reward_account_utxo
       }
       // ::
-      _other -> fail @"Oracle Script state transition not allowed"
+      _other -> fail @"E3"
     }
   }
 
   else(_ctx: ScriptContext) {
-    fail @"validator supports only spend purpose"
+    fail @"E2"
   }
 }

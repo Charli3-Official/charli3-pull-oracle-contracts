@@ -12,10 +12,10 @@ pub fn median(
   node_feeds_count: Int,
 ) -> OracleFeed {
   if config.disallow_less_than_four_nodes && node_feeds_count < 4 {
-    fail @"median: less than four nodes"
+    fail @"E4"
   } else {
     when node_feeds_sorted is {
-      [] -> fail @"median: empty list"
+      [] -> fail @"E5"
       [x] -> x
       xs -> {
         expect Some(midpoint) = rational.new(1, 2)
@@ -33,7 +33,7 @@ pub fn consensus_by_iqr(
 ) -> List<FeedVkh> {
   if node_feeds_count < 4 {
     if config.disallow_less_than_four_nodes {
-      fail @"consensus_by_iqr: less than four nodes"
+      fail @"E6"
     } else {
       pairs.keys(node_feeds)
     }

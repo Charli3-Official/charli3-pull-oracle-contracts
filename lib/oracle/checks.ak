@@ -33,6 +33,8 @@ pub fn spends_protocol_nft_inputs(
   tx_inputs: List<Input>,
   tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
 ) -> Bool {
+  trace @"T7"
+
   let as_data: Data = redeemer
   let refs =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_nft)
@@ -60,6 +62,8 @@ pub fn spends_one_script_utxo_with_nft(
   tx_inputs: List<Input>,
   tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
 ) -> Bool {
+  trace @"T8"
+
   let as_data: Data = redeemer
   expect [input] = find_script_inputs_by_token(tx_inputs, script_hash, nft)
   expect Some(r) =
@@ -74,7 +78,7 @@ pub fn returns_empty_reward_outputs(
   utxo_count: Int,
   tx_outputs: List<Output>,
 ) -> Bool {
-  trace @"returns_empty_reward_outputs"
+  trace @"T9"
 
   let outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, reward_transport_nft)
@@ -97,7 +101,7 @@ pub fn returns_empty_aggstate_outputs(
   utxo_count: Int,
   tx_outputs: List<Output>,
 ) -> Bool {
-  trace @"returns_empty_aggstate_outputs"
+  trace @"T10"
 
   let outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, aggstate_nft)
@@ -119,7 +123,7 @@ pub fn find_out_datum_and_value(
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -> (OracleDatum, Value) {
-  trace @"find_out_datum_and_value"
+  trace @"T11"
 
   expect [script_out] =
     find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
@@ -135,7 +139,7 @@ pub fn find_out_datum_and_value_with_allowing_asset(
   protocol_token: Asset,
   allowed_asset: Option<Asset>,
 ) -> (OracleDatum, Value) {
-  trace @"find_out_datum_and_value_with_allowing_asset"
+  trace @"T12"
 
   when allowed_asset is {
     None -> find_out_datum_and_value(tx_outputs, script_hash, protocol_token)
@@ -160,7 +164,7 @@ pub fn find_referenced_datum(
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -> OracleDatum {
-  trace @"find_referenced_datum"
+  trace @"T13"
 
   expect [script_in] =
     find_script_inputs_by_token(
@@ -181,7 +185,7 @@ pub fn find_in_datum(
   redeemer: OracleRedeemer,
   protocol_token: Asset,
 ) -> OracleDatum {
-  trace @"find_in_datum"
+  trace @"T14"
 
   expect [script_in] =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
@@ -203,7 +207,7 @@ pub fn find_in_aggregations(
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -> List<Aggregation> {
-  trace @"find_in_aggregations"
+  trace @"T15"
 
   let inputs =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
@@ -238,7 +242,8 @@ pub fn does_not_produce_own_nft_outputs(
   tx_outputs: List<Output>,
   own_nft_policy_id: PolicyId,
 ) -> Bool {
-  trace @"does_not_produce_own_nft_outputs"
+  trace @"T16"
+
   tx_outputs
     |> list.filter(
         fn(o) {
@@ -252,7 +257,7 @@ pub fn is_aggstate_expired(
   aggstate: Option<AggStateDatum>,
   tx_validity_range: ValidityRange,
 ) -> Bool {
-  trace @"is_aggstate_expired"
+  trace @"T17"
 
   aggstate
     |> option.map(
@@ -269,6 +274,8 @@ pub fn convert_reward_prices(
   rate_nft: Option<Asset>,
   reward_prices: RewardPrices,
 ) -> RewardPrices {
+  trace @"T18"
+
   when rate_nft is {
     None -> reward_prices
     Some(nft) -> {
@@ -353,7 +360,7 @@ pub fn oracle_fees_were_transferred(
   in_value: Value,
   out_value: Value,
 ) -> Bool {
-  trace @"oracle_fees_were_transferred"
+  trace @"T19"
 
   let actual_fee =
     calculate_asset_net_change_with_default(fee_token, in_value, out_value)
@@ -374,7 +381,7 @@ pub fn check_reward_distribution(
   nodes: Nodes,
   iqr_fence_multiplier: Percent,
 ) -> Bool {
-  trace @"check_reward_distribution"
+  trace @"T20"
 
   let node_ids = pairs.keys(nodes)
 
@@ -419,11 +426,11 @@ pub fn check_reward_distribution(
 
   let check_exact_rewards_paid = dict.values(required_rewards) == actual_rewards
 
-  check_nodes_count? && check_exact_rewards_paid?
+  check_nodes_count && check_exact_rewards_paid
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
-  trace @"validate_message_form"
+  trace @"T21"
 
   let node_feeds = pairs.values(message.node_feeds_sorted_by_feed)
 
@@ -450,7 +457,7 @@ fn do_get_length_and_check_order(
       if prev <= x {
         do_get_length_and_check_order(xs, n + 1, x)
       } else {
-        fail @"check node feeds order"
+        fail @"E7"
       }
   }
 }
@@ -459,7 +466,7 @@ pub fn check_settings_sanity(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
 ) -> Bool {
-  trace @"check_settings_sanity"
+  trace @"T22"
 
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
@@ -479,7 +486,7 @@ pub fn check_fee_settings_sanity(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
 ) -> Bool {
-  trace @"check_fee_settings_sanity"
+  trace @"T23"
 
   let must_not_have_negative_price =
     out_settings.fee_info.reward_prices.node_fee >= 0 && out_settings.fee_info.reward_prices.platform_fee >= 0
@@ -491,7 +498,7 @@ pub fn check_closing_does_not_change_settings(
   in_core_datum: OracleSettingsDatum,
   out_core_datum: OracleSettingsDatum,
 ) -> Bool {
-  trace @"check_closing_does_not_change_settings"
+  trace @"T24"
 
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_absolute_uncertainty == out_core_datum.time_absolute_uncertainty
 }
@@ -500,7 +507,7 @@ pub fn find_node_index_by_signature(
   tx_signatories: List<VerificationKeyHash>,
   nodes: Nodes,
 ) -> Int {
-  trace @"find_node_index_by_signature"
+  trace @"T25"
 
   expect [(node_ix, _)] =
     list.indexed_map(nodes, fn(index, node) { (index, builtin.snd_pair(node)) })
@@ -519,7 +526,7 @@ pub fn check_node_received_reward(
   in_value: Value,
   out_value: Value,
 ) -> Bool {
-  trace @"check_node_received_reward"
+  trace @"T26"
 
   expect (in_init, [in_reward, ..in_tail]) =
     list.span(in_distribution, rewarded_node_index)
@@ -546,7 +553,7 @@ pub fn check_platform_received_reward(
   in_value: Value,
   out_value: Value,
 ) -> Bool {
-  trace @"check_platform_received_reward"
+  trace @"T27"
 
   let nodes_rewards =
     list.foldr(reward_distribution, 0, fn(reward, total) { reward + total })
@@ -571,7 +578,7 @@ pub fn check_added_nodes(
   in_distribution: List<Int>,
   out_distribution: List<Int>,
 ) -> Bool {
-  trace @"check_added_nodes"
+  trace @"T28"
 
   let (deleted_nodes, added_nodes) =
     list.foldl(out_settings.nodes, (in_settings.nodes, []), push_added_node)
@@ -632,7 +639,7 @@ pub fn check_deleted_nodes(
   in_distribution: List<Int>,
   out_distribution: List<Int>,
 ) -> Bool {
-  trace @"check_deleted_nodes"
+  trace @"T29"
 
   let (added_nodes, _, deleted_nodes) =
     list.foldl(
@@ -711,7 +718,7 @@ fn do_get_length_and_check_strict_order(
       if builtin.less_than_bytearray(prev, x) {
         do_get_length_and_check_strict_order(xs, n + 1, x)
       } else {
-        fail @"check node ids order"
+        fail @"E8"
       }
   }
 }

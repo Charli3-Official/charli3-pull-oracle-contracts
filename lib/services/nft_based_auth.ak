@@ -9,7 +9,7 @@ pub fn auth_by_nft(
   tx_inputs: List<Input>,
   tx_outputs: List<Output>,
 ) -> Bool {
-  trace @"auth_by_nft"
+  trace @"T5"
 
   let has_nft =
     fn(value: Value) -> Bool {
@@ -30,5 +30,5 @@ pub fn auth_by_nft(
   let must_pay_back_same_tokens =
     get_nft(input.output.value) == get_nft(output.value)
 
-  must_pay_nft_back? && must_pay_back_same_tokens?
+  must_pay_nft_back && must_pay_back_same_tokens
 }

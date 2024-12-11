@@ -12,7 +12,7 @@ pub fn find_own_protocol_policy_id(
   input_value: Value,
   nft_name: AssetName,
 ) -> PolicyId {
-  trace @"find_own_protocol_policy_id"
+  trace @"T3"
 
   expect [(policy_id, _name, 1)] =
     input_value
