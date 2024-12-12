@@ -12,7 +12,7 @@ pub fn get_current_time(
   time_accuracy: PosixTimeDiff,
   tx_validity_range: ValidityRange,
 ) -> PosixTime {
-  trace @"get_current_time"
+  trace @"T4"
 
   let Interval { lower_bound, upper_bound } = tx_validity_range
   expect interval.Finite(start) = lower_bound.bound_type

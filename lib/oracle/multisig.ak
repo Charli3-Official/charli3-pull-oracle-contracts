@@ -10,7 +10,7 @@ pub fn check_nodes_multisig(
   allowed_nodes: Nodes,
   required_node_signatures_count: Int,
 ) -> Bool {
-  trace @"check_nodes_multisig"
+  trace @"T6"
 
   let node_ids = pairs.keys(node_feeds)
   let nodes_count = list.length(node_ids)
@@ -27,5 +27,5 @@ pub fn check_nodes_multisig(
     list.difference(node_ids, tx_signatories) == []
   let must_pass_threshold = nodes_count >= required_node_signatures_count
 
-  must_have_all_feeds_signed? && must_pass_threshold? && must_have_unique_nodes? && must_have_allowed_nodes?
+  must_have_all_feeds_signed && must_pass_threshold && must_have_unique_nodes && must_have_allowed_nodes
 }
