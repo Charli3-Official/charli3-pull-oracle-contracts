@@ -561,6 +561,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_conserve_value = in_value == out_value
 
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_settings_sanity(
+          oracle_conf,
           in_core_datum,
           out_core_datum,
         ) && must_conserve_value
