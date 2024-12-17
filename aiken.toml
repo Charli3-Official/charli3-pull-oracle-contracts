@@ -1,6 +1,6 @@
 name = "charli3-official/odv-multisig-charli3-oracle-onchain"
 version = "0.0.0"
-compiler = "v1.1.6"
+compiler = "v1.1.9"
 plutus = "v3"
 license = "Apache-2.0"
 description = "Aiken contracts for project 'charli3-official/odv-multisig-charli3-oracle-onchain'"
@@ -12,7 +12,7 @@ platform = "github"
 
 [[dependencies]]
 name = "aiken-lang/stdlib"
-version = "v2.1.0"
+version = "v2.2.0"
 source = "github"
 
 [[dependencies]]
