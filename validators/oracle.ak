@@ -28,7 +28,7 @@ use oracle/checks.{
   find_referenced_datum, is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
   spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
-  validate_message_form,
+  validate_message_form, validate_settings_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -81,7 +81,7 @@ validator oracle_nfts(
         expect Some(_input) =
           list.find(inputs, fn(input) { input.output_reference == utxo_ref })
 
-        expect (OracleSettings(_), _) =
+        expect (OracleSettings(out_core_datum), _) =
           find_out_datum_and_value(outputs, oracle_script_hash, core_nft)
 
         expect (RewardAccount(_), _) =
@@ -102,7 +102,10 @@ validator oracle_nfts(
             outputs,
           )
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_mint_some_reward_transport && must_mint_same_amount_aggstate && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && validate_settings_form(
+          oracle_conf,
+          out_core_datum,
+        ) && must_mint_some_reward_transport && must_mint_same_amount_aggstate && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
       }
       ScaleToken -> {
         expect None = minted_assets |> dict.get(config.core_settings_token_name)
