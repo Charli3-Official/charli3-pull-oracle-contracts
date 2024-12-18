@@ -21,9 +21,9 @@ use oracle/datum.{
   RewardTransport,
 }
 use oracle/redeemer.{
-  AddNodes, BurnToken, CalculateRewards, CloseOracle, DelNodes, DismissRewards,
-  MintToken, NodeCollect, OdvAggregate, PlatformCollect, RemoveOracle,
-  ReopenOracle, ScaleDown, ScaleToken, SetFeeConfig, UpdateSettings,
+  AddNodes, BurnToken, CalculateRewards, DelNodes, DismissRewards, MintToken,
+  NodeCollect, OdvAggregate, PauseOracle, PlatformCollect, RemoveOracle,
+  ResumeOracle, ScaleDown, ScaleToken, SetFeeConfig, UpdateSettings,
 }
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -49,7 +49,7 @@ const mock_fee_token_name = "C3"
 const mock_oracle_conf =
   OracleConfiguration {
     platform_auth_nft: mock_platform_auth_policy_id,
-    closing_period_length: twenty_four_hours,
+    pause_period_length: twenty_four_hours,
     reward_dismissing_period_length: twenty_four_hours,
     fee_token: Some(
       Asset { policy_id: mock_fee_token_policy_id, name: mock_fee_token_name },
@@ -59,7 +59,7 @@ const mock_oracle_conf =
 const mock_oracle_conf_using_ada_fee =
   OracleConfiguration {
     platform_auth_nft: mock_platform_auth_policy_id,
-    closing_period_length: twenty_four_hours,
+    pause_period_length: twenty_four_hours,
     reward_dismissing_period_length: twenty_four_hours,
     fee_token: None,
   }
@@ -130,7 +130,7 @@ const mock_oracle_settings =
     time_absolute_uncertainty: three_minutes,
     iqr_fence_multiplier: 150,
     utxo_size_safety_buffer: 0,
-    closing_period_started_at: None,
+    pause_period_started_at: None,
   }
 
 const mock_utxo_size_safety_buffer = 5_500_000
@@ -150,7 +150,7 @@ const mock_oracle_settings_using_ada_fee =
     time_absolute_uncertainty: three_minutes,
     iqr_fence_multiplier: 150,
     utxo_size_safety_buffer: mock_utxo_size_safety_buffer,
-    closing_period_started_at: None,
+    pause_period_started_at: None,
   }
 
 const mock_rate_nft =
@@ -1299,7 +1299,7 @@ test successful_set_fee_config() {
   let core_settings_before =
     OracleSettingsDatum {
       ..mock_oracle_settings,
-      closing_period_started_at: Some(mock_current_time),
+      pause_period_started_at: Some(mock_current_time),
     }
   let core_settings_input =
     tx.Input {
@@ -1391,7 +1391,7 @@ test successful_add_nodes() {
   let core_settings_before =
     OracleSettingsDatum {
       ..mock_oracle_settings,
-      closing_period_started_at: Some(mock_current_time),
+      pause_period_started_at: Some(mock_current_time),
     }
   let core_settings_input =
     tx.Input {
@@ -1492,7 +1492,7 @@ test successful_del_nodes() {
   let core_settings_before =
     OracleSettingsDatum {
       ..mock_oracle_settings,
-      closing_period_started_at: Some(mock_current_time),
+      pause_period_started_at: Some(mock_current_time),
     }
   let core_settings_input =
     tx.Input {
@@ -1793,10 +1793,10 @@ test successful_reward_dismissing() {
   )
 }
 
-test successful_oracle_close() {
+test successful_oracle_pause() {
   let core_settings_ref =
     OutputReference {
-      transaction_id: "core settings before oracle close tx",
+      transaction_id: "core settings before oracle pause tx",
       output_index: 0,
     }
   let core_settings_input =
@@ -1807,7 +1807,7 @@ test successful_oracle_close() {
   let core_settings_after =
     OracleSettingsDatum {
       ..mock_oracle_settings,
-      closing_period_started_at: Some(mock_current_time),
+      pause_period_started_at: Some(mock_current_time),
     }
   let core_settings_output =
     tx.Output {
@@ -1817,34 +1817,34 @@ test successful_oracle_close() {
       reference_script: None,
     }
 
-  let oracle_close_redeemer: Data = CloseOracle
-  let oracle_close_tx =
+  let oracle_pause_redeemer: Data = PauseOracle
+  let oracle_pause_tx =
     Transaction {
       ..tx.placeholder,
       inputs: [core_settings_input, mock_platform_nft_input],
-      redeemers: [Pair(tx.Spend(core_settings_ref), oracle_close_redeemer)],
+      redeemers: [Pair(tx.Spend(core_settings_ref), oracle_pause_redeemer)],
       outputs: [core_settings_output, mock_platform_nft_output],
       validity_range: mock_precise_tx_validity_interval,
     }
   oracle.oracle_manager.spend(
     mock_oracle_conf,
     Some(OracleSettings(mock_oracle_settings)),
-    CloseOracle,
+    PauseOracle,
     core_settings_ref,
-    oracle_close_tx,
+    oracle_pause_tx,
   )
 }
 
-test successful_reopen_oracle() {
+test successful_resume_oracle() {
   let core_settings_ref =
     OutputReference {
-      transaction_id: "core settings before reopen oracle tx",
+      transaction_id: "core settings before resume oracle tx",
       output_index: 0,
     }
   let core_settings_before =
     OracleSettingsDatum {
       ..mock_oracle_settings,
-      closing_period_started_at: Some(mock_current_time),
+      pause_period_started_at: Some(mock_current_time),
     }
   let core_settings_input =
     tx.Input {
@@ -1857,20 +1857,20 @@ test successful_reopen_oracle() {
       },
     }
 
-  let reopen_oracle_redeemer: Data = ReopenOracle
-  let reopen_oracle_tx =
+  let resume_oracle_redeemer: Data = ResumeOracle
+  let resume_oracle_tx =
     Transaction {
       ..tx.placeholder,
       inputs: [core_settings_input, mock_platform_nft_input],
-      redeemers: [Pair(tx.Spend(core_settings_ref), reopen_oracle_redeemer)],
+      redeemers: [Pair(tx.Spend(core_settings_ref), resume_oracle_redeemer)],
       outputs: [mock_core_settings_output, mock_platform_nft_output],
     }
   oracle.oracle_manager.spend(
     mock_oracle_conf,
     Some(OracleSettings(core_settings_before)),
-    ReopenOracle,
+    ResumeOracle,
     core_settings_ref,
-    reopen_oracle_tx,
+    resume_oracle_tx,
   )
 }
 
@@ -1899,7 +1899,7 @@ test successful_remove_oracle() {
   let core_settings =
     OracleSettingsDatum {
       ..mock_oracle_settings,
-      closing_period_started_at: Some(mock_current_time),
+      pause_period_started_at: Some(mock_current_time),
     }
   let core_settings_input =
     tx.Input {
@@ -2053,7 +2053,7 @@ test successful_remove_oracle_when_no_aggstate_removed() {
   let core_settings =
     OracleSettingsDatum {
       ..mock_oracle_settings,
-      closing_period_started_at: Some(mock_current_time),
+      pause_period_started_at: Some(mock_current_time),
     }
   let core_settings_input =
     tx.Input {

@@ -1,7 +1,7 @@
 /// Types of actions for Oracle NFTs (protocol tokens)
 /// * MintToken  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState
 /// * ScaleToken - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState
-/// * BurnToken  - Oracle close: all tokens are burned
+/// * BurnToken  - Oracle remove: all tokens are burned
 pub type MintingRedeemer {
   MintToken
   ScaleToken
@@ -19,9 +19,9 @@ pub type MintingRedeemer {
 /// * DelNodes - oracle platform deletes nodes
 /// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
 /// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
-/// * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards
-/// * ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily
-/// * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs
+/// * PauseOracle - oracle platform starts pause period, when nodes can still calculate disregarded rewards
+/// * ResumeOracle - redeemer for cancelling oracle pause, so that platform can suspend oracle operation only temporarily
+/// * RemoveOracle - oracle pause period ends and platform destroys all UTxOs and all NFTs
 pub type OracleRedeemer {
   OdvAggregate
   CalculateRewards
@@ -33,7 +33,7 @@ pub type OracleRedeemer {
   DelNodes
   ScaleDown
   DismissRewards
-  CloseOracle
-  ReopenOracle
+  PauseOracle
+  ResumeOracle
   RemoveOracle
 }

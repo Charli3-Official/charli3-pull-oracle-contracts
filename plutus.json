@@ -395,7 +395,7 @@
     },
     "oracle/datum/OracleConfiguration": {
       "title": "OracleConfiguration",
-      "description": "Immutable oracle settings.\n Rationale for immutability:\n * platform_auth_nft - oracle deployment corresponds to one unchanging \"platform\"\n * closing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * fee_token - oracle nodes will be sure that platform won't update reward currency",
+      "description": "Immutable oracle settings.\n Rationale for immutability:\n * platform_auth_nft - oracle deployment corresponds to one unchanging \"platform\"\n * pause_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval\n * fee_token - oracle nodes will be sure that platform won't update reward currency",
       "anyOf": [
         {
           "title": "OracleConfiguration",
@@ -408,8 +408,8 @@
               "$ref": "#/definitions/PolicyId"
             },
             {
-              "title": "closing_period_length",
-              "description": "closing period is when oracle can no longer do aggregations, but rewards can still be calculated",
+              "title": "pause_period_length",
+              "description": "pause period is when oracle can no longer do aggregations, but rewards can still be calculated",
               "$ref": "#/definitions/PosixTimeDiff"
             },
             {
@@ -517,8 +517,8 @@
               "$ref": "#/definitions/Int"
             },
             {
-              "title": "closing_period_started_at",
-              "description": "if oracle is in closing state, then this field will have a certain timestamp value",
+              "title": "pause_period_started_at",
+              "description": "if oracle is in pause state, then this field will have a certain timestamp value",
               "$ref": "#/definitions/Option$PosixTime"
             }
           ]
@@ -587,7 +587,7 @@
     },
     "oracle/redeemer/MintingRedeemer": {
       "title": "MintingRedeemer",
-      "description": "Types of actions for Oracle NFTs (protocol tokens)\n * MintToken  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState\n * ScaleToken - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState\n * BurnToken  - Oracle close: all tokens are burned",
+      "description": "Types of actions for Oracle NFTs (protocol tokens)\n * MintToken  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState\n * ScaleToken - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState\n * BurnToken  - Oracle remove: all tokens are burned",
       "anyOf": [
         {
           "title": "MintToken",
@@ -611,7 +611,7 @@
     },
     "oracle/redeemer/OracleRedeemer": {
       "title": "OracleRedeemer",
-      "description": "Types of actions for Oracle smart contract\n * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain\n * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO\n * NodeCollect - oracle node collects rewards\n * PlatformCollect - oracle platform collects rewards\n * UpdateSettings - oracle platform changes consensus settings\n * SetFeeConfig - oracle platform changes reward fee configuration\n * AddNodes - oracle platform adds new nodes\n * DelNodes - oracle platform deletes nodes\n * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs\n * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards\n * CloseOracle - oracle platform starts closing period, when nodes can still calculate disregarded rewards\n * ReopenOracle - redeemer for cancelling oracle close, so that platform can suspend oracle operation only temporarily\n * RemoveOracle - oracle closing period ends and platform destroys all UTxOs and all NFTs",
+      "description": "Types of actions for Oracle smart contract\n * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain\n * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO\n * NodeCollect - oracle node collects rewards\n * PlatformCollect - oracle platform collects rewards\n * UpdateSettings - oracle platform changes consensus settings\n * SetFeeConfig - oracle platform changes reward fee configuration\n * AddNodes - oracle platform adds new nodes\n * DelNodes - oracle platform deletes nodes\n * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs\n * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards\n * PauseOracle - oracle platform starts pause period, when nodes can still calculate disregarded rewards\n * ResumeOracle - redeemer for cancelling oracle pause, so that platform can suspend oracle operation only temporarily\n * RemoveOracle - oracle pause period ends and platform destroys all UTxOs and all NFTs",
       "anyOf": [
         {
           "title": "OdvAggregate",
@@ -674,13 +674,13 @@
           "fields": []
         },
         {
-          "title": "CloseOracle",
+          "title": "PauseOracle",
           "dataType": "constructor",
           "index": 10,
           "fields": []
         },
         {
-          "title": "ReopenOracle",
+          "title": "ResumeOracle",
           "dataType": "constructor",
           "index": 11,
           "fields": []
