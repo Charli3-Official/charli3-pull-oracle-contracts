@@ -355,6 +355,20 @@ pub fn calculate_asset_quantity_with_default(
   }
 }
 
+pub fn conserves_utxo_value(in_value: Value, out_value: Value) -> Bool {
+  trace @"T31"
+
+  let in_tokens = assets.without_lovelace(in_value)
+  let out_tokens = assets.without_lovelace(out_value)
+  let must_conserve_token_value = in_tokens == out_tokens
+
+  let in_lovelace = assets.lovelace_of(in_value)
+  let out_lovelace = assets.lovelace_of(out_value)
+  let must_conserve_ada_value = in_lovelace <= out_lovelace
+
+  must_conserve_token_value && must_conserve_ada_value
+}
+
 pub fn oracle_fees_were_transferred(
   fee_token: Option<Asset>,
   aggregations: List<Aggregation>,
