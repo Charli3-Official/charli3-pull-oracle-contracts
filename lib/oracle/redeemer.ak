@@ -13,8 +13,7 @@ pub type MintingRedeemer {
 /// * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO
 /// * NodeCollect - oracle node collects rewards
 /// * PlatformCollect - oracle platform collects rewards
-/// * UpdateSettings - oracle platform changes consensus settings
-/// * SetFeeConfig - oracle platform changes reward fee configuration
+/// * UpdateSettings - oracle platform changes consensus, timing or fee settings
 /// * AddNodes - oracle platform adds new nodes
 /// * DelNodes - oracle platform deletes nodes
 /// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
@@ -28,7 +27,6 @@ pub type OracleRedeemer {
   NodeCollect
   PlatformCollect
   UpdateSettings
-  SetFeeConfig
   AddNodes
   DelNodes
   ScaleDown

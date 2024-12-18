@@ -130,12 +130,11 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 * T20 - check_reward_distribution;
 * T21 - validate_message_form;
 * T22 - check_settings_sanity;
-* T23 - check_fee_settings_sanity;
+* T23 - conserves_utxo_value;
 * T24 - check_closing_does_not_change_settings;
 * T25 - find_node_index_by_signature;
 * T26 - check_node_received_reward;
 * T27 - check_platform_received_reward;
 * T28 - check_added_nodes;
 * T29 - check_deleted_nodes;
-* T30 - validate_settings_form;
-* T31 - conserves_utxo_value.
+* T30 - validate_settings_form.

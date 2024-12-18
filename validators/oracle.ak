@@ -19,12 +19,11 @@ use config
 use ext/cardano/value.{Asset}
 use oracle/checks.{
   calculate_asset_net_change_with_default, calculate_minimum_fee_amount,
-  check_added_nodes, check_deleted_nodes, check_fee_settings_sanity,
-  check_node_received_reward, check_pause_does_not_change_settings,
-  check_platform_received_reward, check_reward_distribution,
-  check_settings_sanity, conserves_utxo_value, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_node_index_by_signature, find_out_datum_and_value,
+  check_added_nodes, check_deleted_nodes, check_node_received_reward,
+  check_pause_does_not_change_settings, check_platform_received_reward,
+  check_reward_distribution, check_settings_sanity, conserves_utxo_value,
+  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
+  find_in_datum, find_node_index_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
   is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
@@ -42,7 +41,7 @@ use oracle/redeemer.{
   AddNodes, BurnToken, CalculateRewards, DelNodes, DismissRewards, MintToken,
   MintingRedeemer, NodeCollect, OdvAggregate, OracleRedeemer, PauseOracle,
   PlatformCollect, RemoveOracle, ResumeOracle, ScaleDown, ScaleToken,
-  SetFeeConfig, UpdateSettings,
+  UpdateSettings,
 }
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{find_own_protocol_policy_id}
@@ -567,24 +566,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           in_value,
           out_value,
         ) && check_settings_sanity(oracle_conf, in_core_datum, out_core_datum)
-      }
-      // :: SetFeeConfig
-      (SetFeeConfig, OracleSettings(in_core_datum)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-
-        expect (OracleSettings(out_core_datum), out_value) =
-          find_out_datum_and_value(outputs, own_hash, core_nft)
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
-          in_value,
-          out_value,
-        ) && check_fee_settings_sanity(in_core_datum, out_core_datum)
       }
       // :: AddNodes
       (AddNodes, RewardAccount(_in_account_datum)) -> {
