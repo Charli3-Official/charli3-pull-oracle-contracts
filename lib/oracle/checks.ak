@@ -14,8 +14,9 @@ use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
   AggState, AggStateDatum, AggregateMessage, Aggregation, FeedVkh, NodeFeed,
-  Nodes, OracleDatum, OracleSettingsDatum, PaymentVkh, RewardConsensusPending,
-  RewardPrices, RewardTransport, RewardTransportDatum, has_no_rewards,
+  Nodes, OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh,
+  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
+  has_no_rewards,
 }
 use oracle/redeemer.{CalculateRewards, OracleRedeemer}
 use services/protocol_token.{
@@ -463,23 +464,41 @@ fn do_get_length_and_check_order(
 }
 
 pub fn check_settings_sanity(
+  oracle_conf: OracleConfiguration,
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
 ) -> Bool {
   trace @"T22"
 
+  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && validate_settings_form(
+    oracle_conf,
+    out_settings,
+  )
+}
+
+pub fn validate_settings_form(
+  oracle_conf: OracleConfiguration,
+  oracle_settings: OracleSettingsDatum,
+) -> Bool {
+  trace @"T30"
+
   let must_not_break_multisig =
-    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
-      out_settings.nodes,
+    oracle_settings.required_node_signatures_count > 0 && oracle_settings.required_node_signatures_count <= list.length(
+      oracle_settings.nodes,
     )
   let must_measure_time_precisely =
-    out_settings.aggregation_liveness_period > out_settings.time_absolute_uncertainty
-  let must_have_positive_intervals = out_settings.time_absolute_uncertainty > 0
-  let must_be_fair_about_outliers = out_settings.iqr_fence_multiplier > 100
-  let must_not_have_negative_utxo_buffer =
-    out_settings.utxo_size_safety_buffer >= 0
+    oracle_settings.aggregation_liveness_period > oracle_settings.time_absolute_uncertainty && oracle_conf.closing_period_length > oracle_settings.time_absolute_uncertainty && oracle_conf.reward_dismissing_period_length > oracle_settings.time_absolute_uncertainty
 
-  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers && must_not_have_negative_utxo_buffer
+  let must_have_positive_intervals =
+    oracle_settings.time_absolute_uncertainty > 0
+  let must_be_fair_about_outliers = oracle_settings.iqr_fence_multiplier > 100
+  let must_not_have_negative_utxo_buffer =
+    when oracle_conf.fee_token is {
+      None -> oracle_settings.utxo_size_safety_buffer > 0
+      Some(_) -> oracle_settings.utxo_size_safety_buffer == 0
+    }
+
+  must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers && must_not_have_negative_utxo_buffer
 }
 
 pub fn check_fee_settings_sanity(

@@ -82,7 +82,7 @@ root="$(pwd)" && ln -s "$root/hooks/pre-commit" "$root/.git/hooks/pre-commit"
 
 Find more on the [Aiken's user manual](https://aiken-lang.org).
 
-Simply install latest version of aiken (change version tag) `nix profile install github:aiken-lang/aiken/v1.1.3#aiken`.
+Simply install latest version of aiken (change version tag) `nix profile install github:aiken-lang/aiken/v1.1.9#aiken`.
 
 ## Validators trace messages and codes
 
@@ -136,4 +136,5 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 * T26 - check_node_received_reward;
 * T27 - check_platform_received_reward;
 * T28 - check_added_nodes;
-* T29 - check_deleted_nodes.
+* T29 - check_deleted_nodes;
+* T30 - validate_settings_form.
