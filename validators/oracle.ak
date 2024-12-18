@@ -581,12 +581,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        let must_be_paused = is_oracle_paused(in_core_datum)
-
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
           in_value,
           out_value,
-        ) && check_fee_settings_sanity(in_core_datum, out_core_datum) && must_be_paused
+        ) && check_fee_settings_sanity(in_core_datum, out_core_datum)
       }
       // :: AddNodes
       (AddNodes, RewardAccount(_in_account_datum)) -> {
@@ -653,8 +651,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token,
           )
 
-        let must_be_paused = is_oracle_paused(in_core_datum)
-
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
           in_value,
           out_value,
@@ -663,7 +659,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           out_core_datum,
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
-        ) && must_be_paused
+        )
       }
       // :: DelNodes
       (DelNodes, RewardAccount(_in_account_datum)) -> {
@@ -730,8 +726,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect (OracleSettings(out_core_datum), out_value) =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        let must_be_paused = is_oracle_paused(in_core_datum)
-
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
           in_value,
           out_value,
@@ -740,7 +734,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           out_core_datum,
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
-        ) && must_be_paused
+        )
       }
       // :: ScaleDown
       (ScaleDown, RewardTransport(NoRewards)) -> {
