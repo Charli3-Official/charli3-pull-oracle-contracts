@@ -355,6 +355,20 @@ pub fn calculate_asset_quantity_with_default(
   }
 }
 
+pub fn conserves_utxo_value(in_value: Value, out_value: Value) -> Bool {
+  trace @"T23"
+
+  let in_tokens = assets.without_lovelace(in_value)
+  let out_tokens = assets.without_lovelace(out_value)
+  let must_conserve_token_value = in_tokens == out_tokens
+
+  let in_lovelace = assets.lovelace_of(in_value)
+  let out_lovelace = assets.lovelace_of(out_value)
+  let must_conserve_ada_value = in_lovelace <= out_lovelace
+
+  must_conserve_token_value && must_conserve_ada_value
+}
+
 pub fn oracle_fees_were_transferred(
   fee_token: Option<Asset>,
   aggregations: List<Aggregation>,
@@ -470,7 +484,7 @@ pub fn check_settings_sanity(
 ) -> Bool {
   trace @"T22"
 
-  in_settings.nodes == out_settings.nodes && in_settings.fee_info == out_settings.fee_info && in_settings.closing_period_started_at == out_settings.closing_period_started_at && validate_settings_form(
+  in_settings.nodes == out_settings.nodes && in_settings.pause_period_started_at == out_settings.pause_period_started_at && validate_settings_form(
     oracle_conf,
     out_settings,
   )
@@ -487,7 +501,7 @@ pub fn validate_settings_form(
       oracle_settings.nodes,
     )
   let must_measure_time_precisely =
-    oracle_settings.aggregation_liveness_period > oracle_settings.time_absolute_uncertainty && oracle_conf.closing_period_length > oracle_settings.time_absolute_uncertainty && oracle_conf.reward_dismissing_period_length > oracle_settings.time_absolute_uncertainty
+    oracle_settings.aggregation_liveness_period > oracle_settings.time_absolute_uncertainty && oracle_conf.pause_period_length > oracle_settings.time_absolute_uncertainty && oracle_conf.reward_dismissing_period_length > oracle_settings.time_absolute_uncertainty
 
   let must_have_positive_intervals =
     oracle_settings.time_absolute_uncertainty > 0
@@ -498,22 +512,13 @@ pub fn validate_settings_form(
       Some(_) -> oracle_settings.utxo_size_safety_buffer == 0
     }
 
-  must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers && must_not_have_negative_utxo_buffer
+  let must_not_have_negative_prices =
+    oracle_settings.fee_info.reward_prices.node_fee >= 0 && oracle_settings.fee_info.reward_prices.platform_fee >= 0
+
+  must_not_break_multisig && must_measure_time_precisely && must_have_positive_intervals && must_be_fair_about_outliers && must_not_have_negative_utxo_buffer && must_not_have_negative_prices
 }
 
-pub fn check_fee_settings_sanity(
-  in_settings: OracleSettingsDatum,
-  out_settings: OracleSettingsDatum,
-) -> Bool {
-  trace @"T23"
-
-  let must_not_have_negative_price =
-    out_settings.fee_info.reward_prices.node_fee >= 0 && out_settings.fee_info.reward_prices.platform_fee >= 0
-
-  in_settings.nodes == out_settings.nodes && in_settings.required_node_signatures_count == out_settings.required_node_signatures_count && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at && must_not_have_negative_price
-}
-
-pub fn check_closing_does_not_change_settings(
+pub fn check_pause_does_not_change_settings(
   in_core_datum: OracleSettingsDatum,
   out_core_datum: OracleSettingsDatum,
 ) -> Bool {
@@ -614,7 +619,7 @@ pub fn check_added_nodes(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
       out_settings.nodes,
@@ -674,7 +679,7 @@ pub fn check_deleted_nodes(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.closing_period_started_at == out_settings.closing_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_absolute_uncertainty == out_settings.time_absolute_uncertainty && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
       pairs.keys(out_settings.nodes),

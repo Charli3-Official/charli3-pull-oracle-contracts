@@ -55,14 +55,14 @@ pub type AggStateDatum {
 /// Immutable oracle settings.
 /// Rationale for immutability:
 /// * platform_auth_nft - oracle deployment corresponds to one unchanging "platform"
-/// * closing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
+/// * pause_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * fee_token - oracle nodes will be sure that platform won't update reward currency
 pub type OracleConfiguration {
   /// platform is authorized by providing its input with specific NFT inside the transaction
   platform_auth_nft: PolicyId,
-  /// closing period is when oracle can no longer do aggregations, but rewards can still be calculated
-  closing_period_length: PosixTimeDiff,
+  /// pause period is when oracle can no longer do aggregations, but rewards can still be calculated
+  pause_period_length: PosixTimeDiff,
   /// after this period rewards can be dismissed with DismissRewards redeemer
   reward_dismissing_period_length: PosixTimeDiff,
   /// oracle fees are paid using this asset, if it's None then ada is used
@@ -95,8 +95,8 @@ pub type OracleSettingsDatum {
   /// in case oracle fee paid in ada it should be equal to a minimum ada amount held at maximum expected reward account utxo size,
   /// otherwise platform can withdraw more rewards than should be left for nodes
   utxo_size_safety_buffer: Int,
-  /// if oracle is in closing state, then this field will have a certain timestamp value
-  closing_period_started_at: Option<PosixTime>,
+  /// if oracle is in pause state, then this field will have a certain timestamp value
+  pause_period_started_at: Option<PosixTime>,
 }
 
 /// Reward distribution datum
@@ -133,8 +133,8 @@ pub type RewardPrices {
   platform_fee: Int,
 }
 
-pub fn is_oracle_closing(settings: OracleSettingsDatum) -> Bool {
-  option.is_some(settings.closing_period_started_at)
+pub fn is_oracle_paused(settings: OracleSettingsDatum) -> Bool {
+  option.is_some(settings.pause_period_started_at)
 }
 
 pub fn has_no_rewards(reward_transport: RewardTransportDatum) -> Bool {
