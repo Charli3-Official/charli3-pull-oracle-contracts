@@ -758,14 +758,14 @@ fn do_get_length_and_check_strict_order(
   }
 }
 
-pub fn check_nodes_final_rewards_paid(
+pub fn check_nodes_final_rewards_paid_returning(
   oracle_conf: OracleConfiguration,
   tx_outputs: List<Output>,
   in_settings: OracleSettingsDatum,
   in_distribution: List<Int>,
   deleted_nodes: Nodes,
   current_time: PosixTime,
-) -> Bool {
+) -> Int {
   trace @"T31"
 
   let remaining_rewards =
@@ -778,18 +778,22 @@ pub fn check_nodes_final_rewards_paid(
 
   when oracle_conf.fee_token is {
     None ->
-      list.all(
+      list.reduce(
         deleted_nodes,
-        fn(Pair(feed_vkh, payment_vkh)) {
+        0,
+        fn(rewards_accumulator, Pair(feed_vkh, payment_vkh)) {
           expect Some(final_reward_amount) =
             dict.get(remaining_rewards, feed_vkh)
           let node_addr = address.from_verification_key(payment_vkh)
 
-          final_reward_amount == 0 || final_ada_rewards_paid(
-            tx_outputs,
-            node_addr,
-            final_reward_amount,
-          )
+          expect
+            final_reward_amount == 0 || final_ada_rewards_paid(
+              tx_outputs,
+              node_addr,
+              final_reward_amount,
+            )
+
+          rewards_accumulator + final_reward_amount
         },
       )
     Some(fee_asset) -> {
@@ -800,20 +804,24 @@ pub fn check_nodes_final_rewards_paid(
           fee_asset,
         )
 
-      list.all(
+      list.reduce(
         deleted_nodes,
-        fn(Pair(feed_vkh, payment_vkh)) {
+        0,
+        fn(rewards_accumulator, Pair(feed_vkh, payment_vkh)) {
           expect Some(final_reward_amount) =
             dict.get(remaining_rewards, feed_vkh)
 
-          final_reward_amount == 0 || final_token_rewards_paid(
-            escrow_outputs,
-            payment_vkh,
-            final_reward_amount,
-            current_time,
-            oracle_conf.platform_auth_nft,
-            oracle_conf.reward_dismissing_period_length,
-          )
+          expect
+            final_reward_amount == 0 || final_token_rewards_paid(
+              escrow_outputs,
+              payment_vkh,
+              final_reward_amount,
+              current_time,
+              oracle_conf.platform_auth_nft,
+              oracle_conf.reward_dismissing_period_length,
+            )
+
+          rewards_accumulator + final_reward_amount
         },
       )
     }
