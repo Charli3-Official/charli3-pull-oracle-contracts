@@ -725,12 +725,15 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             deleted_nodes,
             current_time,
           )
-        let must_withdraw_final_rewards =
-          final_rewards_amount == calculate_asset_net_change_with_default(
+        let amount_withdrawn =
+          calculate_asset_net_change_with_default(
             oracle_conf.fee_token,
             in_value,
             out_value,
           )
+            |> fn(v) { -v }
+        let must_withdraw_final_rewards =
+          final_rewards_amount == amount_withdrawn
 
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_withdraw_final_rewards
       }
