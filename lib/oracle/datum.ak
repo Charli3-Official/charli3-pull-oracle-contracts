@@ -1,4 +1,4 @@
-use aiken/crypto.{VerificationKeyHash}
+use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
 use ext/aiken/math/rational.{Percent}
@@ -58,6 +58,7 @@ pub type AggStateDatum {
 /// * pause_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * fee_token - oracle nodes will be sure that platform won't update reward currency
+/// * reward_escrow_script_hash - oracle nodes will be sure that the reward escrow script is fair
 pub type OracleConfiguration {
   /// platform is authorized by providing its input with specific NFT inside the transaction
   platform_auth_nft: PolicyId,
@@ -67,6 +68,9 @@ pub type OracleConfiguration {
   reward_dismissing_period_length: PosixTimeDiff,
   /// oracle fees are paid using this asset, if it's None then ada is used
   fee_token: Option<Asset>,
+  /// when oracle platform removes nodes it will do a final token reward payout to this address,
+  /// ada rewards are paid to nodes PaymentVkh, so escrow script hash can be set to ""
+  reward_escrow_script_hash: ScriptHash,
 }
 
 pub type AggregateMessage {

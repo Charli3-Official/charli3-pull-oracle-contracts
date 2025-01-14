@@ -6,7 +6,7 @@ use aiken/interval
 use aiken/math/rational
 use aiken/primitive/int
 use cardano/address
-use cardano/assets.{PolicyId}
+use cardano/assets.{AssetName, PolicyId}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use config
@@ -25,6 +25,7 @@ use oracle/redeemer.{
   NodeCollect, OdvAggregate, PauseOracle, PlatformCollect, RemoveOracle,
   ResumeOracle, ScaleDown, ScaleToken, UpdateSettings,
 }
+use services/reward_escrow.{RewardEscrowDatum}
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
 
@@ -40,11 +41,13 @@ const mock_oracle_nft_script_hash: ScriptHash = "oracle nft script hash"
 
 const mock_auth_script_hash: ScriptHash = "platform auth script hash"
 
+const mock_escrow_script_hash: ScriptHash = "reward escrow script hash"
+
 const mock_platform_auth_policy_id: PolicyId = "platform auth NFT policy id"
 
-const mock_fee_token_policy_id = "C3 policy id"
+const mock_fee_token_policy_id: PolicyId = "C3 policy id"
 
-const mock_fee_token_name = "C3"
+const mock_fee_token_name: AssetName = "C3"
 
 const mock_oracle_conf =
   OracleConfiguration {
@@ -54,6 +57,7 @@ const mock_oracle_conf =
     fee_token: Some(
       Asset { policy_id: mock_fee_token_policy_id, name: mock_fee_token_name },
     ),
+    reward_escrow_script_hash: mock_escrow_script_hash,
   }
 
 const mock_oracle_conf_using_ada_fee =
@@ -62,6 +66,7 @@ const mock_oracle_conf_using_ada_fee =
     pause_period_length: twenty_four_hours,
     reward_dismissing_period_length: twenty_four_hours,
     fee_token: None,
+    reward_escrow_script_hash: "",
   }
 
 const mock_nodes =
@@ -1410,18 +1415,20 @@ test successful_del_nodes() {
     RewardAccount(RewardAccountDatum(mock_nodes_rewards))
   let reward_account_after =
     RewardAccount(RewardAccountDatum(list.drop(mock_nodes_rewards, 1)))
-  let rewards_value =
-    assets.from_asset(
-      mock_fee_token_policy_id,
-      mock_fee_token_name,
-      mock_minimum_fee_amount,
-    )
+
   let reward_account_input =
     tx.Input {
       output_reference: reward_account_ref,
       output: tx.Output {
         address: address.from_script(mock_manager_script_hash),
-        value: assets.merge(mock_reward_account_token_value, rewards_value),
+        value: assets.merge(
+          mock_reward_account_token_value,
+          assets.from_asset(
+            mock_fee_token_policy_id,
+            mock_fee_token_name,
+            mock_minimum_fee_amount,
+          ),
+        ),
         datum: tx.InlineDatum(reward_account_before),
         reference_script: None,
       },
@@ -1429,7 +1436,14 @@ test successful_del_nodes() {
   let reward_account_output =
     tx.Output {
       address: address.from_script(mock_manager_script_hash),
-      value: assets.merge(mock_reward_account_token_value, rewards_value),
+      value: assets.merge(
+        mock_reward_account_token_value,
+        assets.from_asset(
+          mock_fee_token_policy_id,
+          mock_fee_token_name,
+          mock_minimum_fee_amount - mock_node_fee,
+        ),
+      ),
       datum: tx.InlineDatum(reward_account_after),
       reference_script: None,
     }
@@ -1471,6 +1485,25 @@ test successful_del_nodes() {
       reference_script: None,
     }
 
+  let reward_escrow_output =
+    tx.Output {
+      address: address.from_script(mock_escrow_script_hash),
+      value: assets.from_asset(
+        mock_fee_token_policy_id,
+        mock_fee_token_name,
+        mock_node_fee,
+      ),
+      datum: tx.InlineDatum(
+        RewardEscrowDatum {
+          reward_issuer_nft: mock_platform_auth_policy_id,
+          reward_issuer_address: address.from_script("platform multisig script"),
+          reward_receiver: "node02 PaymentVkh",
+          escrow_expiration_timestamp: mock_current_time + mock_oracle_conf.reward_dismissing_period_length,
+        },
+      ),
+      reference_script: None,
+    }
+
   let del_nodes_redeemer: Data = DelNodes
   let del_nodes_tx =
     Transaction {
@@ -1484,7 +1517,9 @@ test successful_del_nodes() {
       ],
       outputs: [
         core_settings_output, reward_account_output, mock_platform_nft_output,
+        reward_escrow_output,
       ],
+      validity_range: mock_precise_tx_validity_interval,
     }
   oracle.oracle_manager.spend(
     mock_oracle_conf,

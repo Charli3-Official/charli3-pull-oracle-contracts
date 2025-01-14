@@ -25,7 +25,7 @@ aiken build
 For testnets:
 
 ```sh
-aiken build --env testnet --trace-filter user-defined
+aiken build --env testnet --trace-filter user-defined --trace-level verbose
 ```
 
 ### Configuring
@@ -137,4 +137,5 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 * T27 - check_platform_received_reward;
 * T28 - check_added_nodes;
 * T29 - check_deleted_nodes;
-* T30 - validate_settings_form.
+* T30 - validate_settings_form;
+* T31 - check_nodes_final_rewards_paid.
