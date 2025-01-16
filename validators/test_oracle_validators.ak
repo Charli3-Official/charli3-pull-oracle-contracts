@@ -33,6 +33,8 @@ const one_hour: PosixTimeDiff = 60 * 60 * 1000
 
 const thirty_minutes: PosixTimeDiff = 30 * 60 * 1000
 
+const ten_minutes: PosixTimeDiff = 10 * 60 * 1000
+
 const three_minutes: PosixTimeDiff = 3 * 60 * 1000
 
 const mock_manager_script_hash: ScriptHash = "oracle manager script hash"
@@ -132,7 +134,8 @@ const mock_oracle_settings =
       },
     },
     aggregation_liveness_period: one_hour,
-    time_absolute_uncertainty: three_minutes,
+    time_uncertainty_aggregation: three_minutes,
+    time_uncertainty_platform: ten_minutes,
     iqr_fence_multiplier: 150,
     utxo_size_safety_buffer: 0,
     pause_period_started_at: None,
@@ -152,7 +155,8 @@ const mock_oracle_settings_using_ada_fee =
       },
     },
     aggregation_liveness_period: one_hour,
-    time_absolute_uncertainty: three_minutes,
+    time_uncertainty_aggregation: three_minutes,
+    time_uncertainty_platform: ten_minutes,
     iqr_fence_multiplier: 150,
     utxo_size_safety_buffer: mock_utxo_size_safety_buffer,
     pause_period_started_at: None,

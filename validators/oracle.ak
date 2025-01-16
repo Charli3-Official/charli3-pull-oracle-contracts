@@ -338,7 +338,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_out_datum_and_value(outputs, own_hash, aggstate_nft)
 
         let current_time =
-          get_current_time(core_datum.time_absolute_uncertainty, validity_range)
+          get_current_time(
+            core_datum.time_uncertainty_aggregation,
+            validity_range,
+          )
 
         let must_have_current_time_as_timestamp =
           current_time == aggregation.message.timestamp && current_time == aggstate.created_at
@@ -713,7 +716,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let current_time =
           get_current_time(
-            in_core_datum.time_absolute_uncertainty,
+            in_core_datum.time_uncertainty_platform,
             validity_range,
           )
         let final_rewards_amount =
@@ -805,7 +808,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let current_time =
           get_current_time(
-            in_core_datum.time_absolute_uncertainty,
+            in_core_datum.time_uncertainty_platform,
             validity_range,
           )
         let must_start_pause_period =

@@ -89,9 +89,10 @@ pub type OracleSettingsDatum {
   fee_info: FeeConfig,
   /// aggregation is considered live, i.e. usable by dapps during this period
   aggregation_liveness_period: PosixTimeDiff,
-  /// this is length of tx validity interval, so technically its value equals time absolute uncertainty times two,
-  /// because we are taking tx validity interval middle as current time value
-  time_absolute_uncertainty: PosixTimeDiff,
+  /// max tx validity interval length for odv-aggregation tx
+  time_uncertainty_aggregation: PosixTimeDiff,
+  /// max tx validity interval length for platform governance txs
+  time_uncertainty_platform: PosixTimeDiff,
   /// see interquartile range (IQR) and Tukey fences methods for outlier detection,
   /// recommended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
   iqr_fence_multiplier: Percent,
