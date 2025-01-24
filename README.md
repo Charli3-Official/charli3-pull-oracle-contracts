@@ -82,7 +82,7 @@ root="$(pwd)" && ln -s "$root/hooks/pre-commit" "$root/.git/hooks/pre-commit"
 
 Find more on the [Aiken's user manual](https://aiken-lang.org).
 
-Simply install latest version of aiken (change version tag) `nix profile install github:aiken-lang/aiken/v1.1.10#aiken`.
+Simply install latest version of aiken (change version tag) `nix profile install github:aiken-lang/aiken/v1.1.9#aiken`.
 
 ## Validators trace messages and codes
 
