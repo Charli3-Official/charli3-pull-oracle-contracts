@@ -94,6 +94,7 @@ validator oracle_nfts(
             reward_transport_nft,
             n,
             outputs,
+            out_core_datum.utxo_size_safety_buffer,
           )
         let must_return_empty_aggstate_utxos =
           returns_empty_aggstate_outputs(
@@ -133,6 +134,7 @@ validator oracle_nfts(
               reward_transport_nft,
               n,
               outputs,
+              core_datum.utxo_size_safety_buffer,
             )
           let must_return_empty_aggstate_utxos =
             returns_empty_aggstate_outputs(
@@ -357,7 +359,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_have_correct_median =
           median == aggregation.oracle_feed && median == aggstate.oracle_feed
 
-        // TODO utxo_size_safety_buffer
         let fees_transferred =
           calculate_asset_net_change_with_default(
             oracle_conf.fee_token,
@@ -386,6 +387,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           extra_signatories,
           core_datum.nodes,
           core_datum.required_node_signatures_count,
+        ) && check_utxo_size_safety_buffer(
+          core_datum.utxo_size_safety_buffer,
+          out_value,
         ) && must_spend_only_one_reward_input && must_spend_only_one_aggstate_input && must_have_current_time_as_timestamp && must_expire_in_liveness_period && must_not_be_paused && must_have_correct_median && must_transfer_oracle_fees && must_tell_node_reward_price
       }
       // :: CalculateRewards
@@ -410,7 +414,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        // TODO utxo_size_safety_buffer
         must_spend_reward_account_utxo
       }
       (CalculateRewards, RewardAccount(in_account_datum)) -> {
@@ -459,15 +462,16 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             reward_transport_nft,
             list.length(aggregations),
             outputs,
+            core_datum.utxo_size_safety_buffer,
           )
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
-        // TODO utxo_size_safety_buffer
         oracle_fees_were_transferred(
           oracle_conf.fee_token,
           aggregations,
           in_value,
           out_value,
+          core_datum.utxo_size_safety_buffer,
         ) && check_reward_distribution(
           aggregations,
           in_account_datum.nodes_to_rewards,

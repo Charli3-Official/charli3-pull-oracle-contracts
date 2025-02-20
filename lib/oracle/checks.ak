@@ -81,6 +81,7 @@ pub fn returns_empty_reward_outputs(
   reward_transport_nft: Asset,
   utxo_count: Int,
   tx_outputs: List<Output>,
+  utxo_size_safety_buffer: Int,
 ) -> Bool {
   trace @"T9"
 
@@ -95,8 +96,12 @@ pub fn returns_empty_reward_outputs(
       reward_transport
     }
   let datums = list.map(outputs, extractor)
+  let values = list.map(outputs, fn(out) { out.value })
 
-  list.length(outputs) == utxo_count && list.all(datums, has_no_rewards)
+  list.length(outputs) == utxo_count && list.all(datums, has_no_rewards) && list.all(
+    values,
+    check_utxo_size_safety_buffer(utxo_size_safety_buffer, _),
+  )
 }
 
 pub fn returns_empty_aggstate_outputs(
@@ -388,6 +393,7 @@ pub fn oracle_fees_were_transferred(
   aggregations: List<Aggregation>,
   in_value: Value,
   out_value: Value,
+  utxo_size_safety_buffer: Int,
 ) -> Bool {
   trace @"T19"
 
@@ -400,7 +406,7 @@ pub fn oracle_fees_were_transferred(
       fn(aggregation, acc) { acc + aggregation.rewards_amount_paid },
     )
 
-  actual_fee >= required_fee
+  check_utxo_size_safety_buffer(utxo_size_safety_buffer, out_value) && actual_fee >= required_fee
 }
 
 pub fn check_reward_distribution(
