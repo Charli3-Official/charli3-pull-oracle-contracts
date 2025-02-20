@@ -22,9 +22,9 @@ use oracle/checks.{
   check_added_nodes, check_deleted_nodes_returning, check_node_received_reward,
   check_nodes_final_rewards_paid_returning, check_pause_does_not_change_settings,
   check_platform_received_reward, check_reward_distribution,
-  check_settings_sanity, conserves_utxo_value, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_node_index_by_signature, find_out_datum_and_value,
+  check_settings_sanity, check_utxo_size_safety_buffer, conserves_utxo_value,
+  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
+  find_in_datum, find_node_index_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
   is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
@@ -357,6 +357,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_have_correct_median =
           median == aggregation.oracle_feed && median == aggstate.oracle_feed
 
+        // TODO utxo_size_safety_buffer
         let fees_transferred =
           calculate_asset_net_change_with_default(
             oracle_conf.fee_token,
@@ -409,6 +410,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
+        // TODO utxo_size_safety_buffer
         must_spend_reward_account_utxo
       }
       (CalculateRewards, RewardAccount(in_account_datum)) -> {
@@ -460,6 +462,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
+        // TODO utxo_size_safety_buffer
         oracle_fees_were_transferred(
           oracle_conf.fee_token,
           aggregations,
@@ -511,6 +514,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
           in_value,
+          out_value,
+        ) && check_utxo_size_safety_buffer(
+          core_datum.utxo_size_safety_buffer,
           out_value,
         )
       }
@@ -738,7 +744,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_withdraw_final_rewards =
           final_rewards_amount == amount_withdrawn
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_withdraw_final_rewards
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_utxo_size_safety_buffer(
+          in_core_datum.utxo_size_safety_buffer,
+          out_value,
+        ) && must_withdraw_final_rewards
       }
       // :: ScaleDown
       (ScaleDown, RewardTransport(NoRewards)) -> {
@@ -769,19 +778,22 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             in_value,
             config.reward_transport_token_name,
           )
+        let core_nft =
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_transport_nft =
           Asset {
             policy_id: nft_policy_id,
             name: config.reward_transport_token_name,
           }
 
-        let must_return_empty_reward_utxo =
-          returns_empty_reward_outputs(
-            own_hash,
-            reward_transport_nft,
-            1,
-            outputs,
-          )
+        expect OracleSettings(core_datum) =
+          find_referenced_datum(reference_inputs, own_hash, core_nft)
+
+        expect (RewardTransport(NoRewards), out_value) =
+          find_out_datum_and_value(outputs, own_hash, reward_transport_nft)
 
         let must_be_after_dismissing_period =
           interval.is_entirely_after(
@@ -789,7 +801,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             aggregation.message.timestamp + oracle_conf.reward_dismissing_period_length,
           )
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_utxo_size_safety_buffer(
+          core_datum.utxo_size_safety_buffer,
+          out_value,
+        ) && must_be_after_dismissing_period
       }
       // :: PauseOracle
       (PauseOracle, OracleSettings(in_core_datum)) -> {

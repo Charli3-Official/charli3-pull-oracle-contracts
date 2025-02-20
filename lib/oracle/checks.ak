@@ -372,6 +372,17 @@ pub fn conserves_utxo_value(in_value: Value, out_value: Value) -> Bool {
   must_conserve_token_value && must_conserve_ada_value
 }
 
+pub fn check_utxo_size_safety_buffer(
+  utxo_size_safety_buffer: Int,
+  out_value: Value,
+) -> Bool {
+  trace @"T32"
+
+  let out_lovelace = assets.lovelace_of(out_value)
+
+  out_lovelace >= utxo_size_safety_buffer
+}
+
 pub fn oracle_fees_were_transferred(
   fee_token: Option<Asset>,
   aggregations: List<Aggregation>,
@@ -511,10 +522,7 @@ pub fn validate_settings_form(
 
   let must_be_fair_about_outliers = oracle_settings.iqr_fence_multiplier > 100
   let must_not_have_negative_utxo_buffer =
-    when oracle_conf.fee_token is {
-      None -> oracle_settings.utxo_size_safety_buffer > 0
-      Some(_) -> oracle_settings.utxo_size_safety_buffer == 0
-    }
+    oracle_settings.utxo_size_safety_buffer > 0
 
   let must_not_have_negative_prices =
     oracle_settings.fee_info.reward_prices.node_fee >= 0 && oracle_settings.fee_info.reward_prices.platform_fee >= 0
@@ -593,7 +601,15 @@ pub fn check_platform_received_reward(
   let actual_reward = in_total_rewards - out_total_rewards
 
   let must_save_nodes_rewards =
-    out_total_rewards - utxo_size_safety_buffer >= nodes_rewards
+    when fee_token is {
+      Some(_) ->
+        out_total_rewards >= nodes_rewards && check_utxo_size_safety_buffer(
+          utxo_size_safety_buffer,
+          out_value,
+        )
+      None -> out_total_rewards - utxo_size_safety_buffer >= nodes_rewards
+    }
+
   let must_withdraw = actual_reward > 0
 
   must_save_nodes_rewards && must_withdraw

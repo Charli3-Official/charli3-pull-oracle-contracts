@@ -138,4 +138,5 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 * T28 - check_added_nodes;
 * T29 - check_deleted_nodes;
 * T30 - validate_settings_form;
-* T31 - check_nodes_final_rewards_paid.
+* T31 - check_nodes_final_rewards_paid;
+* T32 - check_utxo_size_safety_buffer.
