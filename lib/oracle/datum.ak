@@ -4,7 +4,7 @@ use cardano/assets.{PolicyId}
 use ext/aiken/math/rational.{Percent}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
-use oracle_datum.{OracleDatum}
+use oracle_datum.{OracleDatum as StandardOracleDatum}
 
 pub type OracleFeed =
   Int
@@ -25,7 +25,7 @@ pub type OracleDatum {
   OracleSettings(OracleSettingsDatum)
   RewardAccount(RewardAccountDatum)
   RewardTransport(RewardTransportDatum)
-  AggState(Option<OracleDatum>)
+  AggState(Option<StandardOracleDatum>)
 }
 
 /// RewardTransport utxo can be in two states:

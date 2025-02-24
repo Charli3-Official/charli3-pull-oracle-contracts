@@ -15,12 +15,13 @@ use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Aggregation, FeedVkh, NodeFeed,
-  Nodes, OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh,
+  AggState, AggregateMessage, Aggregation, FeedVkh, NodeFeed, Nodes,
+  OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh,
   RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
   has_no_rewards,
 }
 use oracle/redeemer.{OracleRedeemer}
+use oracle_datum.{OracleDatum as StandardOracleDatum}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -110,7 +111,7 @@ pub fn returns_empty_aggstate_outputs(
   let outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, aggstate_nft)
   let extractor =
-    fn(output: Output) -> Option<AggStateDatum> {
+    fn(output: Output) -> Option<StandardOracleDatum> {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
       expect AggState(aggstate) = oracle_datum

@@ -15,8 +15,8 @@ use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Aggregation, FeeConfig, FeedVkh,
-  NoRewards, NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
+  AggState, AggregateMessage, Aggregation, FeeConfig, FeedVkh, NoRewards,
+  NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
   RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
   RewardTransport,
 }
