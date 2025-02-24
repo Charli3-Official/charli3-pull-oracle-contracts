@@ -450,6 +450,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
             own_hash,
             reward_transport_nft,
+            CalculateRewards,
           )
         let must_return_empty_reward_utxos =
           returns_empty_reward_outputs(
@@ -775,11 +776,20 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             name: config.reward_transport_token_name,
           }
 
-        let must_return_empty_reward_utxo =
+        let aggregations =
+          find_in_aggregations(
+            inputs,
+            redeemers,
+            own_hash,
+            reward_transport_nft,
+            DismissRewards,
+          )
+
+        let must_return_empty_reward_utxos =
           returns_empty_reward_outputs(
             own_hash,
             reward_transport_nft,
-            1,
+            list.length(aggregations),
             outputs,
           )
 
@@ -789,7 +799,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             aggregation.message.timestamp + oracle_conf.reward_dismissing_period_length,
           )
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxo && must_be_after_dismissing_period
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos && must_be_after_dismissing_period
       }
       // :: PauseOracle
       (PauseOracle, OracleSettings(in_core_datum)) -> {

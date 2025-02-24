@@ -20,7 +20,7 @@ use oracle/datum.{
   RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
   has_no_rewards,
 }
-use oracle/redeemer.{CalculateRewards, OracleRedeemer}
+use oracle/redeemer.{OracleRedeemer}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -210,13 +210,14 @@ pub fn find_in_aggregations(
   tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
   script_hash: ScriptHash,
   protocol_token: Asset,
+  redeemer: OracleRedeemer,
 ) -> List<Aggregation> {
   trace @"T15"
 
   let inputs =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
 
-  let as_data: Data = CalculateRewards
+  let as_data: Data = redeemer
   let refs = list.map(inputs, fn(i) { i.output_reference })
 
   let must_have_correct_redeemers =
