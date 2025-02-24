@@ -44,6 +44,7 @@ use oracle/redeemer.{
   PlatformCollect, RemoveOracle, ResumeOracle, ScaleDown, ScaleToken,
   UpdateSettings,
 }
+use oracle_datum.{OracleDatum, get_created_at, get_expiry_at, get_price}
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{find_own_protocol_policy_id}
 use services/time.{get_current_time}
@@ -344,7 +345,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         let must_have_current_time_as_timestamp =
-          current_time == aggregation.message.timestamp && current_time == aggstate.created_at
+          current_time == aggregation.message.timestamp && current_time == get_created_at(
+            aggstate.price_data,
+          )
         let must_expire_in_liveness_period =
           aggstate.expiry_timestamp == current_time + core_datum.aggregation_liveness_period
 

@@ -4,6 +4,7 @@ use cardano/assets.{PolicyId}
 use ext/aiken/math/rational.{Percent}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
+use oracle_datum.{OracleDatum}
 
 pub type OracleFeed =
   Int
@@ -24,7 +25,7 @@ pub type OracleDatum {
   OracleSettings(OracleSettingsDatum)
   RewardAccount(RewardAccountDatum)
   RewardTransport(RewardTransportDatum)
-  AggState(Option<AggStateDatum>)
+  AggState(Option<OracleDatum>)
 }
 
 /// RewardTransport utxo can be in two states:
@@ -41,15 +42,6 @@ pub type Aggregation {
   message: AggregateMessage,
   node_reward_price: Int,
   rewards_amount_paid: Int,
-}
-
-/// AggStateDatum contains an oracle feed - median taken from individual node feeds,
-/// an expiration timestamp marking time after which AggState can be consumed once again,
-/// and a created at timestamp for oracle users.
-pub type AggStateDatum {
-  oracle_feed: OracleFeed,
-  expiry_timestamp: PosixTime,
-  created_at: PosixTime,
 }
 
 /// Immutable oracle settings.

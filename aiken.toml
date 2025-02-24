@@ -20,6 +20,11 @@ name = "aiken-lang/fuzz"
 version = "v2.1.0"
 source = "github"
 
+[[dependencies]]
+name = "xxAVOGADROxx/oracle-integration-aiken"
+version = "v0.1.1"
+source = "github"
+
 [config.default]
 disallow_less_than_four_nodes = true
 aggstate_token_name = "C3AS"
