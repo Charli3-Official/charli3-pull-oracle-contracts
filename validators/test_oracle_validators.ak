@@ -25,6 +25,7 @@ use oracle/redeemer.{
   NodeCollect, OdvAggregate, PauseOracle, PlatformCollect, RemoveOracle,
   ResumeOracle, ScaleDown, ScaleToken, UpdateSettings,
 }
+use oracle_datum.{create_oracle_datum}
 use services/reward_escrow.{RewardEscrowDatum}
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -341,16 +342,14 @@ test successful_odv_aggregation() {
       output_index: 0,
     }
   let aggstate_before = AggState(None)
-  let aggstate_after =
-    AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
-      ),
+  let oracle_datum_standard =
+    create_oracle_datum(
+      mock_median,
+      mock_current_time,
+      mock_current_time + one_hour,
     )
+  let aggstate_after = AggState(Some(oracle_datum_standard))
+  trace @"agg": aggstate_after
   let aggstate_input =
     tx.Input {
       output_reference: aggstate_ref,
@@ -441,16 +440,13 @@ test successful_odv_aggregation_with_ada_fees() {
       output_index: 0,
     }
   let aggstate_before = AggState(None)
-  let aggstate_after =
-    AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
-      ),
+  let oracle_datum_standard =
+    create_oracle_datum(
+      mock_median,
+      mock_current_time,
+      mock_current_time + one_hour,
     )
+  let aggstate_after = AggState(Some(oracle_datum_standard))
   let aggstate_input =
     tx.Input {
       output_reference: aggstate_ref,
@@ -579,11 +575,11 @@ test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
         datum: tx.InlineDatum(
           AggState(
             Some(
-              AggStateDatum {
-                oracle_feed: c3_rate,
-                expiry_timestamp: mock_current_time - thirty_minutes / 2 + one_hour,
-                created_at: mock_current_time - thirty_minutes / 2,
-              },
+              create_oracle_datum(
+                c3_rate,
+                mock_current_time - thirty_minutes / 2,
+                mock_current_time - thirty_minutes / 2 + one_hour,
+              ),
             ),
           ),
         ),
@@ -600,11 +596,11 @@ test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
   let aggstate_after =
     AggState(
       Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+        create_oracle_datum(
+          mock_median,
+          mock_current_time,
+          mock_current_time + one_hour,
+        ),
       ),
     )
   let aggstate_input =
@@ -1602,11 +1598,11 @@ test successful_scale_down() {
   let aggstate =
     AggState(
       Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+        create_oracle_datum(
+          mock_median,
+          mock_current_time,
+          mock_current_time + one_hour,
+        ),
       ),
     )
   let aggstate_input =

@@ -21,7 +21,9 @@ use oracle/datum.{
   has_no_rewards,
 }
 use oracle/redeemer.{OracleRedeemer}
-use oracle_datum.{OracleDatum as StandardOracleDatum}
+use oracle_datum.{
+  OracleDatum as StandardOracleDatum, get_oracle_expiry_at, get_oracle_price,
+}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -260,7 +262,7 @@ pub fn does_not_produce_own_nft_outputs(
 }
 
 pub fn is_aggstate_expired(
-  aggstate: Option<AggStateDatum>,
+  aggstate: Option<StandardOracleDatum>,
   tx_validity_range: ValidityRange,
 ) -> Bool {
   trace @"T17"
@@ -268,7 +270,10 @@ pub fn is_aggstate_expired(
   aggstate
     |> option.map(
         fn(state) {
-          interval.is_entirely_after(tx_validity_range, state.expiry_timestamp)
+          interval.is_entirely_after(
+            tx_validity_range,
+            get_oracle_expiry_at(state),
+          )
         },
       )
     |> option.or_else(True)
@@ -297,12 +302,13 @@ pub fn convert_reward_prices(
       expect tx.InlineDatum(datum) = rate_input.output.datum
       expect oracle_datum: OracleDatum = datum
       expect AggState(Some(rate_datum)) = oracle_datum
-      expect Some(rate) = rational.new(rate_datum.oracle_feed, coin_precision)
+      expect Some(rate) =
+        rational.new(get_oracle_price(rate_datum), coin_precision)
 
       expect
         interval.is_entirely_before(
           tx_validity_range,
-          rate_datum.expiry_timestamp,
+          get_oracle_expiry_at(rate_datum),
         )
 
       let convert_reward =

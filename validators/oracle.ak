@@ -44,7 +44,7 @@ use oracle/redeemer.{
   PlatformCollect, RemoveOracle, ResumeOracle, ScaleDown, ScaleToken,
   UpdateSettings,
 }
-use oracle_datum.{OracleDatum, get_created_at, get_expiry_at, get_price}
+use oracle_datum.{get_oracle_created_at, get_oracle_expiry_at, get_oracle_price}
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{find_own_protocol_policy_id}
 use services/time.{get_current_time}
@@ -345,11 +345,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         let must_have_current_time_as_timestamp =
-          current_time == aggregation.message.timestamp && current_time == get_created_at(
-            aggstate.price_data,
+          current_time == aggregation.message.timestamp && current_time == get_oracle_created_at(
+            aggstate,
           )
         let must_expire_in_liveness_period =
-          aggstate.expiry_timestamp == current_time + core_datum.aggregation_liveness_period
+          get_oracle_expiry_at(aggstate) == current_time + core_datum.aggregation_liveness_period
 
         let must_not_be_paused = is_oracle_paused(core_datum) |> not
 
@@ -358,7 +358,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             |> pairs.values
             |> consensus.median(aggregation.message.node_feeds_count)
         let must_have_correct_median =
-          median == aggregation.oracle_feed && median == aggstate.oracle_feed
+          median == aggregation.oracle_feed && median == get_oracle_price(
+            aggstate,
+          )
 
         let fees_transferred =
           calculate_asset_net_change_with_default(
