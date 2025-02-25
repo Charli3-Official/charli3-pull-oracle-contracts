@@ -668,7 +668,7 @@
             },
             {
               "title": "utxo_size_safety_buffer",
-              "description": "this value equals zero when oracle fee token is any native asset (e.g. C3);\n in case oracle fee paid in ada it should be equal to a minimum ada amount held at maximum expected reward account utxo size,\n otherwise platform can withdraw more rewards than should be left for nodes",
+              "description": "this value is always larger than zero,\n should be equal to a minimum ada amount held at maximum expected oracle utxo size",
               "$ref": "#/definitions/Int"
             },
             {

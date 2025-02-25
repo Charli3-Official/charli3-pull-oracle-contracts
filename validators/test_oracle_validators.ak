@@ -122,6 +122,8 @@ const mock_nodes_rewards =
     mock_node_fee,
   ]
 
+const mock_utxo_size_safety_buffer = 7_500_000
+
 const mock_oracle_settings =
   OracleSettingsDatum {
     nodes: mock_nodes,
@@ -137,11 +139,9 @@ const mock_oracle_settings =
     time_uncertainty_aggregation: three_minutes,
     time_uncertainty_platform: ten_minutes,
     iqr_fence_multiplier: 150,
-    utxo_size_safety_buffer: 0,
+    utxo_size_safety_buffer: mock_utxo_size_safety_buffer,
     pause_period_started_at: None,
   }
-
-const mock_utxo_size_safety_buffer = 5_500_000
 
 const mock_oracle_settings_using_ada_fee =
   OracleSettingsDatum {
@@ -230,17 +230,23 @@ const mock_core_settings_input_using_ada_fee =
   }
 
 const mock_reward_account_token_value =
-  assets.from_asset(
-    mock_oracle_nft_script_hash,
-    config.reward_account_token_name,
-    1,
+  assets.merge(
+    assets.from_asset(
+      mock_oracle_nft_script_hash,
+      config.reward_account_token_name,
+      1,
+    ),
+    assets.from_lovelace(mock_utxo_size_safety_buffer),
   )
 
 const mock_reward_transport_token_value =
-  assets.from_asset(
-    mock_oracle_nft_script_hash,
-    config.reward_transport_token_name,
-    1,
+  assets.merge(
+    assets.from_asset(
+      mock_oracle_nft_script_hash,
+      config.reward_transport_token_name,
+      1,
+    ),
+    assets.from_lovelace(mock_utxo_size_safety_buffer),
   )
 
 const mock_aggstate_token_value =
@@ -817,10 +823,7 @@ test successful_reward_calculation_with_ada_fees() {
       output_reference: reward_account_ref,
       output: tx.Output {
         address: address.from_script(mock_manager_script_hash),
-        value: assets.merge(
-          mock_reward_account_token_value,
-          assets.from_lovelace(mock_utxo_size_safety_buffer),
-        ),
+        value: mock_reward_account_token_value,
         datum: tx.InlineDatum(RewardAccount(mock_empty_reward_account_datum)),
         reference_script: None,
       },
@@ -830,9 +833,7 @@ test successful_reward_calculation_with_ada_fees() {
       address: address.from_script(mock_manager_script_hash),
       value: assets.merge(
         mock_reward_account_token_value,
-        assets.from_lovelace(
-          mock_minimum_fee_amount + mock_utxo_size_safety_buffer,
-        ),
+        assets.from_lovelace(mock_minimum_fee_amount),
       ),
       datum: tx.InlineDatum(reward_account_after),
       reference_script: None,
@@ -1206,12 +1207,9 @@ test successful_platform_collect_with_ada_fees() {
       output_index: 0,
     }
   let reward_account = RewardAccount(RewardAccountDatum(mock_nodes_rewards))
-  let rewards_value_before =
-    assets.from_lovelace(mock_minimum_fee_amount + mock_utxo_size_safety_buffer)
+  let rewards_value_before = assets.from_lovelace(mock_minimum_fee_amount)
   let rewards_value_after =
-    assets.from_lovelace(
-      mock_minimum_fee_amount - mock_platform_fee + mock_utxo_size_safety_buffer,
-    )
+    assets.from_lovelace(mock_minimum_fee_amount - mock_platform_fee)
   let reward_account_input =
     tx.Input {
       output_reference: reward_account_ref,
@@ -1760,6 +1758,7 @@ test successful_reward_dismissing() {
   let dismiss_rewards_tx =
     Transaction {
       ..tx.placeholder,
+      reference_inputs: [mock_core_settings_input],
       inputs: [reward_transport_input, mock_platform_nft_input],
       redeemers: [
         Pair(tx.Spend(reward_transport_ref), dismiss_rewards_redeemer),
