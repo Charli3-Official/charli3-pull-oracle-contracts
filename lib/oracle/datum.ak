@@ -96,9 +96,8 @@ pub type OracleSettingsDatum {
   /// see interquartile range (IQR) and Tukey fences methods for outlier detection,
   /// recommended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
   iqr_fence_multiplier: Percent,
-  /// this value equals zero when oracle fee token is any native asset (e.g. C3);
-  /// in case oracle fee paid in ada it should be equal to a minimum ada amount held at maximum expected reward account utxo size,
-  /// otherwise platform can withdraw more rewards than should be left for nodes
+  /// this value is always larger than zero,
+  /// should be equal to a minimum ada amount held at maximum expected oracle utxo size
   utxo_size_safety_buffer: Int,
   /// if oracle is in pause state, then this field will have a certain timestamp value
   pause_period_started_at: Option<PosixTime>,

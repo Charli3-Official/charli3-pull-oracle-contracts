@@ -22,9 +22,9 @@ use oracle/checks.{
   check_added_nodes, check_deleted_nodes_returning, check_node_received_reward,
   check_nodes_final_rewards_paid_returning, check_pause_does_not_change_settings,
   check_platform_received_reward, check_reward_distribution,
-  check_settings_sanity, conserves_utxo_value, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_aggregations, find_in_datum,
-  find_node_index_by_signature, find_out_datum_and_value,
+  check_settings_sanity, check_utxo_size_safety_buffer, conserves_utxo_value,
+  convert_reward_prices, does_not_produce_own_nft_outputs, find_in_aggregations,
+  find_in_datum, find_node_index_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
   is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
@@ -94,6 +94,7 @@ validator oracle_nfts(
             reward_transport_nft,
             n,
             outputs,
+            out_core_datum.utxo_size_safety_buffer,
           )
         let must_return_empty_aggstate_utxos =
           returns_empty_aggstate_outputs(
@@ -133,6 +134,7 @@ validator oracle_nfts(
               reward_transport_nft,
               n,
               outputs,
+              core_datum.utxo_size_safety_buffer,
             )
           let must_return_empty_aggstate_utxos =
             returns_empty_aggstate_outputs(
@@ -385,6 +387,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           extra_signatories,
           core_datum.nodes,
           core_datum.required_node_signatures_count,
+        ) && check_utxo_size_safety_buffer(
+          core_datum.utxo_size_safety_buffer,
+          out_value,
         ) && must_spend_only_one_reward_input && must_spend_only_one_aggstate_input && must_have_current_time_as_timestamp && must_expire_in_liveness_period && must_not_be_paused && must_have_correct_median && must_transfer_oracle_fees && must_tell_node_reward_price
       }
       // :: CalculateRewards
@@ -458,6 +463,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             reward_transport_nft,
             list.length(aggregations),
             outputs,
+            core_datum.utxo_size_safety_buffer,
           )
 
         // TODO make sure this is extra safe, because it is allowed for anyone to calculate rewards
@@ -466,6 +472,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           aggregations,
           in_value,
           out_value,
+          core_datum.utxo_size_safety_buffer,
         ) && check_reward_distribution(
           aggregations,
           in_account_datum.nodes_to_rewards,
@@ -512,6 +519,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
           in_value,
+          out_value,
+        ) && check_utxo_size_safety_buffer(
+          core_datum.utxo_size_safety_buffer,
           out_value,
         )
       }
@@ -739,7 +749,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         let must_withdraw_final_rewards =
           final_rewards_amount == amount_withdrawn
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_withdraw_final_rewards
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_utxo_size_safety_buffer(
+          in_core_datum.utxo_size_safety_buffer,
+          out_value,
+        ) && must_withdraw_final_rewards
       }
       // :: ScaleDown
       (ScaleDown, RewardTransport(NoRewards)) -> {
@@ -770,11 +783,19 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             in_value,
             config.reward_transport_token_name,
           )
+        let core_nft =
+          Asset {
+            policy_id: nft_policy_id,
+            name: config.core_settings_token_name,
+          }
         let reward_transport_nft =
           Asset {
             policy_id: nft_policy_id,
             name: config.reward_transport_token_name,
           }
+
+        expect OracleSettings(core_datum) =
+          find_referenced_datum(reference_inputs, own_hash, core_nft)
 
         let aggregations =
           find_in_aggregations(
@@ -791,6 +812,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             reward_transport_nft,
             list.length(aggregations),
             outputs,
+            core_datum.utxo_size_safety_buffer,
           )
 
         let must_be_after_dismissing_period =
