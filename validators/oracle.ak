@@ -35,7 +35,8 @@ use oracle/consensus
 use oracle/datum.{
   AggState, NoRewards, OracleConfiguration, OracleDatum, OracleSettings,
   OracleSettingsDatum, RewardAccount, RewardAccountDatum, RewardConsensusPending,
-  RewardTransport, is_oracle_paused,
+  RewardTransport, get_oracle_created_at, get_oracle_expiry_at, get_oracle_price,
+  is_oracle_paused,
 }
 use oracle/multisig.{check_nodes_multisig}
 use oracle/redeemer.{
@@ -44,7 +45,7 @@ use oracle/redeemer.{
   PlatformCollect, RemoveOracle, ResumeOracle, ScaleDown, ScaleToken,
   UpdateSettings,
 }
-use oracle_datum.{get_oracle_created_at, get_oracle_expiry_at, get_oracle_price}
+// use oracle_datum.{get_oracle_created_at, get_oracle_expiry_at, get_oracle_price}
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{find_own_protocol_policy_id}
 use services/time.{get_current_time}

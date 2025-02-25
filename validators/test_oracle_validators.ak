@@ -18,14 +18,13 @@ use oracle/datum.{
   AggState, AggregateMessage, Aggregation, FeeConfig, FeedVkh, NoRewards,
   NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
   RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
-  RewardTransport,
+  RewardTransport, create_oracle_datum,
 }
 use oracle/redeemer.{
   AddNodes, BurnToken, CalculateRewards, DelNodes, DismissRewards, MintToken,
   NodeCollect, OdvAggregate, PauseOracle, PlatformCollect, RemoveOracle,
   ResumeOracle, ScaleDown, ScaleToken, UpdateSettings,
 }
-use oracle_datum.{create_oracle_datum}
 use services/reward_escrow.{RewardEscrowDatum}
 
 const twenty_four_hours: PosixTimeDiff = 24 * 60 * 60 * 1000
@@ -349,7 +348,6 @@ test successful_odv_aggregation() {
       mock_current_time + one_hour,
     )
   let aggstate_after = AggState(Some(oracle_datum_standard))
-  trace @"agg": aggstate_after
   let aggstate_input =
     tx.Input {
       output_reference: aggstate_ref,

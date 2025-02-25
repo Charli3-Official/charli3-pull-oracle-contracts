@@ -1,10 +1,119 @@
+use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
 use ext/aiken/math/rational.{Percent}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
-use oracle_datum.{OracleDatum as StandardOracleDatum}
+
+pub type PriceMap =
+  Pairs<Int, Int>
+
+pub type PriceData {
+  SharedData
+  ExtendedData
+  GenericData { price_map: PriceMap }
+}
+
+/// Represents the main oracle datum structure
+pub type StandardOracleDatum {
+  price_data: PriceData,
+}
+
+pub fn get_price(price_data: PriceData) -> Int {
+  when price_data is {
+    GenericData { price_map } ->
+      when pairs.get_first(price_map, 0) is {
+        Some(price) -> price
+        None -> fail @"Price not found"
+      }
+    _ -> fail @"Invalid PriceData variant"
+  }
+}
+
+/// Retrieves the creation time from the PriceData
+///
+/// @param price_data - The PriceData to extract the timestamp from
+/// @return The timestamp as an Int
+pub fn get_timestamp(price_data: PriceData) -> Int {
+  when price_data is {
+    GenericData { price_map } ->
+      when pairs.get_first(price_map, 1) is {
+        Some(timestamp) -> timestamp
+        None -> fail @"Timestamp not found"
+      }
+    _ -> fail @"Invalid PriceData variant"
+  }
+}
+
+/// Retrieves the expiration time from the PriceData
+///
+/// @param price_data - The PriceData to extract the expiry from
+/// @return The expiry as an Int
+pub fn get_expiry_at(price_data: PriceData) -> Int {
+  when price_data is {
+    GenericData { price_map } ->
+      when pairs.get_first(price_map, 2) is {
+        Some(expiry) -> expiry
+        None -> fail @"Expiry not found"
+      }
+    _ -> fail @"Invalid PriceData variant"
+  }
+}
+
+/// Checks if the oracle data is valid (not expired)
+///
+/// @param oracle_datum - The OracleDatum to check
+/// @param current_time - The current time to compare against
+/// @return True if the oracle is valid, False otherwise
+pub fn is_oracle_valid(
+  oracle_datum: StandardOracleDatum,
+  current_time: Int,
+) -> Bool {
+  current_time <= get_expiry_at(oracle_datum.price_data)
+}
+
+/// Retrieves the price from the OracleDatum
+///
+/// @param oracle_datum - The OracleDatum to extract the price from
+/// @return The price as an Int
+pub fn get_oracle_price(oracle_datum: StandardOracleDatum) -> Int {
+  get_price(oracle_datum.price_data)
+}
+
+/// Retrieves the timestamp from the OracleDatum
+///
+/// @param oracle_datum - The OracleDatum to extract the timestamp from
+/// @return The timestamp as an Int
+pub fn get_oracle_created_at(oracle_datum: StandardOracleDatum) -> Int {
+  get_timestamp(oracle_datum.price_data)
+}
+
+/// Retrieves the timestamp from the OracleDatum
+///
+/// @param oracle_datum - The OracleDatum to extract the timestamp from
+/// @return The timestamp as an Int
+pub fn get_oracle_expiry_at(oracle_datum: StandardOracleDatum) -> Int {
+  get_expiry_at(oracle_datum.price_data)
+}
+
+/// Creates a new OracleDatum with the given price, timestamp, and expiry
+///
+/// @param price - The price to set
+/// @param timestamp - The timestamp to set
+/// @param expiry - The expiry to set
+/// @return A new OracleDatum
+pub fn create_oracle_datum(
+  price: Int,
+  timestamp: Int,
+  expiry: Int,
+) -> StandardOracleDatum {
+  StandardOracleDatum {
+    price_data: GenericData {
+      price_map: [Pair(0, price), Pair(1, timestamp), Pair(2, expiry)],
+    },
+  }
+}
 
 pub type OracleFeed =
   Int

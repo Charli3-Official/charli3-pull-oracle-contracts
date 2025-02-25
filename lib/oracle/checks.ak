@@ -18,12 +18,9 @@ use oracle/datum.{
   AggState, AggregateMessage, Aggregation, FeedVkh, NodeFeed, Nodes,
   OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh,
   RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
-  has_no_rewards,
+  StandardOracleDatum, get_oracle_expiry_at, get_oracle_price, has_no_rewards,
 }
 use oracle/redeemer.{OracleRedeemer}
-use oracle_datum.{
-  OracleDatum as StandardOracleDatum, get_oracle_expiry_at, get_oracle_price,
-}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -136,7 +133,6 @@ pub fn find_out_datum_and_value(
     find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
   expect tx.InlineDatum(datum) = script_out.datum
   expect oracle_datum: OracleDatum = datum
-
   (oracle_datum, script_out.value)
 }
 
