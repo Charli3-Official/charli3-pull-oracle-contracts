@@ -3,7 +3,7 @@ use aiken/collection/list
 use aiken/collection/pairs
 use aiken/math/rational
 use config
-use ext/aiken/math/rational.{Percent, per_cent} as ext
+use ext/aiken/math/rational.{Percent, Permille, per_mille} as ext
 use oracle/datum.{FeedVkh, NodeFeed, OracleFeed}
 use services/iqr.{iqr_fence, quantile}
 
@@ -11,52 +11,86 @@ pub fn median(
   node_feeds_sorted: List<NodeFeed>,
   node_feeds_count: Int,
 ) -> OracleFeed {
-  if config.disallow_less_than_four_nodes && node_feeds_count < 4 {
-    fail @"E4"
-  } else {
-    when node_feeds_sorted is {
-      [] -> fail @"E5"
-      [x] -> x
-      xs -> {
-        expect Some(midpoint) = rational.new(1, 2)
-        quantile(xs, node_feeds_count, midpoint) |> rational.round_even
-      }
+  when node_feeds_sorted is {
+    [] -> fail @"E5"
+    [x] -> x
+    xs -> {
+      expect Some(midpoint) = rational.new(1, 2)
+      quantile(xs, node_feeds_count, midpoint) |> rational.round_even
     }
   }
 }
 
 /// Returns list of nodes which are not outliers using interquartile range algorithm (IQR).
-pub fn consensus_by_iqr(
+/// Uses deviation from the middle point (median) if IQR is not applicable:
+/// 1. Judging by the nodes feeds count:
+///   * required minimum for IQR at least not to throw error is one point per quartile, i.e. 4 points;
+///   * a reasonable minimum of IQR applicability is 3 points per quartile, i.e. 12 points;
+///   * a threshold from which IQR starts to work really good is 5 points per quartile, i.e. 20 points.
+/// 2. In case iqr equals zero we cannot use it, see the docstring for iqr_fence function.
+pub fn consensus_by_iqr_and_deviation(
+  middle_point: NodeFeed,
   node_feeds: Pairs<FeedVkh, NodeFeed>,
   node_feeds_count: Int,
   iqr_fence_multiplier: Percent,
+  deviation_fence_multiplier: Permille,
 ) -> List<FeedVkh> {
-  if node_feeds_count < 4 {
-    if config.disallow_less_than_four_nodes {
-      fail @"E6"
-    } else {
-      pairs.keys(node_feeds)
-    }
-  } else {
-    expect Some(multiplier) = rational.new(iqr_fence_multiplier, per_cent)
-    let (lower_fence, upper_fence) =
-      pairs.values(node_feeds)
-        |> iqr_fence(node_feeds_count, multiplier)
-    let lower_limit = rational.round_even(lower_fence)
-    let upper_limit = rational.round_even(upper_fence)
-
-    list.filter_map(
+  if node_feeds_count == 1 {
+    pairs.keys(node_feeds)
+  } else if node_feeds_count < config.iqr_applicability_threshold {
+    filter_with_deviation_fence(
+      middle_point,
       node_feeds,
-      fn(p) {
-        let id = builtin.fst_pair(p)
-        let feed = builtin.snd_pair(p)
-
-        if feed < lower_limit || feed > upper_limit {
-          None
-        } else {
-          Some(id)
-        }
-      },
+      deviation_fence_multiplier,
     )
+  } else {
+    let iqr =
+      pairs.values(node_feeds)
+        |> iqr_fence(node_feeds_count, iqr_fence_multiplier)
+    when iqr is {
+      None ->
+        filter_with_deviation_fence(
+          middle_point,
+          node_feeds,
+          deviation_fence_multiplier,
+        )
+      Some((fence_lower, fence_upper)) ->
+        filter_outliers(node_feeds, fence_lower, fence_upper)
+    }
   }
+}
+
+pub fn filter_with_deviation_fence(
+  middle_point: NodeFeed,
+  node_feeds: Pairs<FeedVkh, NodeFeed>,
+  deviation_fence_multiplier: Permille,
+) -> List<FeedVkh> {
+  expect Some(multiplier) = rational.new(deviation_fence_multiplier, per_mille)
+  let midpoint = rational.from_int(middle_point)
+
+  let fence = rational.mul(multiplier, midpoint)
+  let fence_lower = rational.sub(midpoint, fence) |> rational.round_even
+  let fence_upper = rational.add(midpoint, fence) |> rational.round_even
+
+  filter_outliers(node_feeds, fence_lower, fence_upper)
+}
+
+pub fn filter_outliers(
+  node_feeds: Pairs<FeedVkh, NodeFeed>,
+  lower_limit: Int,
+  upper_limit: Int,
+) {
+  list.filter_map(
+    node_feeds,
+    fn(p) {
+      let id = builtin.fst_pair(p)
+      let feed = builtin.snd_pair(p)
+
+      if feed < lower_limit || feed > upper_limit {
+        None
+      } else {
+        Some(id)
+      }
+    },
+  )
 }

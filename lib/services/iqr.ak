@@ -5,26 +5,36 @@
 
 use aiken/collection/list
 use aiken/math/rational.{Rational}
-use ext/aiken/math/rational.{per_cent} as ext
+use ext/aiken/math/rational.{Percent, per_cent} as ext
 
-/// See interquartile range (IQR) and Tukey fences methods for outlier detection
+/// See interquartile range (IQR) and Tukey fences methods for outlier detection.
+/// Explanation for cases when it can return None:
+/// The IQR method is built on the assumption that there is a meaningful spread between
+/// the 25th and 75th percentiles. When you find that the 0.25‐quantile equals the 0.75‐quantile
+/// it indicates that a large number of your data points are concentrated at the center.
+/// This situation leads to zero interquartile range, and the thresholds for detecting outliers collapse,
+/// meaning even minor deviations from the center would be flagged as outliers.
 pub fn iqr_fence(
   sorted_input: List<Int>,
   input_length: Int,
-  iqr_multiplier: Rational,
-) -> (Rational, Rational) {
+  iqr_fence_multiplier: Percent,
+) -> Option<(Int, Int)> {
+  expect Some(multiplier) = rational.new(iqr_fence_multiplier, per_cent)
   expect Some(point_25) = rational.new(25, per_cent)
   expect Some(point_75) = rational.new(75, per_cent)
   let q25 = quantile(sorted_input, input_length, point_25)
   let q75 = quantile(sorted_input, input_length, point_75)
-
   let iqr = rational.sub(q75, q25)
 
-  let fence = rational.mul(iqr_multiplier, iqr)
-  let fence_lower = rational.sub(q25, fence)
-  let fence_upper = rational.add(q75, fence)
+  if rational.round_even(iqr) == 0 {
+    None
+  } else {
+    let fence = rational.mul(multiplier, iqr)
+    let fence_lower = rational.sub(q25, fence)
+    let fence_upper = rational.add(q75, fence)
 
-  (fence_lower, fence_upper)
+    Some((rational.round_even(fence_lower), rational.round_even(fence_upper)))
+  }
 }
 
 /// Returns weighted (by proximity) average of the two elements closest to the quantile index q * (n - 1)
