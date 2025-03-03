@@ -6,6 +6,12 @@ use ext/aiken/math/rational.{Percent}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 
+pub type OracleFeed =
+  Int
+
+pub type NodeFeed =
+  Int
+
 pub type PriceMap =
   Pairs<Int, Int>
 
@@ -16,110 +22,20 @@ pub type PriceData {
 }
 
 /// Represents the main oracle datum structure
-pub type StandardOracleDatum {
-  price_data: PriceData,
+pub fn get_price_data(price_data: PriceData, index: Int) -> Option<Int> {
+  expect GenericData(price_map) = price_data
+  pairs.get_first(price_map, index)
 }
 
-pub fn get_price(price_data: PriceData) -> Int {
-  when price_data is {
-    GenericData { price_map } ->
-      when pairs.get_first(price_map, 0) is {
-        Some(price) -> price
-        None -> fail @"Price not found"
-      }
-    _ -> fail @"Invalid PriceData variant"
-  }
-}
-
-/// Retrieves the creation time from the PriceData
-///
-/// @param price_data - The PriceData to extract the timestamp from
-/// @return The timestamp as an Int
-pub fn get_timestamp(price_data: PriceData) -> Int {
-  when price_data is {
-    GenericData { price_map } ->
-      when pairs.get_first(price_map, 1) is {
-        Some(timestamp) -> timestamp
-        None -> fail @"Timestamp not found"
-      }
-    _ -> fail @"Invalid PriceData variant"
-  }
-}
-
-/// Retrieves the expiration time from the PriceData
-///
-/// @param price_data - The PriceData to extract the expiry from
-/// @return The expiry as an Int
-pub fn get_expiry_at(price_data: PriceData) -> Int {
-  when price_data is {
-    GenericData { price_map } ->
-      when pairs.get_first(price_map, 2) is {
-        Some(expiry) -> expiry
-        None -> fail @"Expiry not found"
-      }
-    _ -> fail @"Invalid PriceData variant"
-  }
-}
-
-/// Checks if the oracle data is valid (not expired)
-///
-/// @param oracle_datum - The OracleDatum to check
-/// @param current_time - The current time to compare against
-/// @return True if the oracle is valid, False otherwise
-pub fn is_oracle_valid(
-  oracle_datum: StandardOracleDatum,
-  current_time: Int,
-) -> Bool {
-  current_time <= get_expiry_at(oracle_datum.price_data)
-}
-
-/// Retrieves the price from the OracleDatum
-///
-/// @param oracle_datum - The OracleDatum to extract the price from
-/// @return The price as an Int
-pub fn get_oracle_price(oracle_datum: StandardOracleDatum) -> Int {
-  get_price(oracle_datum.price_data)
-}
-
-/// Retrieves the timestamp from the OracleDatum
-///
-/// @param oracle_datum - The OracleDatum to extract the timestamp from
-/// @return The timestamp as an Int
-pub fn get_oracle_created_at(oracle_datum: StandardOracleDatum) -> Int {
-  get_timestamp(oracle_datum.price_data)
-}
-
-/// Retrieves the timestamp from the OracleDatum
-///
-/// @param oracle_datum - The OracleDatum to extract the timestamp from
-/// @return The timestamp as an Int
-pub fn get_oracle_expiry_at(oracle_datum: StandardOracleDatum) -> Int {
-  get_expiry_at(oracle_datum.price_data)
-}
-
-/// Creates a new OracleDatum with the given price, timestamp, and expiry
-///
-/// @param price - The price to set
-/// @param timestamp - The timestamp to set
-/// @param expiry - The expiry to set
-/// @return A new OracleDatum
-pub fn create_oracle_datum(
+pub fn create_price_data(
   price: Int,
-  timestamp: Int,
-  expiry: Int,
-) -> StandardOracleDatum {
-  StandardOracleDatum {
-    price_data: GenericData {
-      price_map: [Pair(0, price), Pair(1, timestamp), Pair(2, expiry)],
-    },
-  }
+  time_creation: Int,
+  time_expiration,
+) -> PriceData {
+  GenericData(
+    [Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration)],
+  )
 }
-
-pub type OracleFeed =
-  Int
-
-pub type NodeFeed =
-  Int
 
 /// There are four types of oracle utxos:
 /// 0. OracleSettings - one for each oracle,
@@ -131,10 +47,10 @@ pub type NodeFeed =
 /// 3. AggState - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,
 ///    that will be referenced by a user of a DApp.
 pub type OracleDatum {
+  StandardOracleDatum(PriceData)
   OracleSettings(OracleSettingsDatum)
   RewardAccount(RewardAccountDatum)
   RewardTransport(RewardTransportDatum)
-  AggState(Option<StandardOracleDatum>)
 }
 
 /// RewardTransport utxo can be in two states:

@@ -15,10 +15,10 @@ use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggState, AggregateMessage, Aggregation, FeedVkh, NodeFeed, Nodes,
-  OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh,
+  AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
+  OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh, PriceData,
   RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
-  StandardOracleDatum, get_oracle_expiry_at, get_oracle_price, has_no_rewards,
+  StandardOracleDatum, get_price_data, has_no_rewards,
 }
 use oracle/redeemer.{OracleRedeemer}
 use services/protocol_token.{
@@ -111,20 +111,17 @@ pub fn returns_empty_aggstate_outputs(
   tx_outputs: List<Output>,
 ) -> Bool {
   trace @"T10"
-
   let outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, aggstate_nft)
   let extractor =
-    fn(output: Output) -> Option<StandardOracleDatum> {
+    fn(output: Output) -> Bool {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
-      expect AggState(aggstate) = oracle_datum
-
-      aggstate
+      expect StandardOracleDatum(GenericData { price_map }) = oracle_datum
+      list.is_empty(price_map)
     }
-  let datums = list.map(outputs, extractor)
 
-  list.length(outputs) == utxo_count && list.all(datums, option.is_none)
+  list.length(outputs) == utxo_count && list.all(outputs, extractor)
 }
 
 pub fn find_out_datum_and_value(
@@ -263,18 +260,14 @@ pub fn does_not_produce_own_nft_outputs(
 }
 
 pub fn is_aggstate_expired(
-  aggstate: Option<StandardOracleDatum>,
+  price_data: PriceData,
   tx_validity_range: ValidityRange,
 ) -> Bool {
   trace @"T17"
-
-  aggstate
+  get_price_data(price_data, 2)
     |> option.map(
-        fn(state) {
-          interval.is_entirely_after(
-            tx_validity_range,
-            get_oracle_expiry_at(state),
-          )
+        fn(time_expiration) {
+          interval.is_entirely_after(tx_validity_range, time_expiration)
         },
       )
     |> option.or_else(True)
@@ -302,15 +295,12 @@ pub fn convert_reward_prices(
             )
       expect tx.InlineDatum(datum) = rate_input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect AggState(Some(rate_datum)) = oracle_datum
-      expect Some(rate) =
-        rational.new(get_oracle_price(rate_datum), coin_precision)
+      expect StandardOracleDatum(generic_data) = oracle_datum
+      expect Some(price) = get_price_data(generic_data, 0)
+      expect Some(rate) = rational.new(price, coin_precision)
 
-      expect
-        interval.is_entirely_before(
-          tx_validity_range,
-          get_oracle_expiry_at(rate_datum),
-        )
+      expect Some(time_expiration) = get_price_data(generic_data, 2)
+      expect interval.is_entirely_before(tx_validity_range, time_expiration)
 
       let convert_reward =
         fn(reward: Int) -> Int {
