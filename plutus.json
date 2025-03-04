@@ -555,7 +555,7 @@
     },
     "oracle/datum/OracleDatum": {
       "title": "OracleDatum",
-      "description": "There are four types of oracle utxos:\n 0. OracleSettings - one for each oracle,\n    acts as single point of truth for oracle settings and node list.\n 1. RewardAccount - one for each oracle,\n    acts as single point of truth for reward distribution.\n 2. RewardTransport - many for each oracle, with possibility of scaling their number on demand,\n    users perform ODV aggregation with those by providing node feeds list constructed off-chain.\n 3. AggState - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,\n    that will be referenced by a user of a DApp.",
+      "description": "There are four types of oracle utxos:\n 0. StandardOracleDatum - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,\n    that will be referenced by a user of a DApp.\n 1. OracleSettings - one for each oracle,\n    acts as single point of truth for oracle settings and node list.\n 2. RewardAccount - one for each oracle,\n    acts as single point of truth for reward distribution.\n 3. RewardTransport - many for each oracle, with possibility of scaling their number on demand,\n    users perform ODV aggregation with those by providing node feeds list constructed off-chain.",
       "anyOf": [
         {
           "title": "StandardOracleDatum",
@@ -659,6 +659,7 @@
     },
     "oracle/datum/PriceData": {
       "title": "PriceData",
+      "description": "The main data structure representing price-related information.\n It can contain shared, extended, or generic data.",
       "anyOf": [
         {
           "title": "SharedData",
