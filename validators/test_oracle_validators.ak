@@ -1722,6 +1722,110 @@ test successful_scale_down_when_aggstate_is_empty() {
   )
 }
 
+test successful_scale_down_when_reward_transport_expired() {
+  let burned_tokens_value =
+    assets.from_asset_list(
+      [
+        Pair(
+          mock_oracle_nft_script_hash,
+          [
+            Pair(config.aggstate_token_name, -1),
+            Pair(config.reward_transport_token_name, -1),
+          ],
+        ),
+      ],
+    )
+  let rewards_value =
+    assets.from_asset(
+      mock_fee_token_policy_id,
+      mock_fee_token_name,
+      mock_minimum_fee_amount,
+    )
+  let reward_transport_ref =
+    OutputReference { transaction_id: "before scale down tx", output_index: 0 }
+  let reward_transport_before =
+    RewardTransport(
+      RewardConsensusPending(
+        Aggregation {
+          oracle_feed: mock_median,
+          message: AggregateMessage {
+            node_feeds_sorted_by_feed: mock_node_feeds,
+            node_feeds_count: mock_node_feeds_count,
+            timestamp: mock_current_time,
+          },
+          node_reward_price: mock_node_fee,
+          rewards_amount_paid: mock_minimum_fee_amount,
+        },
+      ),
+    )
+  let reward_transport_input =
+    tx.Input {
+      output_reference: reward_transport_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: assets.merge(mock_reward_transport_token_value, rewards_value),
+        datum: tx.InlineDatum(reward_transport_before),
+        reference_script: None,
+      },
+    }
+  let aggstate_ref =
+    OutputReference { transaction_id: "before scale down tx", output_index: 1 }
+  let aggstate =
+    AggState(
+      Some(
+        AggStateDatum {
+          oracle_feed: mock_median,
+          expiry_timestamp: mock_current_time + one_hour,
+          created_at: mock_current_time,
+        },
+      ),
+    )
+  let aggstate_input =
+    tx.Input {
+      output_reference: aggstate_ref,
+      output: tx.Output {
+        address: address.from_script(mock_manager_script_hash),
+        value: mock_aggstate_token_value,
+        datum: tx.InlineDatum(aggstate),
+        reference_script: None,
+      },
+    }
+
+  let scale_down_redeemer: Data = ScaleDown
+  let scale_down_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [mock_platform_nft_input, aggstate_input, reward_transport_input],
+      redeemers: [
+        Pair(tx.Spend(aggstate_ref), scale_down_redeemer),
+        Pair(tx.Spend(reward_transport_ref), scale_down_redeemer),
+      ],
+      outputs: [mock_platform_nft_output],
+      mint: burned_tokens_value,
+      validity_range: interval.after(mock_current_time + 1 + twenty_four_hours),
+    }
+  oracle.oracle_nfts.mint(
+    mock_starting_platform_utxo,
+    mock_oracle_conf,
+    mock_manager_script_hash,
+    ScaleToken,
+    mock_oracle_nft_script_hash,
+    scale_down_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(reward_transport_before),
+    ScaleDown,
+    reward_transport_ref,
+    scale_down_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_oracle_conf,
+    Some(aggstate),
+    ScaleDown,
+    aggstate_ref,
+    scale_down_tx,
+  )
+}
+
 test successful_reward_dismissing() {
   let rewards_value =
     assets.from_asset(

@@ -29,7 +29,7 @@ use oracle/checks.{
   is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
   spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
-  validate_message_form, validate_settings_form,
+  validate_dismissing_period, validate_message_form, validate_settings_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -755,17 +755,28 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && must_withdraw_final_rewards
       }
       // :: ScaleDown
-      (ScaleDown, RewardTransport(NoRewards)) -> {
+      (ScaleDown, RewardTransport(state)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
             config.reward_transport_token_name,
           )
 
+        let must_be_empty_or_expired =
+          when state is {
+            NoRewards -> True
+            RewardConsensusPending(aggregation) ->
+              validate_dismissing_period(
+                aggregation,
+                validity_range,
+                oracle_conf.reward_dismissing_period_length,
+              )
+          }
+
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
-        )
+        ) && must_be_empty_or_expired
       }
       (ScaleDown, AggState(aggstate)) -> {
         let nft_policy_id =
@@ -815,13 +826,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             core_datum.utxo_size_safety_buffer,
           )
 
-        let must_be_after_dismissing_period =
-          interval.is_entirely_after(
-            validity_range,
-            aggregation.message.timestamp + oracle_conf.reward_dismissing_period_length,
-          )
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos && must_be_after_dismissing_period
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && validate_dismissing_period(
+          aggregation,
+          validity_range,
+          oracle_conf.reward_dismissing_period_length,
+        ) && must_return_empty_reward_utxos
       }
       // :: PauseOracle
       (PauseOracle, OracleSettings(in_core_datum)) -> {

@@ -909,3 +909,16 @@ fn final_token_rewards_paid(
   )
     |> option.is_some
 }
+
+pub fn validate_dismissing_period(
+  aggregation: Aggregation,
+  tx_validity_range: ValidityRange,
+  reward_dismissing_period_length: PosixTimeDiff,
+) -> Bool {
+  trace @"T33"
+
+  interval.is_entirely_after(
+    tx_validity_range,
+    aggregation.message.timestamp + reward_dismissing_period_length,
+  )
+}
