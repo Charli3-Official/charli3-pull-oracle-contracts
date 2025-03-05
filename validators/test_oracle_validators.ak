@@ -1761,13 +1761,11 @@ test successful_scale_down_when_reward_transport_expired() {
   let aggstate_ref =
     OutputReference { transaction_id: "before scale down tx", output_index: 1 }
   let aggstate =
-    AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+    StandardOracleDatum(
+      create_price_data(
+        mock_median,
+        mock_current_time,
+        mock_current_time + one_hour,
       ),
     )
   let aggstate_input =
