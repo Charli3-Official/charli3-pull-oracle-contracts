@@ -51,6 +51,8 @@ const mock_fee_token_policy_id: PolicyId = "C3 policy id"
 
 const mock_fee_token_name: AssetName = "C3"
 
+const empty_oracle_feed = AggState(GenericData([]))
+
 const mock_oracle_conf =
   OracleConfiguration {
     platform_auth_nft: mock_platform_auth_policy_id,
@@ -294,8 +296,6 @@ const mock_current_time = ( 1732195907000 + 1732195907000 + three_minutes ) / 2
 
 const mock_starting_platform_utxo =
   OutputReference { transaction_id: "before start tx", output_index: 0 }
-
-const empty_oracle_feed = AggState(GenericData([]))
 
 test successful_oracle_start() {
   let platform_input =
