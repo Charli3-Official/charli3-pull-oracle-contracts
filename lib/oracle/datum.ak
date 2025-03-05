@@ -43,7 +43,7 @@ pub fn create_price_data(
 }
 
 /// There are four types of oracle utxos:
-/// 0. StandardOracleDatum - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,
+/// 0. AggState - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,
 ///    that will be referenced by a user of a DApp.
 /// 1. OracleSettings - one for each oracle,
 ///    acts as single point of truth for oracle settings and node list.
@@ -52,7 +52,7 @@ pub fn create_price_data(
 /// 3. RewardTransport - many for each oracle, with possibility of scaling their number on demand,
 ///    users perform ODV aggregation with those by providing node feeds list constructed off-chain.
 pub type OracleDatum {
-  StandardOracleDatum(PriceData)
+  AggState(PriceData)
   OracleSettings(OracleSettingsDatum)
   RewardAccount(RewardAccountDatum)
   RewardTransport(RewardTransportDatum)

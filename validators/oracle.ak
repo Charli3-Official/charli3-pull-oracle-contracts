@@ -33,9 +33,9 @@ use oracle/checks.{
 }
 use oracle/consensus
 use oracle/datum.{
-  GenericData, NoRewards, OracleConfiguration, OracleDatum, OracleSettings,
-  OracleSettingsDatum, RewardAccount, RewardAccountDatum, RewardConsensusPending,
-  RewardTransport, StandardOracleDatum, is_oracle_paused,
+  AggState, GenericData, NoRewards, OracleConfiguration, OracleDatum,
+  OracleSettings, OracleSettingsDatum, RewardAccount, RewardAccountDatum,
+  RewardConsensusPending, RewardTransport, is_oracle_paused,
 }
 use oracle/multisig.{check_nodes_multisig}
 use oracle/redeemer.{
@@ -261,7 +261,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
     when (redeemer, in_datum) is {
       // :: OdvAggregate
-      (OdvAggregate, StandardOracleDatum(price_data)) -> {
+      (OdvAggregate, AggState(price_data)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.aggstate_token_name)
         let reward_transport_nft =
@@ -281,7 +281,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        expect (StandardOracleDatum(_), out_value) =
+        expect (AggState(_), out_value) =
           find_out_datum_and_value(outputs, own_hash, aggstate_nft)
 
         is_aggstate_expired(price_data, validity_range) && conserves_utxo_value(
@@ -337,7 +337,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         expect (
-          StandardOracleDatum(GenericData([
+          AggState(GenericData([
             Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
           ])),
           _out_value,
@@ -782,7 +782,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           nft_policy_id,
         ) && must_be_empty_or_expired
       }
-      (ScaleDown, StandardOracleDatum(price_data)) -> {
+      (ScaleDown, AggState(price_data)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.aggstate_token_name)
 
@@ -934,7 +934,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         must_spend_core_settings_utxo
       }
-      (RemoveOracle, StandardOracleDatum(price_data)) -> {
+      (RemoveOracle, AggState(price_data)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.aggstate_token_name)
         let core_nft =

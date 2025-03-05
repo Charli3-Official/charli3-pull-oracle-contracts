@@ -15,10 +15,10 @@ use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
-  AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
+  AggState, AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
   OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh, PriceData,
   RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
-  StandardOracleDatum, get_price_data, has_no_rewards,
+  get_price_data, has_no_rewards,
 }
 use oracle/redeemer.{OracleRedeemer}
 use services/protocol_token.{
@@ -117,7 +117,7 @@ pub fn returns_empty_aggstate_outputs(
     fn(output: Output) -> Bool {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
-      expect StandardOracleDatum(GenericData { price_map }) = oracle_datum
+      expect AggState(GenericData { price_map }) = oracle_datum
       list.is_empty(price_map)
     }
 
@@ -295,7 +295,7 @@ pub fn convert_reward_prices(
             )
       expect tx.InlineDatum(datum) = rate_input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect StandardOracleDatum(generic_data) = oracle_datum
+      expect AggState(generic_data) = oracle_datum
       expect Some(price) = get_price_data(generic_data, 0)
       expect Some(rate) = rational.new(price, coin_precision)
 

@@ -15,10 +15,10 @@ use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle
 use oracle/datum.{
-  AggregateMessage, Aggregation, FeeConfig, FeedVkh, GenericData, NoRewards,
-  NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
+  AggState, AggregateMessage, Aggregation, FeeConfig, FeedVkh, GenericData,
+  NoRewards, NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
   RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
-  RewardTransport, StandardOracleDatum, create_price_data,
+  RewardTransport, create_price_data,
 }
 use oracle/redeemer.{
   AddNodes, BurnToken, CalculateRewards, DelNodes, DismissRewards, MintToken,
@@ -268,7 +268,7 @@ const mock_empty_aggstate_output =
   tx.Output {
     address: address.from_script(mock_manager_script_hash),
     value: mock_aggstate_token_value,
-    datum: tx.InlineDatum(StandardOracleDatum(GenericData([]))),
+    datum: tx.InlineDatum(empty_oracle_feed),
     reference_script: None,
   }
 
@@ -294,6 +294,8 @@ const mock_current_time = ( 1732195907000 + 1732195907000 + three_minutes ) / 2
 
 const mock_starting_platform_utxo =
   OutputReference { transaction_id: "before start tx", output_index: 0 }
+
+const empty_oracle_feed = AggState(GenericData([]))
 
 test successful_oracle_start() {
   let platform_input =
@@ -346,9 +348,9 @@ test successful_odv_aggregation() {
       transaction_id: "aggstate before odv aggregation tx",
       output_index: 0,
     }
-  let aggstate_before = StandardOracleDatum(GenericData([]))
+  let aggstate_before = empty_oracle_feed
   let aggstate_after =
-    StandardOracleDatum(
+    AggState(
       create_price_data(
         mock_median,
         mock_current_time,
@@ -444,9 +446,9 @@ test successful_odv_aggregation_with_ada_fees() {
       transaction_id: "aggstate before odv aggregation tx",
       output_index: 0,
     }
-  let aggstate_before = StandardOracleDatum(GenericData([]))
+  let aggstate_before = empty_oracle_feed
   let aggstate_after =
-    StandardOracleDatum(
+    AggState(
       create_price_data(
         mock_median,
         mock_current_time,
@@ -579,7 +581,7 @@ test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
           1,
         ),
         datum: tx.InlineDatum(
-          StandardOracleDatum(
+          AggState(
             create_price_data(
               c3_rate,
               mock_current_time - thirty_minutes / 2,
@@ -596,9 +598,9 @@ test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
       transaction_id: "aggstate before odv aggregation tx",
       output_index: 0,
     }
-  let aggstate_before = StandardOracleDatum(GenericData([]))
+  let aggstate_before = empty_oracle_feed
   let aggstate_after =
-    StandardOracleDatum(
+    AggState(
       create_price_data(
         mock_median,
         mock_current_time,
@@ -1590,7 +1592,7 @@ test successful_scale_down() {
   let aggstate_ref =
     OutputReference { transaction_id: "before scale down tx", output_index: 1 }
   let aggstate =
-    StandardOracleDatum(
+    AggState(
       create_price_data(
         mock_median,
         mock_current_time,
@@ -1665,7 +1667,7 @@ test successful_scale_down_when_aggstate_is_empty() {
     }
   let aggstate_ref =
     OutputReference { transaction_id: "before scale down tx", output_index: 1 }
-  let aggstate = StandardOracleDatum(GenericData([]))
+  let aggstate = empty_oracle_feed
   let aggstate_input =
     tx.Input {
       output_reference: aggstate_ref,
@@ -1761,7 +1763,7 @@ test successful_scale_down_when_reward_transport_expired() {
   let aggstate_ref =
     OutputReference { transaction_id: "before scale down tx", output_index: 1 }
   let aggstate =
-    StandardOracleDatum(
+    AggState(
       create_price_data(
         mock_median,
         mock_current_time,
@@ -2097,7 +2099,7 @@ test successful_remove_oracle() {
     remove_oracle_tx,
   ) && oracle.oracle_manager.spend(
     mock_oracle_conf,
-    Some(StandardOracleDatum(GenericData([]))),
+    Some(empty_oracle_feed),
     RemoveOracle,
     OutputReference { transaction_id: aggstate_tx_id, output_index: 0 },
     remove_oracle_tx,
