@@ -15,10 +15,10 @@ use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle
 use oracle/datum.{
-  AggState, AggStateDatum, AggregateMessage, Aggregation, FeeConfig, FeedVkh,
+  AggState, AggregateMessage, Aggregation, FeeConfig, FeedVkh, GenericData,
   NoRewards, NodeFeed, OracleConfiguration, OracleSettings, OracleSettingsDatum,
   RewardAccount, RewardAccountDatum, RewardConsensusPending, RewardPrices,
-  RewardTransport,
+  RewardTransport, create_price_data,
 }
 use oracle/redeemer.{
   AddNodes, BurnToken, CalculateRewards, DelNodes, DismissRewards, MintToken,
@@ -50,6 +50,8 @@ const mock_platform_auth_policy_id: PolicyId = "platform auth NFT policy id"
 const mock_fee_token_policy_id: PolicyId = "C3 policy id"
 
 const mock_fee_token_name: AssetName = "C3"
+
+const empty_oracle_feed = AggState(GenericData([]))
 
 const mock_oracle_conf =
   OracleConfiguration {
@@ -268,7 +270,7 @@ const mock_empty_aggstate_output =
   tx.Output {
     address: address.from_script(mock_manager_script_hash),
     value: mock_aggstate_token_value,
-    datum: tx.InlineDatum(AggState(None)),
+    datum: tx.InlineDatum(empty_oracle_feed),
     reference_script: None,
   }
 
@@ -346,15 +348,13 @@ test successful_odv_aggregation() {
       transaction_id: "aggstate before odv aggregation tx",
       output_index: 0,
     }
-  let aggstate_before = AggState(None)
+  let aggstate_before = empty_oracle_feed
   let aggstate_after =
     AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+      create_price_data(
+        mock_median,
+        mock_current_time,
+        mock_current_time + one_hour,
       ),
     )
   let aggstate_input =
@@ -446,15 +446,13 @@ test successful_odv_aggregation_with_ada_fees() {
       transaction_id: "aggstate before odv aggregation tx",
       output_index: 0,
     }
-  let aggstate_before = AggState(None)
+  let aggstate_before = empty_oracle_feed
   let aggstate_after =
     AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+      create_price_data(
+        mock_median,
+        mock_current_time,
+        mock_current_time + one_hour,
       ),
     )
   let aggstate_input =
@@ -584,12 +582,10 @@ test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
         ),
         datum: tx.InlineDatum(
           AggState(
-            Some(
-              AggStateDatum {
-                oracle_feed: c3_rate,
-                expiry_timestamp: mock_current_time - thirty_minutes / 2 + one_hour,
-                created_at: mock_current_time - thirty_minutes / 2,
-              },
+            create_price_data(
+              c3_rate,
+              mock_current_time - thirty_minutes / 2,
+              mock_current_time - thirty_minutes / 2 + one_hour,
             ),
           ),
         ),
@@ -602,15 +598,13 @@ test successful_odv_aggregation_with_dynamic_oracle_fees_calculation() {
       transaction_id: "aggstate before odv aggregation tx",
       output_index: 0,
     }
-  let aggstate_before = AggState(None)
+  let aggstate_before = empty_oracle_feed
   let aggstate_after =
     AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+      create_price_data(
+        mock_median,
+        mock_current_time,
+        mock_current_time + one_hour,
       ),
     )
   let aggstate_input =
@@ -1599,12 +1593,10 @@ test successful_scale_down() {
     OutputReference { transaction_id: "before scale down tx", output_index: 1 }
   let aggstate =
     AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+      create_price_data(
+        mock_median,
+        mock_current_time,
+        mock_current_time + one_hour,
       ),
     )
   let aggstate_input =
@@ -1675,7 +1667,7 @@ test successful_scale_down_when_aggstate_is_empty() {
     }
   let aggstate_ref =
     OutputReference { transaction_id: "before scale down tx", output_index: 1 }
-  let aggstate = AggState(None)
+  let aggstate = empty_oracle_feed
   let aggstate_input =
     tx.Input {
       output_reference: aggstate_ref,
@@ -1772,12 +1764,10 @@ test successful_scale_down_when_reward_transport_expired() {
     OutputReference { transaction_id: "before scale down tx", output_index: 1 }
   let aggstate =
     AggState(
-      Some(
-        AggStateDatum {
-          oracle_feed: mock_median,
-          expiry_timestamp: mock_current_time + one_hour,
-          created_at: mock_current_time,
-        },
+      create_price_data(
+        mock_median,
+        mock_current_time,
+        mock_current_time + one_hour,
       ),
     )
   let aggstate_input =
@@ -2109,7 +2099,7 @@ test successful_remove_oracle() {
     remove_oracle_tx,
   ) && oracle.oracle_manager.spend(
     mock_oracle_conf,
-    Some(AggState(None)),
+    Some(empty_oracle_feed),
     RemoveOracle,
     OutputReference { transaction_id: aggstate_tx_id, output_index: 0 },
     remove_oracle_tx,

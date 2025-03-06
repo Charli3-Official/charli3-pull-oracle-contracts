@@ -1,3 +1,4 @@
+use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
@@ -11,20 +12,50 @@ pub type OracleFeed =
 pub type NodeFeed =
   Int
 
+/// A mapping structure that stores key-value pairs.
+/// It is used to store price-related data in the PriceData structure.
+pub type PriceMap =
+  Pairs<Int, Int>
+
+/// The main data structure representing price-related information.
+/// It can contain shared, extended, or generic data.
+pub type PriceData {
+  SharedData
+  ExtendedData
+  GenericData { price_map: PriceMap }
+}
+
+/// Retrieves a price-related value from the PriceData structure using an index.
+pub fn get_price_data(price_data: PriceData, index: Int) -> Option<Int> {
+  expect GenericData(price_map) = price_data
+  pairs.get_first(price_map, index)
+}
+
+/// Creates a PriceData object with price, creation time, and expiration time.
+pub fn create_price_data(
+  price: Int,
+  time_creation: Int,
+  time_expiration,
+) -> PriceData {
+  GenericData(
+    [Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration)],
+  )
+}
+
 /// There are four types of oracle utxos:
-/// 0. OracleSettings - one for each oracle,
-///    acts as single point of truth for oracle settings and node list.
-/// 1. RewardAccount - one for each oracle,
-///    acts as single point of truth for reward distribution.
-/// 2. RewardTransport - many for each oracle, with possibility of scaling their number on demand,
-///    users perform ODV aggregation with those by providing node feeds list constructed off-chain.
-/// 3. AggState - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,
+/// 0. AggState - each AggState utxo is complementary to RewardTransport, it contains the oracle feed value,
 ///    that will be referenced by a user of a DApp.
+/// 1. OracleSettings - one for each oracle,
+///    acts as single point of truth for oracle settings and node list.
+/// 2. RewardAccount - one for each oracle,
+///    acts as single point of truth for reward distribution.
+/// 3. RewardTransport - many for each oracle, with possibility of scaling their number on demand,
+///    users perform ODV aggregation with those by providing node feeds list constructed off-chain.
 pub type OracleDatum {
+  AggState(PriceData)
   OracleSettings(OracleSettingsDatum)
   RewardAccount(RewardAccountDatum)
   RewardTransport(RewardTransportDatum)
-  AggState(Option<AggStateDatum>)
 }
 
 /// RewardTransport utxo can be in two states:
@@ -41,15 +72,6 @@ pub type Aggregation {
   message: AggregateMessage,
   node_reward_price: Int,
   rewards_amount_paid: Int,
-}
-
-/// AggStateDatum contains an oracle feed - median taken from individual node feeds,
-/// an expiration timestamp marking time after which AggState can be consumed once again,
-/// and a created at timestamp for oracle users.
-pub type AggStateDatum {
-  oracle_feed: OracleFeed,
-  expiry_timestamp: PosixTime,
-  created_at: PosixTime,
 }
 
 /// Immutable oracle settings.
