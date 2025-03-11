@@ -29,13 +29,13 @@ use oracle/checks.{
   is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_aggstate_outputs, returns_empty_reward_outputs,
   spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
-  validate_message_form, validate_settings_form,
+  validate_dismissing_period, validate_message_form, validate_settings_form,
 }
 use oracle/consensus
 use oracle/datum.{
-  AggState, NoRewards, OracleConfiguration, OracleDatum, OracleSettings,
-  OracleSettingsDatum, RewardAccount, RewardAccountDatum, RewardConsensusPending,
-  RewardTransport, is_oracle_paused,
+  AggState, GenericData, NoRewards, OracleConfiguration, OracleDatum,
+  OracleSettings, OracleSettingsDatum, RewardAccount, RewardAccountDatum,
+  RewardConsensusPending, RewardTransport, is_oracle_paused,
 }
 use oracle/multisig.{check_nodes_multisig}
 use oracle/redeemer.{
@@ -261,7 +261,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
     when (redeemer, in_datum) is {
       // :: OdvAggregate
-      (OdvAggregate, AggState(aggstate)) -> {
+      (OdvAggregate, AggState(price_data)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.aggstate_token_name)
         let reward_transport_nft =
@@ -284,7 +284,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect (AggState(_), out_value) =
           find_out_datum_and_value(outputs, own_hash, aggstate_nft)
 
-        is_aggstate_expired(aggstate, validity_range) && conserves_utxo_value(
+        is_aggstate_expired(price_data, validity_range) && conserves_utxo_value(
           in_value,
           out_value,
         ) && must_spend_reward_transport_utxo
@@ -336,8 +336,12 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token,
           )
 
-        expect (AggState(Some(aggstate)), _out_value) =
-          find_out_datum_and_value(outputs, own_hash, aggstate_nft)
+        expect (
+          AggState(GenericData([
+            Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
+          ])),
+          _out_value,
+        ) = find_out_datum_and_value(outputs, own_hash, aggstate_nft)
 
         let current_time =
           get_current_time(
@@ -346,9 +350,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         let must_have_current_time_as_timestamp =
-          current_time == aggregation.message.timestamp && current_time == aggstate.created_at
+          current_time == aggregation.message.timestamp && current_time == time_creation
         let must_expire_in_liveness_period =
-          aggstate.expiry_timestamp == current_time + core_datum.aggregation_liveness_period
+          time_expiration == current_time + core_datum.aggregation_liveness_period
 
         let must_not_be_paused = is_oracle_paused(core_datum) |> not
 
@@ -357,7 +361,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             |> pairs.values
             |> consensus.median(aggregation.message.node_feeds_count)
         let must_have_correct_median =
-          median == aggregation.oracle_feed && median == aggstate.oracle_feed
+          median == aggregation.oracle_feed && median == price
 
         let fees_transferred =
           calculate_asset_net_change_with_default(
@@ -755,26 +759,37 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && must_withdraw_final_rewards
       }
       // :: ScaleDown
-      (ScaleDown, RewardTransport(NoRewards)) -> {
+      (ScaleDown, RewardTransport(state)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
             config.reward_transport_token_name,
           )
 
+        let must_be_empty_or_expired =
+          when state is {
+            NoRewards -> True
+            RewardConsensusPending(aggregation) ->
+              validate_dismissing_period(
+                aggregation,
+                validity_range,
+                oracle_conf.reward_dismissing_period_length,
+              )
+          }
+
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
-        )
+        ) && must_be_empty_or_expired
       }
-      (ScaleDown, AggState(aggstate)) -> {
+      (ScaleDown, AggState(price_data)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.aggstate_token_name)
 
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
           outputs,
           nft_policy_id,
-        ) && is_aggstate_expired(aggstate, validity_range)
+        ) && is_aggstate_expired(price_data, validity_range)
       }
       // :: DismissRewards
       (DismissRewards, RewardTransport(RewardConsensusPending(aggregation))) -> {
@@ -815,13 +830,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             core_datum.utxo_size_safety_buffer,
           )
 
-        let must_be_after_dismissing_period =
-          interval.is_entirely_after(
-            validity_range,
-            aggregation.message.timestamp + oracle_conf.reward_dismissing_period_length,
-          )
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_utxos && must_be_after_dismissing_period
+        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && validate_dismissing_period(
+          aggregation,
+          validity_range,
+          oracle_conf.reward_dismissing_period_length,
+        ) && must_return_empty_reward_utxos
       }
       // :: PauseOracle
       (PauseOracle, OracleSettings(in_core_datum)) -> {
@@ -921,7 +934,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         must_spend_core_settings_utxo
       }
-      (RemoveOracle, AggState(aggstate)) -> {
+      (RemoveOracle, AggState(price_data)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.aggstate_token_name)
         let core_nft =
@@ -939,7 +952,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        is_aggstate_expired(aggstate, validity_range) && must_spend_core_settings_utxo
+        is_aggstate_expired(price_data, validity_range) && must_spend_core_settings_utxo
       }
       (
         RemoveOracle,
