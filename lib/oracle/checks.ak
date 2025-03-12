@@ -17,10 +17,9 @@ use oracle/consensus.{consensus_by_iqr}
 use oracle/datum.{
   AggState, AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
   OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh, PriceData,
-  RewardConsensusPending, RewardPrices, RewardTransport, RewardTransportDatum,
-  get_price_data, has_no_rewards,
+  RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
 }
-use oracle/redeemer.{OracleRedeemer}
+use oracle/redeemer.{OdvAggregate, OracleRedeemer}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -76,9 +75,27 @@ pub fn spends_one_script_utxo_with_nft(
   r == as_data
 }
 
-pub fn returns_empty_reward_outputs(
+pub fn spends_one_account_utxo_for_aggregation(
   script_hash: ScriptHash,
-  reward_transport_nft: Asset,
+  acc_nft: Asset,
+  tx_inputs: List<Input>,
+  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
+) -> Bool {
+  trace @"T88"
+
+  expect [input] = find_script_inputs_by_token(tx_inputs, script_hash, acc_nft)
+  expect Some(redeemer) =
+    pairs.get_first(tx_redeemers, tx.Spend(input.output_reference))
+  expect r: OracleRedeemer = redeemer
+  expect OdvAggregate(_) = r
+
+  True
+}
+
+
+pub fn returns_empty_account_outputs(
+  script_hash: ScriptHash,
+  reward_account_nft: Asset,
   utxo_count: Int,
   tx_outputs: List<Output>,
   utxo_size_safety_buffer: Int,
@@ -86,19 +103,19 @@ pub fn returns_empty_reward_outputs(
   trace @"T9"
 
   let outputs =
-    find_script_outputs_by_token(tx_outputs, script_hash, reward_transport_nft)
+    find_script_outputs_by_token(tx_outputs, script_hash, reward_account_nft)
   let extractor =
-    fn(output: Output) -> RewardTransportDatum {
+    fn(output: Output) -> RewardAccountDatum {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardTransport(reward_transport) = oracle_datum
+      expect RewardAccount(reward_acc) = oracle_datum
 
-      reward_transport
+      reward_acc
     }
-  let datums = list.map(outputs, extractor)
+  expect _ = list.map(outputs, extractor)
   let values = list.map(outputs, fn(out) { out.value })
 
-  list.length(outputs) == utxo_count && list.all(datums, has_no_rewards) && list.all(
+  list.length(outputs) == utxo_count && list.all(
     values,
     check_utxo_size_safety_buffer(utxo_size_safety_buffer, _),
   )
@@ -204,44 +221,6 @@ pub fn find_in_datum(
   expect oracle_datum: OracleDatum = datum
 
   oracle_datum
-}
-
-pub fn find_in_aggregations(
-  tx_inputs: List<Input>,
-  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
-  script_hash: ScriptHash,
-  protocol_token: Asset,
-  redeemer: OracleRedeemer,
-) -> List<Aggregation> {
-  trace @"T15"
-
-  let inputs =
-    find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
-
-  let as_data: Data = redeemer
-  let refs = list.map(inputs, fn(i) { i.output_reference })
-
-  let must_have_correct_redeemers =
-    list.all(
-      refs,
-      fn(ref) {
-        expect Some(r) = pairs.get_first(tx_redeemers, tx.Spend(ref))
-
-        r == as_data
-      },
-    )
-  expect must_have_correct_redeemers
-
-  let extractor =
-    fn(input: Input) -> Aggregation {
-      expect tx.InlineDatum(datum) = input.output.datum
-      expect oracle_datum: OracleDatum = datum
-      expect RewardTransport(RewardConsensusPending(aggregation)) = oracle_datum
-
-      aggregation
-    }
-
-  list.map(inputs, extractor)
 }
 
 pub fn does_not_produce_own_nft_outputs(

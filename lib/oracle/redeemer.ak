@@ -1,3 +1,5 @@
+use oracle/datum.{AggregateMessage}
+
 /// Types of actions for Oracle NFTs (protocol tokens)
 /// * MintToken  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState
 /// * ScaleToken - Scale RewardTransport and AggState UTxOs: any number of mints/burns for RewardTransport and AggState
@@ -10,7 +12,6 @@ pub type MintingRedeemer {
 
 /// Types of actions for Oracle smart contract
 /// * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain
-/// * CalculateRewards - nodes and platform can calculate reward consensus transferring user provided fees to reward UTxO
 /// * NodeCollect - oracle node collects rewards
 /// * PlatformCollect - oracle platform collects rewards
 /// * UpdateSettings - oracle platform changes consensus, timing or fee settings
@@ -22,8 +23,8 @@ pub type MintingRedeemer {
 /// * ResumeOracle - redeemer for cancelling oracle pause, so that platform can suspend oracle operation only temporarily
 /// * RemoveOracle - oracle pause period ends and platform destroys all UTxOs and all NFTs
 pub type OracleRedeemer {
-  OdvAggregate
-  CalculateRewards
+  OdvAggregate(AggregateMessage)
+  OdvAggregateMsg
   NodeCollect
   PlatformCollect
   UpdateSettings

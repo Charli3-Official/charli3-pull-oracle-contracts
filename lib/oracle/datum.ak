@@ -55,7 +55,6 @@ pub type OracleDatum {
   AggState(PriceData)
   OracleSettings(OracleSettingsDatum)
   RewardAccount(RewardAccountDatum)
-  RewardTransport(RewardTransportDatum)
 }
 
 /// RewardTransport utxo can be in two states:
