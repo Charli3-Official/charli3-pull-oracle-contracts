@@ -22,13 +22,13 @@ pub fn median(
 }
 
 /// Returns list of nodes which are not outliers using interquartile range algorithm (IQR).
-/// Uses deviation from the middle point (median) if IQR is not applicable:
+/// Uses divergency from the middle point (median) if IQR is not applicable:
 /// 1. Judging by the nodes feeds count:
 ///   * required minimum for IQR at least not to throw error is one point per quartile, i.e. 4 points;
 ///   * a reasonable minimum of IQR applicability is 3 points per quartile, i.e. 12 points;
 ///   * a threshold from which IQR starts to work really good is 5 points per quartile, i.e. 20 points.
 /// 2. In case iqr equals zero we cannot use it, see the docstring for iqr_fence function.
-pub fn consensus_by_iqr_and_deviation(
+pub fn consensus_by_iqr_and_divergency(
   middle_point: NodeFeed,
   node_feeds: Pairs<FeedVkh, NodeFeed>,
   node_feeds_count: Int,
@@ -38,7 +38,7 @@ pub fn consensus_by_iqr_and_deviation(
   if node_feeds_count == 1 {
     pairs.keys(node_feeds)
   } else if node_feeds_count < config.iqr_applicability_threshold {
-    filter_with_deviation_fence(
+    filter_with_divergency_fence(
       middle_point,
       node_feeds,
       median_divergency_factor,
@@ -49,7 +49,7 @@ pub fn consensus_by_iqr_and_deviation(
         |> iqr_fence(node_feeds_count, iqr_fence_multiplier)
     when iqr is {
       None ->
-        filter_with_deviation_fence(
+        filter_with_divergency_fence(
           middle_point,
           node_feeds,
           median_divergency_factor,
@@ -60,7 +60,7 @@ pub fn consensus_by_iqr_and_deviation(
   }
 }
 
-pub fn filter_with_deviation_fence(
+pub fn filter_with_divergency_fence(
   middle_point: NodeFeed,
   node_feeds: Pairs<FeedVkh, NodeFeed>,
   median_divergency_factor: Permille,

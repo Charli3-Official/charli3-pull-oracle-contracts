@@ -10,10 +10,10 @@ use cardano/address.{Address}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input,
   Output, Redeemer, ScriptPurpose, ValidityRange} as tx
-use ext/aiken/math/rational.{Percent, coin_precision} as ext
+use ext/aiken/math/rational.{Percent, Permille, coin_precision} as ext
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
-use oracle/consensus.{consensus_by_iqr}
+use oracle/consensus.{consensus_by_iqr_and_divergency}
 use oracle/datum.{
   AggState, AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
   OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh, PriceData,
@@ -409,6 +409,7 @@ pub fn check_reward_distribution(
   out_distribution: List<Int>,
   nodes: Nodes,
   iqr_fence_multiplier: Percent,
+  median_divergency_factor: Permille,
 ) -> Bool {
   trace @"T20"
 
@@ -429,10 +430,12 @@ pub fn check_reward_distribution(
         |> dict.from_ascending_pairs,
       fn(aggregation, acc) {
         let rewarded_nodes =
-          consensus_by_iqr(
+          consensus_by_iqr_and_divergency(
+            aggregation.oracle_feed,
             aggregation.message.node_feeds_sorted_by_feed,
             aggregation.message.node_feeds_count,
             iqr_fence_multiplier,
+            median_divergency_factor,
           )
         list.foldr(
           rewarded_nodes,

@@ -483,6 +483,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           out_account_datum.nodes_to_rewards,
           core_datum.nodes,
           core_datum.iqr_fence_multiplier,
+          core_datum.median_divergency_factor,
         ) && must_return_empty_reward_utxos
       }
       // :: NodeCollect
