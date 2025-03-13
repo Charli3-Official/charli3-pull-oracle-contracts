@@ -27,6 +27,7 @@ pub fn iqr_fence(
   let iqr = rational.sub(q75, q25)
 
   if rational.round_even(iqr) == 0 {
+    trace @"T34"
     None
   } else {
     let fence = rational.mul(multiplier, iqr)
