@@ -33,7 +33,7 @@ pub fn consensus_by_iqr_and_deviation(
   node_feeds: Pairs<FeedVkh, NodeFeed>,
   node_feeds_count: Int,
   iqr_fence_multiplier: Percent,
-  deviation_fence_multiplier: Permille,
+  median_divergency_factor: Permille,
 ) -> List<FeedVkh> {
   if node_feeds_count == 1 {
     pairs.keys(node_feeds)
@@ -41,7 +41,7 @@ pub fn consensus_by_iqr_and_deviation(
     filter_with_deviation_fence(
       middle_point,
       node_feeds,
-      deviation_fence_multiplier,
+      median_divergency_factor,
     )
   } else {
     let iqr =
@@ -52,7 +52,7 @@ pub fn consensus_by_iqr_and_deviation(
         filter_with_deviation_fence(
           middle_point,
           node_feeds,
-          deviation_fence_multiplier,
+          median_divergency_factor,
         )
       Some((fence_lower, fence_upper)) ->
         filter_outliers(node_feeds, fence_lower, fence_upper)
@@ -63,12 +63,12 @@ pub fn consensus_by_iqr_and_deviation(
 pub fn filter_with_deviation_fence(
   middle_point: NodeFeed,
   node_feeds: Pairs<FeedVkh, NodeFeed>,
-  deviation_fence_multiplier: Permille,
+  median_divergency_factor: Permille,
 ) -> List<FeedVkh> {
-  expect Some(multiplier) = rational.new(deviation_fence_multiplier, per_mille)
+  expect Some(factor) = rational.new(median_divergency_factor, per_mille)
   let midpoint = rational.from_int(middle_point)
 
-  let fence = rational.mul(multiplier, midpoint)
+  let fence = rational.mul(factor, midpoint)
   let fence_lower = rational.sub(midpoint, fence) |> rational.round_even
   let fence_upper = rational.add(midpoint, fence) |> rational.round_even
 
