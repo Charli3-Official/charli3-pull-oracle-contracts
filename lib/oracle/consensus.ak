@@ -12,7 +12,7 @@ pub fn median(
   node_feeds_count: Int,
 ) -> OracleFeed {
   when node_feeds_sorted is {
-    [] -> fail @"E5"
+    [] -> fail @"E4"
     [x] -> x
     xs -> {
       expect Some(midpoint) = rational.new(1, 2)

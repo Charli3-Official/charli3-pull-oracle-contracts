@@ -489,7 +489,7 @@ fn do_get_length_and_check_order(
       if prev <= x {
         do_get_length_and_check_order(xs, n + 1, x)
       } else {
-        fail @"E7"
+        fail @"E5"
       }
   }
 }
@@ -774,7 +774,7 @@ fn do_get_length_and_check_strict_order(
       if builtin.less_than_bytearray(prev, x) {
         do_get_length_and_check_strict_order(xs, n + 1, x)
       } else {
-        fail @"E8"
+        fail @"E6"
       }
   }
 }
