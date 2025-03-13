@@ -141,6 +141,7 @@ const mock_oracle_settings =
     time_uncertainty_aggregation: three_minutes,
     time_uncertainty_platform: ten_minutes,
     iqr_fence_multiplier: 150,
+    median_divergency_factor: 300,
     utxo_size_safety_buffer: mock_utxo_size_safety_buffer,
     pause_period_started_at: None,
   }
@@ -160,6 +161,7 @@ const mock_oracle_settings_using_ada_fee =
     time_uncertainty_aggregation: three_minutes,
     time_uncertainty_platform: ten_minutes,
     iqr_fence_multiplier: 150,
+    median_divergency_factor: 300,
     utxo_size_safety_buffer: mock_utxo_size_safety_buffer,
     pause_period_started_at: None,
   }
