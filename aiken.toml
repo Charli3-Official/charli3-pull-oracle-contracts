@@ -21,14 +21,14 @@ version = "v2.1.0"
 source = "github"
 
 [config.default]
-disallow_less_than_four_nodes = true
+iqr_applicability_threshold = 4
 aggstate_token_name = "C3AS"
 core_settings_token_name = "C3CS"
 reward_account_token_name = "C3RA"
 reward_transport_token_name = "C3RT"
 
 [config.testnet]
-disallow_less_than_four_nodes = false
+iqr_applicability_threshold = 4
 aggstate_token_name = "C3AS" # "AggregationState"
 core_settings_token_name = "C3CS" # "CoreSettings"
 reward_account_token_name = "C3RA" # "RewardAccount"

@@ -10,10 +10,10 @@ use cardano/address.{Address}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input,
   Output, Redeemer, ScriptPurpose, ValidityRange} as tx
-use ext/aiken/math/rational.{Percent, coin_precision} as ext
+use ext/aiken/math/rational.{Percent, Permille, coin_precision} as ext
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
-use oracle/consensus.{consensus_by_iqr}
+use oracle/consensus.{consensus_by_iqr_and_divergency}
 use oracle/datum.{
   AggState, AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
   OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh, PriceData,
@@ -409,6 +409,7 @@ pub fn check_reward_distribution(
   out_distribution: List<Int>,
   nodes: Nodes,
   iqr_fence_multiplier: Percent,
+  median_divergency_factor: Permille,
 ) -> Bool {
   trace @"T20"
 
@@ -429,10 +430,12 @@ pub fn check_reward_distribution(
         |> dict.from_ascending_pairs,
       fn(aggregation, acc) {
         let rewarded_nodes =
-          consensus_by_iqr(
+          consensus_by_iqr_and_divergency(
+            aggregation.oracle_feed,
             aggregation.message.node_feeds_sorted_by_feed,
             aggregation.message.node_feeds_count,
             iqr_fence_multiplier,
+            median_divergency_factor,
           )
         list.foldr(
           rewarded_nodes,
@@ -486,7 +489,7 @@ fn do_get_length_and_check_order(
       if prev <= x {
         do_get_length_and_check_order(xs, n + 1, x)
       } else {
-        fail @"E7"
+        fail @"E5"
       }
   }
 }
@@ -520,7 +523,8 @@ pub fn validate_settings_form(
   let must_have_fair_validity_intervals =
     oracle_settings.time_uncertainty_platform > oracle_settings.time_uncertainty_aggregation && oracle_settings.time_uncertainty_aggregation > 0
 
-  let must_be_fair_about_outliers = oracle_settings.iqr_fence_multiplier > 100
+  let must_be_fair_about_outliers =
+    oracle_settings.iqr_fence_multiplier > 100 && oracle_settings.median_divergency_factor >= 1
   let must_not_have_negative_utxo_buffer =
     oracle_settings.utxo_size_safety_buffer > 0
 
@@ -536,7 +540,7 @@ pub fn check_pause_does_not_change_settings(
 ) -> Bool {
   trace @"T24"
 
-  in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_uncertainty_platform == out_core_datum.time_uncertainty_platform && in_core_datum.time_uncertainty_aggregation == out_core_datum.time_uncertainty_aggregation
+  in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.median_divergency_factor == out_core_datum.median_divergency_factor && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_uncertainty_platform == out_core_datum.time_uncertainty_platform && in_core_datum.time_uncertainty_aggregation == out_core_datum.time_uncertainty_aggregation
 }
 
 pub fn find_node_index_by_signature(
@@ -639,7 +643,7 @@ pub fn check_added_nodes(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
       out_settings.nodes,
@@ -699,7 +703,7 @@ pub fn check_deleted_nodes_returning(
     )
 
   let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
+    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
       pairs.keys(out_settings.nodes),
@@ -770,7 +774,7 @@ fn do_get_length_and_check_strict_order(
       if builtin.less_than_bytearray(prev, x) {
         do_get_length_and_check_strict_order(xs, n + 1, x)
       } else {
-        fail @"E8"
+        fail @"E6"
       }
   }
 }
