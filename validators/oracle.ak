@@ -28,8 +28,9 @@ use oracle/checks.{
   find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
   is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_account_outputs, returns_empty_aggstate_outputs,
-  spends_one_account_utxo_for_aggregation, spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
-  validate_dismissing_period, validate_message_form, validate_settings_form,
+  spends_one_account_utxo_for_aggregation, spends_one_script_utxo_with_nft,
+  spends_protocol_nft_inputs, validate_dismissing_period, validate_message_form,
+  validate_settings_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -39,8 +40,8 @@ use oracle/datum.{
 }
 use oracle/multisig.{check_nodes_multisig}
 use oracle/redeemer.{
-  AddNodes, BurnToken, DelNodes, DismissRewards, MintToken,
-  MintingRedeemer, NodeCollect, OdvAggregate, OdvAggregateMsg, OracleRedeemer, PauseOracle,
+  AddNodes, BurnToken, DelNodes, DismissRewards, MintToken, MintingRedeemer,
+  NodeCollect, OdvAggregate, OdvAggregateMsg, OracleRedeemer, PauseOracle,
   PlatformCollect, RemoveOracle, ResumeOracle, ScaleDown, ScaleToken,
   UpdateSettings,
 }
@@ -348,14 +349,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             core_datum.fee_info.rate_nft,
             core_datum.fee_info.reward_prices,
           )
-          // reward_prices.node_fee == aggregation.node_reward_price
+        // reward_prices.node_fee == aggregation.node_reward_price
         let minimum_fee_amount =
-          calculate_minimum_fee_amount(
-            reward_prices,
-            message.node_feeds_count,
-          )
-        let must_transfer_oracle_fees =
-          fees_transferred >= minimum_fee_amount
+          calculate_minimum_fee_amount(reward_prices, message.node_feeds_count)
+        let must_transfer_oracle_fees = fees_transferred >= minimum_fee_amount
 
         validate_message_form(message) && check_nodes_multisig(
           message.node_feeds_sorted_by_feed,
@@ -377,6 +374,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           out_account_datum.nodes_to_rewards,
           core_datum.nodes,
           core_datum.iqr_fence_multiplier,
+          core_datum.median_divergency_factor,
         ) && must_spend_only_one_aggstate_input && must_have_current_time_as_timestamp && must_expire_in_liveness_period && must_not_be_paused && must_have_correct_median && must_transfer_oracle_fees
       }
       // :: NodeCollect

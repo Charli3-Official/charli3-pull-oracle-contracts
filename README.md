@@ -98,11 +98,9 @@ Direct failures that cause code to stop evaluation and return the error.
 * E1 - validator supports only mint purpose;
 * E2 - validator supports only spend purpose;
 * E3 - Oracle Manager Script state transition not allowed;
-* E4 - median: less than four nodes;
-* E5 - median: empty list;
-* E6 - consensus_by_iqr: less than four nodes;
-* E7 - check node feeds ascending order;
-* E8 - check node ids (feed vkhs) ascending order.
+* E4 - median: empty list;
+* E5 - check node feeds ascending order;
+* E6 - check node ids (feed vkhs) ascending strict order.
 
 ### Traces
 
@@ -140,4 +138,5 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 * T30 - validate_settings_form;
 * T31 - check_nodes_final_rewards_paid;
 * T32 - check_utxo_size_safety_buffer;
-* T33 - validate_dismissing_period.
+* T33 - validate_dismissing_period;
+* T34 - IQR equals zero.

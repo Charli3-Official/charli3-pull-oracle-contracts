@@ -2,7 +2,7 @@ use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
-use ext/aiken/math/rational.{Percent}
+use ext/aiken/math/rational.{Percent, Permille}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 
@@ -117,6 +117,10 @@ pub type OracleSettingsDatum {
   /// see interquartile range (IQR) and Tukey fences methods for outlier detection,
   /// recommended value for this parameter is 150 (i.e. 1.5) or 170 in case of normal distribution
   iqr_fence_multiplier: Percent,
+  /// in case IQR is not applicable (equals zero) or number of nodes is less than iqr_applicability_threshold,
+  /// median is multiplied by this factor to then produce a fence for filtering out outliers;
+  /// recommended value for this parameter is 25 (i.e. 2.5%) for stablecoins and 300 (30%) for everything else
+  median_divergency_factor: Permille,
   /// this value is always larger than zero,
   /// should be equal to a minimum ada amount held at maximum expected oracle utxo size
   utxo_size_safety_buffer: Int,
