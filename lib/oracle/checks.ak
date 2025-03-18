@@ -16,8 +16,8 @@ use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr_and_divergency}
 use oracle/datum.{
   AggState, AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
-  OracleConfiguration, OracleDatum, OracleSettingsDatum, PaymentVkh, PriceData,
-  RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
+  OracleConfiguration, OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
+  PriceData, RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
 }
 use oracle/redeemer.{OdvAggregate, OracleRedeemer}
 use services/protocol_token.{
@@ -91,7 +91,6 @@ pub fn spends_one_account_utxo_for_aggregation(
 
   True
 }
-
 
 pub fn returns_empty_account_outputs(
   script_hash: ScriptHash,
@@ -383,61 +382,72 @@ pub fn oracle_fees_were_transferred(
 }
 
 pub fn check_reward_distribution(
-  aggregations: List<Aggregation>,
-  in_distribution: List<Int>,
-  out_distribution: List<Int>,
+  message: AggregateMessage,
+  median: OracleFeed,
+  node_reward_price: Int,
+  in_distribution: Pairs<PaymentVkh, Int>,
+  out_distribution: Pairs<PaymentVkh, Int>,
   nodes: Nodes,
+  // Already sorted ascendingly by FeedVkh
   iqr_fence_multiplier: Percent,
   median_divergency_factor: Permille,
 ) -> Bool {
   trace @"T20"
-
-  let node_ids = pairs.keys(nodes)
-
-  let check_nodes_count =
-    list.length(in_distribution) == list.length(out_distribution)
-
-  let actual_rewards =
-    list.map2(out_distribution, in_distribution, fn(out, in) { out - in })
-
-  let sum_rewards =
-    fn(_k, a, b) { Some(a + b) }
-  let required_rewards =
-    list.foldr(
-      aggregations,
-      list.map(node_ids, fn(id) { Pair(id, 0) })
-        |> dict.from_ascending_pairs,
-      fn(aggregation, acc) {
-        let rewarded_nodes =
-          consensus_by_iqr_and_divergency(
-            aggregation.oracle_feed,
-            aggregation.message.node_feeds_sorted_by_feed,
-            aggregation.message.node_feeds_count,
-            iqr_fence_multiplier,
-            median_divergency_factor,
-          )
-        list.foldr(
-          rewarded_nodes,
-          acc,
-          fn(node_id, d) {
-            if dict.has_key(d, node_id) {
-              dict.insert_with(
-                d,
-                node_id,
-                aggregation.node_reward_price,
-                sum_rewards,
-              )
-            } else {
-              d
-            }
-          },
-        )
-      },
+  // Compute rewarded feed nodes first, as this is needed for validation
+  let rewarded_feed_nodes =
+    consensus_by_iqr_and_divergency(
+      median,
+      message.node_feeds_sorted_by_feed,
+      message.node_feeds_count,
+      iqr_fence_multiplier,
+      median_divergency_factor,
     )
-
-  let check_exact_rewards_paid = dict.values(required_rewards) == actual_rewards
-
-  check_nodes_count && check_exact_rewards_paid
+  // Create a set of rewarded feed VKHs - using a map for O(1) lookups
+  let rewarded_feed_dict =
+    list.foldr(
+      rewarded_feed_nodes,
+      dict.empty,
+      fn(feed_vkh, acc) { dict.insert(acc, feed_vkh, True) },
+    )
+  // Process all records in a single pass to avoid creating of intermediate data structures
+  dict.from_ascending_pairs(out_distribution)
+    |> dict.foldr(
+        True,
+        fn(payment_vkh, out_amount, acc) {
+          if !acc {
+            // Short-circuit if we've already found an invalid case
+            False
+          } else {
+            // Find the feed vkh for this payment vkh
+            let maybe_feed_vkh =
+              nodes
+                |> list.find(fn(Pair(_, snd)) { snd == payment_vkh })
+                |> option.map(fn(Pair(fst, _)) { fst })
+            when maybe_feed_vkh is {
+              // Invalid payment VKH - not in the nodes list
+              None -> False
+              Some(feed_vkh) -> {
+                // Determine expected reward based on whether this feed node was rewarded
+                let expected_reward =
+                  if dict.has_key(rewarded_feed_dict, feed_vkh) {
+                    node_reward_price
+                  } else {
+                    0
+                  }
+                // Get input amount, defaulting to 0 if not present
+                let in_amount =
+                  in_distribution
+                    |> list.find(fn(Pair(fst, _)) { fst == payment_vkh })
+                    |> option.map(fn(Pair(_, snd)) { snd })
+                    |> option.or_else(0)
+                // 0 since it's a new node
+                // Check if the output amount matches expected
+                in_amount + expected_reward == out_amount
+              }
+            }
+          }
+        },
+      )
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
@@ -522,60 +532,89 @@ pub fn check_pause_does_not_change_settings(
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.median_divergency_factor == out_core_datum.median_divergency_factor && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_uncertainty_platform == out_core_datum.time_uncertainty_platform && in_core_datum.time_uncertainty_aggregation == out_core_datum.time_uncertainty_aggregation
 }
 
-pub fn find_node_index_by_signature(
+pub fn find_node_by_signature(
   tx_signatories: List<VerificationKeyHash>,
   nodes: Nodes,
-) -> Int {
+) -> Option<PaymentVkh> {
   trace @"T25"
 
-  expect [(node_ix, _)] =
-    list.indexed_map(nodes, fn(index, node) { (index, builtin.snd_pair(node)) })
-      |> list.filter(
-          fn((_, payment_vkh)) { list.has(tx_signatories, payment_vkh) },
-        )
+  let maybe_node =
+    list.find(
+      nodes,
+      fn(Pair(_, payment_vkh)) { list.has(tx_signatories, payment_vkh) },
+    )
 
-  node_ix
+  maybe_node |> option.map(fn(Pair(_, payment_vkh)) { payment_vkh })
 }
 
 pub fn check_node_received_reward(
   fee_token: Option<Asset>,
-  rewarded_node_index: Int,
-  in_distribution: List<Int>,
-  out_distribution: List<Int>,
+  maybe_payment_vkh: Option<PaymentVkh>,
+  in_distribution: Pairs<PaymentVkh, Int>,
+  out_distribution: Pairs<PaymentVkh, Int>,
   in_value: Value,
   out_value: Value,
 ) -> Bool {
   trace @"T26"
 
-  expect (in_init, [in_reward, ..in_tail]) =
-    list.span(in_distribution, rewarded_node_index)
-  expect (out_init, [out_reward, ..out_tail]) =
-    list.span(out_distribution, rewarded_node_index)
-  let required_reward = in_reward - out_reward
+  when maybe_payment_vkh is {
+    None -> False
+    Some(payment_vkh) -> {
+      // Find the reward amount directly in input distribution
+      let maybe_in_amount =
+        list.find(in_distribution, fn(Pair(fst, _)) { fst == payment_vkh })
+          |> option.map(fn(Pair(_, snd)) { snd })
 
-  let actual_reward =
-    calculate_asset_net_change_with_default(fee_token, in_value, out_value)
-      |> fn(v) { -v }
+      // Check that payment_vkh does NOT exist in out_distribution
+      let payment_vkh_exists_in_out =
+        list.any(out_distribution, fn(Pair(fst, _)) { fst == payment_vkh })
 
-  let must_not_modify_other_nodes = in_init == out_init && in_tail == out_tail
-  let must_withdraw_reward = required_reward > 0
-  let must_not_take_installments = out_reward >= 0
-  let must_receive_reward = required_reward == actual_reward
+      when maybe_in_amount is {
+        None -> False
+        Some(required_reward) ->
+          if required_reward <= 0 || payment_vkh_exists_in_out {
+            False
+          } else {
+            // Calculate actual reward received
+            let actual_reward =
+              calculate_asset_net_change_with_default(
+                fee_token,
+                in_value,
+                out_value,
+              )
+                |> fn(v) { -v }
 
-  must_not_modify_other_nodes && must_withdraw_reward && must_receive_reward && must_not_take_installments
+            // Simply filter out the rewarded node from input and compare the resulting lists
+            let in_without_payment_vkh =
+              list.filter(
+                in_distribution,
+                fn(Pair(fst, snd)) { fst != payment_vkh },
+              )
+            let other_entries_match = in_without_payment_vkh == out_distribution
+
+            // Final verification
+            other_entries_match && required_reward == actual_reward
+          }
+      }
+    }
+  }
 }
 
 pub fn check_platform_received_reward(
   fee_token: Option<Asset>,
   utxo_size_safety_buffer: Int,
-  reward_distribution: List<Int>,
+  reward_distribution: Pairs<PaymentVkh, Int>,
   in_value: Value,
   out_value: Value,
 ) -> Bool {
   trace @"T27"
 
   let nodes_rewards =
-    list.foldr(reward_distribution, 0, fn(reward, total) { reward + total })
+    list.foldr(
+      reward_distribution,
+      0,
+      fn(Pair(_, reward), total) { reward + total },
+    )
 
   let in_total_rewards =
     calculate_asset_quantity_with_default(in_value, fee_token)

@@ -24,7 +24,7 @@ use oracle/checks.{
   check_platform_received_reward, check_reward_distribution,
   check_settings_sanity, check_utxo_size_safety_buffer, conserves_utxo_value,
   convert_reward_prices, does_not_produce_own_nft_outputs, find_in_datum,
-  find_node_index_by_signature, find_out_datum_and_value,
+  find_node_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
   is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_account_outputs, returns_empty_aggstate_outputs,
@@ -362,14 +362,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && check_utxo_size_safety_buffer(
           core_datum.utxo_size_safety_buffer,
           out_value,
-        ) && oracle_fees_were_transferred(
-          oracle_conf.fee_token,
-          aggregations,
-          in_value,
-          out_value,
-          core_datum.utxo_size_safety_buffer,
         ) && check_reward_distribution(
-          aggregations,
+          message,
+          median,
+          reward_prices.node_fee,
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
           core_datum.nodes,
@@ -406,12 +402,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token,
           )
 
-        let rewarded_node =
-          find_node_index_by_signature(extra_signatories, core_datum.nodes)
-
         check_node_received_reward(
           oracle_conf.fee_token,
-          rewarded_node,
+          find_node_by_signature(extra_signatories, core_datum.nodes),
           in_account_datum.nodes_to_rewards,
           out_account_datum.nodes_to_rewards,
           in_value,

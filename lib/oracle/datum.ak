@@ -130,9 +130,9 @@ pub type OracleSettingsDatum {
 
 /// Reward distribution datum
 pub type RewardAccountDatum {
-  /// we get oracle node id (FeedVkh) mapped to node reward amount
-  /// if we zip together Nodes keys (i.e. pairs first elements) and this list of reward amounts
-  nodes_to_rewards: List<Int>,
+  /// Maps oracle node payment verification keys to their reward amounts.
+  /// Each entry represents an individual node's accumulated rewards that can be claimed.
+  nodes_to_rewards: Pairs<PaymentVkh, Int>,
 }
 
 // TODO consider removing PaymentVkh: that way operator uses FeedVkh to authorize collecting node rewards
