@@ -421,7 +421,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           reward_output_accounts,
         ) && total_input_accounts == list.length(reward_output_accounts)
       }
-
       // :: PlatformCollect
       (PlatformCollect, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
@@ -489,42 +488,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && check_settings_sanity(oracle_conf, in_core_datum, out_core_datum)
       }
       // :: AddNodes
-      (AddNodes, RewardAccount(_in_account_datum)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(
-            in_value,
-            config.reward_account_token_name,
-          )
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-        let reward_acc_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.reward_account_token_name,
-          }
-
-        let must_spend_core_settings_utxo =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            AddNodes,
-            core_nft,
-            inputs,
-            redeemers,
-          )
-
-        expect [(RewardAccount(_out_account_datum), out_value)] =
-          find_out_datum_and_value_with_allowing_asset(
-            outputs,
-            own_hash,
-            reward_acc_nft,
-            oracle_conf.fee_token,
-          )
-
-        conserves_utxo_value(in_value, out_value) && must_spend_core_settings_utxo
-      }
       (AddNodes, OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.core_settings_token_name)
@@ -542,26 +505,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        expect RewardAccount(in_account_datum) =
-          find_in_datum(inputs, redeemers, own_hash, AddNodes, reward_acc_nft)
-
-        expect [(RewardAccount(out_account_datum), _)] =
-          find_out_datum_and_value_with_allowing_asset(
-            outputs,
-            own_hash,
-            reward_acc_nft,
-            oracle_conf.fee_token,
-          )
-
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
           in_value,
           out_value,
-        ) && check_added_nodes(
-          in_core_datum,
-          out_core_datum,
-          in_account_datum.nodes_to_rewards,
-          out_account_datum.nodes_to_rewards,
-        )
+        ) && check_added_nodes(in_core_datum, out_core_datum)
       }
       // :: DelNodes
       (DelNodes, OracleSettings(_in_core_datum)) -> {

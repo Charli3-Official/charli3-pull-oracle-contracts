@@ -1,5 +1,5 @@
 use aiken/builtin
-use aiken/collection/dict.{Dict}
+use aiken/collection/dict
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
@@ -743,28 +743,14 @@ pub fn check_platform_received_reward(
   must_save_nodes_rewards && actual_reward > 0
 }
 
-// TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
 pub fn check_added_nodes(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
-  in_distribution: List<Int>,
-  out_distribution: List<Int>,
 ) -> Bool {
   trace @"T28"
 
   let (deleted_nodes, added_nodes) =
     list.foldl(out_settings.nodes, (in_settings.nodes, []), push_added_node)
-  let old_distribution_dict =
-    list.foldr(
-      added_nodes,
-      list.map2(
-        pairs.keys(out_settings.nodes),
-        out_distribution,
-        fn(id, reward) { Pair(id, reward) },
-      )
-        |> dict.from_ascending_pairs,
-      check_new_node_rewards_distribution,
-    )
 
   let must_keep_other_settings_unchanged =
     in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
@@ -774,10 +760,8 @@ pub fn check_added_nodes(
     )
   let must_not_delete_nodes = deleted_nodes == []
   let must_add_some_nodes = added_nodes != []
-  let must_save_old_nodes =
-    dict.values(old_distribution_dict) == in_distribution
 
-  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_delete_nodes && must_add_some_nodes && must_save_old_nodes
+  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_delete_nodes && must_add_some_nodes
 }
 
 fn push_added_node(
@@ -796,15 +780,6 @@ fn push_added_node(
   }
 }
 
-fn check_new_node_rewards_distribution(
-  new_node: Pair<FeedVkh, PaymentVkh>,
-  out_distribution: Dict<FeedVkh, Int>,
-) -> Dict<FeedVkh, Int> {
-  expect (Some(0), acc) = dict.pop(out_distribution, builtin.fst_pair(new_node))
-  acc
-}
-
-// TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
 pub fn check_deleted_nodes_returning(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
