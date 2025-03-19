@@ -311,9 +311,9 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         expect [
           (
-            AggState(GenericData([
+            AggState(GenericData{price_map: [
               Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
-            ])),
+            ]}),
             _out_value,
           ),
         ] = find_out_datum_and_value(outputs, own_hash, aggstate_nft)
@@ -524,7 +524,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && deleted_nodes
       }
       // :: ScaleDown
-      (ScaleDown, RewardAccount(RewardAccountDatum([]))) -> {
+      (ScaleDown, RewardAccount(RewardAccountDatum{nodes_to_rewards: []})) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
@@ -546,7 +546,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && is_aggstate_expired(price_data, validity_range)
       }
       // :: DismissRewards
-      (DismissRewards, RewardAccount(RewardAccountDatum(_))) -> {
+      (DismissRewards, RewardAccount(RewardAccountDatum { .. })) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
@@ -637,7 +637,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         ) && check_pause_does_not_change_settings(in_core_datum, out_core_datum) && must_be_paused && must_resume_oracle
       }
       // :: RemoveOracle
-      (RemoveOracle, RewardAccount(RewardAccountDatum([]))) -> {
+      (RemoveOracle, RewardAccount(RewardAccountDatum{nodes_to_rewards: []})) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,

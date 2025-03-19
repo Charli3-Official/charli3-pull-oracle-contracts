@@ -27,7 +27,7 @@ pub type PriceData {
 
 /// Retrieves a price-related value from the PriceData structure using an index.
 pub fn get_price_data(price_data: PriceData, index: Int) -> Option<Int> {
-  expect GenericData(price_map) = price_data
+  expect GenericData { price_map } = price_data
   pairs.get_first(price_map, index)
 }
 

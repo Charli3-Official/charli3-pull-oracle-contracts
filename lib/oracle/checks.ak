@@ -105,7 +105,8 @@ pub fn returns_empty_account_outputs(
     fn(output: Output) -> Value {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(RewardAccountDatum([])) = oracle_datum
+      expect RewardAccount(RewardAccountDatum{nodes_to_rewards: []}) =
+        oracle_datum
 
       output.value
     }
@@ -255,7 +256,9 @@ pub fn find_in_reward_accounts(
     fn(input: Input, acc: List<RewardAccountDatum>) -> List<RewardAccountDatum> {
       expect tx.InlineDatum(datum) = input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(RewardAccountDatum(nodes_rewards)) = oracle_datum
+      expect RewardAccount(RewardAccountDatum {
+        nodes_to_rewards: nodes_rewards,
+      }) = oracle_datum
       // Check if this datum is already in the accumulator
       let exists =
         list.any(
@@ -290,7 +293,7 @@ pub fn find_out_reward_accounts(
     fn(output: Output, acc: Int) -> Int {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(RewardAccountDatum(_)) = oracle_datum
+      expect RewardAccount(RewardAccountDatum { .. }) = oracle_datum
       acc + 1
     }
   list.foldr(outputs, 0, extractor)
@@ -648,7 +651,9 @@ pub fn check_node_received_reward(
               reward_output_accounts,
               fn(output_account) {
                 expect (
-                  RewardAccount(RewardAccountDatum(out_distribution)),
+                  RewardAccount(RewardAccountDatum {
+                    nodes_to_rewards: out_distribution,
+                  }),
                   out_value,
                 ) = output_account
                 // Check that payment_vkh does NOT exist in out_distribution
@@ -714,8 +719,9 @@ pub fn check_platform_received_reward(
       reward_output_accounts,
       fn(output_account) {
         let (oracle_datum, _) = output_account
-        expect RewardAccount(RewardAccountDatum(out_distribution)) =
-          oracle_datum
+        expect RewardAccount(RewardAccountDatum {
+          nodes_to_rewards: out_distribution,
+        }) = oracle_datum
         // Verify datum hasn't changed
         out_distribution == reward_distribution
       },
