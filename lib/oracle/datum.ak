@@ -165,10 +165,3 @@ pub type RewardPrices {
 pub fn is_oracle_paused(settings: OracleSettingsDatum) -> Bool {
   option.is_some(settings.pause_period_started_at)
 }
-
-pub fn has_no_rewards(reward_transport: RewardTransportDatum) -> Bool {
-  when reward_transport is {
-    NoRewards -> True
-    RewardConsensusPending { .. } -> False
-  }
-}

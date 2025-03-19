@@ -6,12 +6,11 @@ use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/interval
 use aiken/math/rational
 use aiken/option.{is_some}
-use cardano/address.{Address}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input,
   Output, Redeemer, ScriptPurpose, ValidityRange} as tx
 use ext/aiken/math/rational.{Percent, Permille, coin_precision} as ext
-use ext/aiken/time.{PosixTime, PosixTimeDiff}
+use ext/aiken/time.{PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr_and_divergency}
 use oracle/datum.{
@@ -24,7 +23,6 @@ use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
 }
-use services/reward_escrow.{RewardEscrowDatum}
 
 /// A convenience function that calls find_script_inputs_by_token
 /// and also checks number of spent inputs
@@ -95,7 +93,7 @@ pub fn spends_one_account_utxo_for_aggregation(
 pub fn returns_empty_account_outputs(
   script_hash: ScriptHash,
   reward_account_nft: Asset,
-  utxo_count: Int,
+  total_input_accounts: Int,
   tx_outputs: List<Output>,
   utxo_size_safety_buffer: Int,
 ) -> Bool {
@@ -104,18 +102,17 @@ pub fn returns_empty_account_outputs(
   let outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, reward_account_nft)
   let extractor =
-    fn(output: Output) -> RewardAccountDatum {
+    fn(output: Output) -> Value {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(reward_acc) = oracle_datum
+      expect RewardAccount(RewardAccountDatum([])) = oracle_datum
 
-      reward_acc
+      output.value
     }
-  expect _ = list.map(outputs, extractor)
-  let values = list.map(outputs, fn(out) { out.value })
+  let empty_outputs_value = list.map(outputs, extractor)
 
-  list.length(outputs) == utxo_count && list.all(
-    values,
+  list.length(empty_outputs_value) == total_input_accounts && list.all(
+    empty_outputs_value,
     check_utxo_size_safety_buffer(utxo_size_safety_buffer, _),
   )
 }
@@ -764,6 +761,22 @@ pub fn check_added_nodes(
   must_keep_other_settings_unchanged && must_not_break_multisig && must_not_delete_nodes && must_add_some_nodes
 }
 
+fn push_deleted_node(
+  node: Pair<FeedVkh, PaymentVkh>,
+  acc: (Nodes, Nodes),
+) -> (Nodes, Nodes) {
+  let (result, out_nodes) = acc
+  when out_nodes is {
+    [] -> (list.push(result, node), [])
+    [x, ..xs] ->
+      if x == node {
+        (result, xs)
+      } else {
+        (list.push(result, node), out_nodes)
+      }
+  }
+}
+
 fn push_added_node(
   node: Pair<FeedVkh, PaymentVkh>,
   acc: (Nodes, Nodes),
@@ -780,27 +793,14 @@ fn push_added_node(
   }
 }
 
-pub fn check_deleted_nodes_returning(
+pub fn check_deleted_nodes(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
-  in_distribution: List<Int>,
-  out_distribution: List<Int>,
-) -> Nodes {
+) -> Bool {
   trace @"T29"
 
-  let (added_nodes, _, deleted_nodes_ixs, deleted_nodes) =
-    list.foldl(
-      in_settings.nodes,
-      (out_settings.nodes, 0, [], []),
-      push_changed_node,
-    )
-  let (_, expected_distribution) =
-    list.indexed_foldr(
-      in_distribution,
-      (deleted_nodes_ixs, []),
-      push_unchanged_node_reward,
-    )
-
+  let (deleted_nodes, added_nodes) =
+    list.foldl(in_settings.nodes, ([], out_settings.nodes), push_deleted_node)
   let must_keep_other_settings_unchanged =
     in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
   let must_not_break_multisig =
@@ -808,51 +808,9 @@ pub fn check_deleted_nodes_returning(
       pairs.keys(out_settings.nodes),
     )
   let must_not_add_nodes = added_nodes == []
-  let must_delete_some_nodes = deleted_nodes_ixs != []
-  let must_delete_nodes_rewards = out_distribution == expected_distribution
+  let must_delete_some_nodes = deleted_nodes != []
 
-  expect
-    must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes && must_delete_some_nodes && must_delete_nodes_rewards
-
-  deleted_nodes
-}
-
-fn push_changed_node(
-  node: Pair<FeedVkh, PaymentVkh>,
-  acc: (Nodes, Int, List<Int>, Nodes),
-) -> (Nodes, Int, List<Int>, Nodes) {
-  let (out_nodes, node_ix, ixs, nodes) = acc
-  when out_nodes is {
-    [] -> ([], node_ix + 1, list.push(ixs, node_ix), list.push(nodes, node))
-    [x, ..xs] ->
-      if x == node {
-        (xs, node_ix + 1, ixs, nodes)
-      } else {
-        (
-          out_nodes,
-          node_ix + 1,
-          list.push(ixs, node_ix),
-          list.push(nodes, node),
-        )
-      }
-  }
-}
-
-fn push_unchanged_node_reward(
-  node_ix: Int,
-  node_reward: Int,
-  acc: (List<Int>, List<Int>),
-) -> (List<Int>, List<Int>) {
-  let (deleted_nodes, result) = acc
-  when deleted_nodes is {
-    [] -> ([], list.push(result, node_reward))
-    [x, ..xs] ->
-      if x == node_ix {
-        (xs, result)
-      } else {
-        (deleted_nodes, list.push(result, node_reward))
-      }
-  }
+  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes && must_delete_some_nodes
 }
 
 fn get_length_and_check_strict_order(node_ids_sorted: List<FeedVkh>) -> Int {
@@ -876,134 +834,6 @@ fn do_get_length_and_check_strict_order(
         fail @"E6"
       }
   }
-}
-
-pub fn check_nodes_final_rewards_paid_returning(
-  oracle_conf: OracleConfiguration,
-  tx_outputs: List<Output>,
-  in_settings: OracleSettingsDatum,
-  in_distribution: List<Int>,
-  deleted_nodes: Nodes,
-  current_time: PosixTime,
-) -> Int {
-  trace @"T31"
-
-  let remaining_rewards =
-    list.map2(
-      pairs.keys(in_settings.nodes),
-      in_distribution,
-      fn(id, reward) { Pair(id, reward) },
-    )
-      |> dict.from_ascending_pairs
-
-  when oracle_conf.fee_token is {
-    None ->
-      list.reduce(
-        deleted_nodes,
-        0,
-        fn(rewards_accumulator, Pair(feed_vkh, payment_vkh)) {
-          expect Some(final_reward_amount) =
-            dict.get(remaining_rewards, feed_vkh)
-          let node_addr = address.from_verification_key(payment_vkh)
-
-          expect
-            final_reward_amount == 0 || final_ada_rewards_paid(
-              tx_outputs,
-              node_addr,
-              final_reward_amount,
-            )
-
-          rewards_accumulator + final_reward_amount
-        },
-      )
-    Some(fee_asset) -> {
-      let escrow_outputs =
-        extract_escrow_outputs(
-          tx_outputs,
-          oracle_conf.reward_escrow_script_hash,
-          fee_asset,
-        )
-
-      list.reduce(
-        deleted_nodes,
-        0,
-        fn(rewards_accumulator, Pair(feed_vkh, payment_vkh)) {
-          expect Some(final_reward_amount) =
-            dict.get(remaining_rewards, feed_vkh)
-
-          expect
-            final_reward_amount == 0 || final_token_rewards_paid(
-              escrow_outputs,
-              payment_vkh,
-              final_reward_amount,
-              current_time,
-              oracle_conf.platform_auth_nft,
-              oracle_conf.reward_dismissing_period_length,
-            )
-
-          rewards_accumulator + final_reward_amount
-        },
-      )
-    }
-  }
-}
-
-fn extract_escrow_outputs(
-  tx_outputs: List<Output>,
-  reward_escrow_script_hash: ScriptHash,
-  fee_token: Asset,
-) -> List<(RewardEscrowDatum, Int)> {
-  let escrow_script_addr = address.from_script(reward_escrow_script_hash)
-
-  list.filter_map(
-    tx_outputs,
-    fn(out) {
-      if out.address == escrow_script_addr {
-        expect tx.InlineDatum(datum) = out.datum
-        expect escrow_datum: RewardEscrowDatum = datum
-
-        Some(
-          (
-            escrow_datum,
-            assets.quantity_of(out.value, fee_token.policy_id, fee_token.name),
-          ),
-        )
-      } else {
-        None
-      }
-    },
-  )
-}
-
-fn final_ada_rewards_paid(
-  tx_outputs: List<Output>,
-  node_addr: Address,
-  final_reward_amount: Int,
-) -> Bool {
-  list.find(
-    tx_outputs,
-    fn(out) {
-      out.address == node_addr && assets.lovelace_of(out.value) >= final_reward_amount
-    },
-  )
-    |> option.is_some
-}
-
-fn final_token_rewards_paid(
-  escrow_outputs: List<(RewardEscrowDatum, Int)>,
-  node_payment_vkh: PaymentVkh,
-  final_reward_amount: Int,
-  current_time: PosixTime,
-  platform_auth_nft: PolicyId,
-  reward_dismissing_period_length: PosixTimeDiff,
-) -> Bool {
-  list.find(
-    escrow_outputs,
-    fn((escrow_datum, escrow_amount)) {
-      escrow_datum.reward_issuer_nft == platform_auth_nft && escrow_datum.escrow_expiration_timestamp == current_time + reward_dismissing_period_length && escrow_datum.reward_receiver == node_payment_vkh && escrow_amount == final_reward_amount
-    },
-  )
-    |> option.is_some
 }
 
 pub fn validate_dismissing_period(
