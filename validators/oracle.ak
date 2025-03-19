@@ -24,9 +24,9 @@ use oracle/checks.{
   check_platform_received_reward, check_reward_distribution,
   check_settings_sanity, check_utxo_size_safety_buffer, conserves_utxo_value,
   convert_reward_prices, does_not_produce_own_nft_outputs, find_in_datum,
-  find_node_by_signature, find_out_datum_and_value,
-  find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
-  is_aggstate_expired, oracle_fees_were_transferred,
+  find_in_reward_accounts, find_node_by_signature, find_out_datum_and_value,
+  find_out_datum_and_value_with_allowing_asset, find_out_reward_accounts,
+  find_referenced_datum, is_aggstate_expired, oracle_fees_were_transferred,
   returns_empty_account_outputs, returns_empty_aggstate_outputs,
   spends_one_account_utxo_for_aggregation, spends_one_script_utxo_with_nft,
   spends_protocol_nft_inputs, validate_dismissing_period, validate_message_form,
@@ -79,7 +79,7 @@ validator oracle_nfts(
         expect Some(_input) =
           list.find(inputs, fn(input) { input.output_reference == utxo_ref })
 
-        expect (OracleSettings(out_core_datum), _) =
+        expect [(OracleSettings(out_core_datum), _)] =
           find_out_datum_and_value(outputs, oracle_script_hash, core_nft)
 
         let must_return_empty_reward_utxos =
@@ -264,7 +264,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        expect (AggState(_), out_value) =
+        expect [(AggState(_), out_value)] =
           find_out_datum_and_value(outputs, own_hash, aggstate_nft)
 
         is_aggstate_expired(price_data, validity_range) && conserves_utxo_value(
@@ -303,7 +303,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
-        expect (RewardAccount(out_account_datum), out_value) =
+        expect [(RewardAccount(out_account_datum), out_value)] =
           find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
@@ -311,12 +311,14 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token,
           )
 
-        expect (
-          AggState(GenericData([
-            Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
-          ])),
-          _out_value,
-        ) = find_out_datum_and_value(outputs, own_hash, aggstate_nft)
+        expect [
+          (
+            AggState(GenericData([
+              Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
+            ])),
+            _out_value,
+          ),
+        ] = find_out_datum_and_value(outputs, own_hash, aggstate_nft)
 
         let current_time =
           get_current_time(
@@ -349,7 +351,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             core_datum.fee_info.rate_nft,
             core_datum.fee_info.reward_prices,
           )
-        // reward_prices.node_fee == aggregation.node_reward_price
+
         let minimum_fee_amount =
           calculate_minimum_fee_amount(reward_prices, message.node_feeds_count)
         let must_transfer_oracle_fees = fees_transferred >= minimum_fee_amount
@@ -394,7 +396,16 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
-        expect (RewardAccount(out_account_datum), out_value) =
+        let total_input_accounts =
+          find_in_reward_accounts(
+            inputs,
+            redeemers,
+            own_hash,
+            reward_acc_nft,
+            NodeCollect,
+          )
+
+        let reward_output_accounts =
           find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
@@ -406,14 +417,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           oracle_conf.fee_token,
           find_node_by_signature(extra_signatories, core_datum.nodes),
           in_account_datum.nodes_to_rewards,
-          out_account_datum.nodes_to_rewards,
           in_value,
-          out_value,
-        ) && check_utxo_size_safety_buffer(
-          core_datum.utxo_size_safety_buffer,
-          out_value,
-        )
+          reward_output_accounts,
+        ) && total_input_accounts == list.length(reward_output_accounts)
       }
+
       // :: PlatformCollect
       (PlatformCollect, RewardAccount(in_account_datum)) -> {
         let nft_policy_id =
@@ -435,7 +443,16 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
-        expect (RewardAccount(out_account_datum), out_value) =
+        let total_input_accounts =
+          find_in_reward_accounts(
+            inputs,
+            redeemers,
+            own_hash,
+            reward_acc_nft,
+            PlatformCollect,
+          )
+
+        let reward_output_accounts =
           find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
@@ -443,15 +460,15 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token,
           )
 
-        let datum_left_unchanged = in_account_datum == out_account_datum
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && check_platform_received_reward(
+        check_platform_received_reward(
           oracle_conf.fee_token,
           core_datum.utxo_size_safety_buffer,
           in_account_datum.nodes_to_rewards,
           in_value,
-          out_value,
-        ) && datum_left_unchanged
+          reward_output_accounts,
+        ) && auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && total_input_accounts == list.length(
+          reward_output_accounts,
+        )
       }
       // :: UpdateSettings
       (UpdateSettings, OracleSettings(in_core_datum)) -> {
@@ -463,7 +480,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             name: config.core_settings_token_name,
           }
 
-        expect (OracleSettings(out_core_datum), out_value) =
+        expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
@@ -498,7 +515,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        expect (RewardAccount(_out_account_datum), out_value) =
+        expect [(RewardAccount(_out_account_datum), out_value)] =
           find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
@@ -522,13 +539,13 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             name: config.reward_account_token_name,
           }
 
-        expect (OracleSettings(out_core_datum), out_value) =
+        expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         expect RewardAccount(in_account_datum) =
           find_in_datum(inputs, redeemers, own_hash, AddNodes, reward_acc_nft)
 
-        expect (RewardAccount(out_account_datum), _) =
+        expect [(RewardAccount(out_account_datum), _)] =
           find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
@@ -570,7 +587,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        expect (OracleSettings(_out_core_datum), out_value) =
+        expect [(OracleSettings(_out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         conserves_utxo_value(in_value, out_value) && must_spend_reward_account_utxo
@@ -595,10 +612,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect OracleSettings(in_core_datum) =
           find_in_datum(inputs, redeemers, own_hash, DelNodes, core_nft)
 
-        expect (OracleSettings(out_core_datum), _) =
+        expect [(OracleSettings(out_core_datum), _)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        expect (RewardAccount(out_account_datum), out_value) =
+        expect [(RewardAccount(out_account_datum), out_value)] =
           find_out_datum_and_value_with_allowing_asset(
             outputs,
             own_hash,
@@ -733,7 +750,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let must_not_be_paused_already = is_oracle_paused(in_core_datum) |> not
 
-        expect (OracleSettings(out_core_datum), out_value) =
+        expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         let current_time =
@@ -761,7 +778,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let must_be_paused = is_oracle_paused(in_core_datum)
 
-        expect (OracleSettings(out_core_datum), out_value) =
+        expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         let must_resume_oracle = is_oracle_paused(out_core_datum) |> not
@@ -794,29 +811,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         // nodes which are interested in collecting the rewards should do so during pause period
-        must_spend_core_settings_utxo
-      }
-      (RemoveOracle, RewardTransport(NoRewards)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(
-            in_value,
-            config.reward_transport_token_name,
-          )
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-
-        let must_spend_core_settings_utxo =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            RemoveOracle,
-            core_nft,
-            inputs,
-            redeemers,
-          )
-
         must_spend_core_settings_utxo
       }
       (RemoveOracle, AggState(price_data)) -> {

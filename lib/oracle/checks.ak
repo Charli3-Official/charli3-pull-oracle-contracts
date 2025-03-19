@@ -144,14 +144,19 @@ pub fn find_out_datum_and_value(
   tx_outputs: List<Output>,
   script_hash: ScriptHash,
   protocol_token: Asset,
-) -> (OracleDatum, Value) {
+) -> List<(OracleDatum, Value)> {
   trace @"T11"
 
-  expect [script_out] =
+  let script_outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
-  expect tx.InlineDatum(datum) = script_out.datum
-  expect oracle_datum: OracleDatum = datum
-  (oracle_datum, script_out.value)
+  list.map(
+    script_outputs,
+    fn(script_output) {
+      expect tx.InlineDatum(datum) = script_output.datum
+      expect oracle_datum: OracleDatum = datum
+      (oracle_datum, script_output.value)
+    },
+  )
 }
 
 pub fn find_out_datum_and_value_with_allowing_asset(
@@ -159,23 +164,27 @@ pub fn find_out_datum_and_value_with_allowing_asset(
   script_hash: ScriptHash,
   protocol_token: Asset,
   allowed_asset: Option<Asset>,
-) -> (OracleDatum, Value) {
+) -> List<(OracleDatum, Value)> {
   trace @"T12"
 
   when allowed_asset is {
     None -> find_out_datum_and_value(tx_outputs, script_hash, protocol_token)
     Some(asset) -> {
-      expect [script_out] =
+      let script_outputs =
         find_script_outputs_by_token_allowing_asset(
           tx_outputs,
           script_hash,
           asset.policy_id,
           protocol_token,
         )
-      expect tx.InlineDatum(datum) = script_out.datum
-      expect oracle_datum: OracleDatum = datum
-
-      (oracle_datum, script_out.value)
+      list.map(
+        script_outputs,
+        fn(script_output) {
+          expect tx.InlineDatum(datum) = script_output.datum
+          expect oracle_datum: OracleDatum = datum
+          (oracle_datum, script_output.value)
+        },
+      )
     }
   }
 }
@@ -220,6 +229,74 @@ pub fn find_in_datum(
   expect oracle_datum: OracleDatum = datum
 
   oracle_datum
+}
+
+pub fn find_in_reward_accounts(
+  tx_inputs: List<Input>,
+  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
+  script_hash: ScriptHash,
+  protocol_token: Asset,
+  redeemer: OracleRedeemer,
+) -> Int {
+  trace @"T15"
+
+  let inputs =
+    find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
+
+  let as_data: Data = redeemer
+  let refs = list.map(inputs, fn(i) { i.output_reference })
+  let must_have_correct_redeemers =
+    list.all(
+      refs,
+      fn(ref) {
+        expect Some(r) = pairs.get_first(tx_redeemers, tx.Spend(ref))
+        r == as_data
+      },
+    )
+  expect must_have_correct_redeemers
+  let extractor =
+    fn(input: Input, acc: List<RewardAccountDatum>) -> List<RewardAccountDatum> {
+      expect tx.InlineDatum(datum) = input.output.datum
+      expect oracle_datum: OracleDatum = datum
+      expect RewardAccount(RewardAccountDatum(nodes_rewards)) = oracle_datum
+      // Check if this datum is already in the accumulator
+      let exists =
+        list.any(
+          acc,
+          fn(existing) { existing.nodes_to_rewards == nodes_rewards },
+        )
+      if exists {
+        // Skip duplicates
+        acc
+      } else {
+        // Add unique datum to accumulator
+        [RewardAccountDatum(nodes_rewards), ..acc]
+      }
+    }
+  // Get unique reward accounts
+  let unique_accounts = list.foldr(inputs, [], extractor)
+  // Return the count of unique accounts
+  list.length(unique_accounts)
+}
+
+pub fn find_out_reward_accounts(
+  tx_outputs: List<Output>,
+  script_hash: ScriptHash,
+  protocol_token: Asset,
+) -> Int {
+  trace @"T15"
+
+  let outputs =
+    find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
+
+  let extractor =
+    fn(output: Output, acc: Int) -> Int {
+      expect tx.InlineDatum(datum) = output.datum
+      expect oracle_datum: OracleDatum = datum
+      expect RewardAccount(RewardAccountDatum(_)) = oracle_datum
+      acc + 1
+    }
+  list.foldr(outputs, 0, extractor)
 }
 
 pub fn does_not_produce_own_nft_outputs(
@@ -551,12 +628,11 @@ pub fn check_node_received_reward(
   fee_token: Option<Asset>,
   maybe_payment_vkh: Option<PaymentVkh>,
   in_distribution: Pairs<PaymentVkh, Int>,
-  out_distribution: Pairs<PaymentVkh, Int>,
   in_value: Value,
-  out_value: Value,
+  reward_output_accounts: List<(OracleDatum, Value)>,
 ) -> Bool {
   trace @"T26"
-
+  // Check if the payment VKH exists
   when maybe_payment_vkh is {
     None -> False
     Some(payment_vkh) -> {
@@ -564,36 +640,50 @@ pub fn check_node_received_reward(
       let maybe_in_amount =
         list.find(in_distribution, fn(Pair(fst, _)) { fst == payment_vkh })
           |> option.map(fn(Pair(_, snd)) { snd })
-
-      // Check that payment_vkh does NOT exist in out_distribution
-      let payment_vkh_exists_in_out =
-        list.any(out_distribution, fn(Pair(fst, _)) { fst == payment_vkh })
-
       when maybe_in_amount is {
         None -> False
         Some(required_reward) ->
-          if required_reward <= 0 || payment_vkh_exists_in_out {
+          if required_reward <= 0 {
             False
           } else {
-            // Calculate actual reward received
-            let actual_reward =
-              calculate_asset_net_change_with_default(
-                fee_token,
-                in_value,
-                out_value,
-              )
-                |> fn(v) { -v }
-
-            // Simply filter out the rewarded node from input and compare the resulting lists
-            let in_without_payment_vkh =
-              list.filter(
-                in_distribution,
-                fn(Pair(fst, snd)) { fst != payment_vkh },
-              )
-            let other_entries_match = in_without_payment_vkh == out_distribution
-
-            // Final verification
-            other_entries_match && required_reward == actual_reward
+            // Find the matching output account
+            list.any(
+              reward_output_accounts,
+              fn(output_account) {
+                expect (
+                  RewardAccount(RewardAccountDatum(out_distribution)),
+                  out_value,
+                ) = output_account
+                // Check that payment_vkh does NOT exist in out_distribution
+                let payment_vkh_exists_in_out =
+                  list.any(
+                    out_distribution,
+                    fn(Pair(fst, _)) { fst == payment_vkh },
+                  )
+                if payment_vkh_exists_in_out {
+                  False
+                } else {
+                  // Calculate actual reward received
+                  let actual_reward =
+                    calculate_asset_net_change_with_default(
+                      fee_token,
+                      in_value,
+                      out_value,
+                    )
+                      |> fn(v) { -v }
+                  // Simply filter out the rewarded node from input and compare the resulting lists
+                  let in_without_payment_vkh =
+                    list.filter(
+                      in_distribution,
+                      fn(Pair(fst, _)) { fst != payment_vkh },
+                    )
+                  let other_entries_match =
+                    in_without_payment_vkh == out_distribution
+                  // Final verification
+                  other_entries_match && required_reward == actual_reward
+                }
+              },
+            )
           }
       }
     }
@@ -605,10 +695,11 @@ pub fn check_platform_received_reward(
   utxo_size_safety_buffer: Int,
   reward_distribution: Pairs<PaymentVkh, Int>,
   in_value: Value,
-  out_value: Value,
+  reward_output_accounts: List<(OracleDatum, Value)>,
 ) -> Bool {
   trace @"T27"
 
+  // Calculate total rewards to be distributed to nodes
   let nodes_rewards =
     list.foldr(
       reward_distribution,
@@ -618,10 +709,27 @@ pub fn check_platform_received_reward(
 
   let in_total_rewards =
     calculate_asset_quantity_with_default(in_value, fee_token)
+
+  // The output rewards should be in the reward output accounts
+  // Find output with matching datum (no changes allowed)
+  expect Some((_, out_value)) =
+    list.find(
+      reward_output_accounts,
+      fn(output_account) {
+        let (oracle_datum, _) = output_account
+        expect RewardAccount(RewardAccountDatum(out_distribution)) =
+          oracle_datum
+        // Verify datum hasn't changed
+        out_distribution == reward_distribution
+      },
+    )
+
   let out_total_rewards =
     calculate_asset_quantity_with_default(out_value, fee_token)
+
   let actual_reward = in_total_rewards - out_total_rewards
 
+  // Check safety buffer requirements
   let must_save_nodes_rewards =
     when fee_token is {
       Some(_) ->
@@ -629,12 +737,10 @@ pub fn check_platform_received_reward(
           utxo_size_safety_buffer,
           out_value,
         )
-      None -> out_total_rewards - utxo_size_safety_buffer >= nodes_rewards
+      None -> out_total_rewards >= nodes_rewards + utxo_size_safety_buffer
     }
 
-  let must_withdraw = actual_reward > 0
-
-  must_save_nodes_rewards && must_withdraw
+  must_save_nodes_rewards && actual_reward > 0
 }
 
 // TODO required_node_signatures_count is > 0, but should be > 4 instead when disallow_less_than_four_nodes?
