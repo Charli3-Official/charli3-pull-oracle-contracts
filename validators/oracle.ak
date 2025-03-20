@@ -71,7 +71,7 @@ validator oracle_nfts(
         expect Some(n) =
           minted_assets |> dict.get(config.reward_account_token_name)
         expect Some(m) = minted_assets |> dict.get(config.aggstate_token_name)
-        let must_mint_some_reward_transport = n > 0
+        let must_mint_some_reward_account = n > 0
         let must_mint_same_amount_aggstate = m == n
 
         expect Some(_input) =
@@ -80,7 +80,7 @@ validator oracle_nfts(
         expect [(OracleSettings(out_core_datum), _)] =
           find_out_datum_and_value(outputs, oracle_script_hash, core_nft)
 
-        let must_return_empty_reward_utxos =
+        let all_reward_accounts_empty =
           returns_empty_account_outputs(
             oracle_script_hash,
             reward_acc_nft,
@@ -88,7 +88,7 @@ validator oracle_nfts(
             outputs,
             out_core_datum.utxo_size_safety_buffer,
           )
-        let must_return_empty_aggstate_utxos =
+        let all_aggstate_empty =
           returns_empty_aggstate_outputs(
             oracle_script_hash,
             aggstate_nft,
@@ -99,12 +99,10 @@ validator oracle_nfts(
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && validate_settings_form(
           oracle_conf,
           out_core_datum,
-        ) && must_mint_some_reward_transport && must_mint_same_amount_aggstate && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+        ) && must_mint_some_reward_account && must_mint_same_amount_aggstate && all_reward_accounts_empty && all_aggstate_empty
       }
       ScaleToken -> {
         expect None = minted_assets |> dict.get(config.core_settings_token_name)
-        expect None =
-          minted_assets |> dict.get(config.reward_account_token_name)
         expect Some(n) =
           minted_assets |> dict.get(config.reward_account_token_name)
         expect Some(m) = minted_assets |> dict.get(config.aggstate_token_name)
@@ -120,7 +118,7 @@ validator oracle_nfts(
               core_nft,
             )
 
-          let must_return_empty_reward_utxos =
+          let all_reward_accounts_empty =
             returns_empty_account_outputs(
               oracle_script_hash,
               reward_acc_nft,
@@ -128,7 +126,7 @@ validator oracle_nfts(
               outputs,
               core_datum.utxo_size_safety_buffer,
             )
-          let must_return_empty_aggstate_utxos =
+          let all_aggstate_empty =
             returns_empty_aggstate_outputs(
               oracle_script_hash,
               aggstate_nft,
@@ -138,7 +136,7 @@ validator oracle_nfts(
 
           let must_not_be_paused = is_oracle_paused(core_datum) |> not
 
-          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_not_be_paused && must_mint_same_amount_aggstate && must_return_empty_reward_utxos && must_return_empty_aggstate_utxos
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_not_be_paused && must_mint_same_amount_aggstate && all_reward_accounts_empty && all_aggstate_empty
         } else {
           trace @"T2"
 
@@ -175,7 +173,7 @@ validator oracle_nfts(
           minted_assets
             |> dict.get(config.aggstate_token_name)
             |> option.or_else(0)
-        let must_not_mint_reward_acc = n <= 0
+        let must_not_mint = n <= 0
         let must_burn_same_amount_aggstate = m == n
 
         let must_spend_core_settings_input =
@@ -206,7 +204,7 @@ validator oracle_nfts(
             redeemers,
           )
 
-        must_spend_core_settings_input && must_not_mint_reward_acc && must_burn_same_amount_aggstate && must_spend_reward_acc_inputs && must_spend_aggstate_inputs
+        must_spend_core_settings_input && must_not_mint && must_burn_same_amount_aggstate && must_spend_reward_acc_inputs && must_spend_aggstate_inputs
       }
     }
   }
