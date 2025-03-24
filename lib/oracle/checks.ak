@@ -10,7 +10,7 @@ use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input,
   Output, Redeemer, ScriptPurpose, ValidityRange} as tx
 use ext/aiken/math/rational.{Percent, Permille, coin_precision} as ext
-use ext/aiken/time.{PosixTimeDiff}
+use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr_and_divergency}
 use oracle/datum.{
@@ -105,7 +105,7 @@ pub fn returns_empty_account_outputs(
     fn(output: Output) -> Value {
       expect tx.InlineDatum(datum) = output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(RewardAccountDatum{nodes_to_rewards: []}) =
+      expect RewardAccount(RewardAccountDatum { nodes_to_rewards: [], .. }) =
         oracle_datum
 
       output.value
@@ -256,21 +256,19 @@ pub fn find_in_reward_accounts(
     fn(input: Input, acc: List<RewardAccountDatum>) -> List<RewardAccountDatum> {
       expect tx.InlineDatum(datum) = input.output.datum
       expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(RewardAccountDatum {
-        nodes_to_rewards: nodes_rewards,
-      }) = oracle_datum
+      expect RewardAccount(reward_account_datum) = oracle_datum
       // Check if this datum is already in the accumulator
       let exists =
         list.any(
           acc,
-          fn(existing) { existing.nodes_to_rewards == nodes_rewards },
+          fn(existing_datum) { existing_datum == reward_account_datum },
         )
       if exists {
         // Skip duplicates
         acc
       } else {
         // Add unique datum to accumulator
-        [RewardAccountDatum(nodes_rewards), ..acc]
+        [reward_account_datum, ..acc]
       }
     }
   // Get unique reward accounts
@@ -462,10 +460,9 @@ pub fn check_reward_distribution(
   message: AggregateMessage,
   median: OracleFeed,
   node_reward_price: Int,
-  in_distribution: Pairs<PaymentVkh, Int>,
-  out_distribution: Pairs<PaymentVkh, Int>,
+  in_distribution: Pairs<FeedVkh, Int>,
+  out_distribution: Pairs<FeedVkh, Int>,
   nodes: Nodes,
-  // Already sorted ascendingly by FeedVkh
   iqr_fence_multiplier: Percent,
   median_divergency_factor: Permille,
 ) -> Bool {
@@ -479,7 +476,7 @@ pub fn check_reward_distribution(
       iqr_fence_multiplier,
       median_divergency_factor,
     )
-  // Create a set of rewarded feed VKHs - using a map for O(1) lookups
+  // Create a set of rewarded feed VKHs - using a map for O(n) lookups
   let rewarded_feed_dict =
     list.foldr(
       rewarded_feed_nodes,
@@ -487,44 +484,38 @@ pub fn check_reward_distribution(
       fn(feed_vkh, acc) { dict.insert(acc, feed_vkh, True) },
     )
   // Process all records in a single pass to avoid creating of intermediate data structures
-  dict.from_ascending_pairs(out_distribution)
-    |> dict.foldr(
-        True,
-        fn(payment_vkh, out_amount, acc) {
-          if !acc {
-            // Short-circuit if we've already found an invalid case
-            False
-          } else {
-            // Find the feed vkh for this payment vkh
-            let maybe_feed_vkh =
-              nodes
-                |> list.find(fn(Pair(_, snd)) { snd == payment_vkh })
-                |> option.map(fn(Pair(fst, _)) { fst })
-            when maybe_feed_vkh is {
-              // Invalid payment VKH - not in the nodes list
-              None -> False
-              Some(feed_vkh) -> {
-                // Determine expected reward based on whether this feed node was rewarded
-                let expected_reward =
-                  if dict.has_key(rewarded_feed_dict, feed_vkh) {
-                    node_reward_price
-                  } else {
-                    0
-                  }
-                // Get input amount, defaulting to 0 if not present
-                let in_amount =
-                  in_distribution
-                    |> list.find(fn(Pair(fst, _)) { fst == payment_vkh })
-                    |> option.map(fn(Pair(_, snd)) { snd })
-                    |> option.or_else(0)
-                // 0 since it's a new node
-                // Check if the output amount matches expected
-                in_amount + expected_reward == out_amount
-              }
+  list.all(
+    out_distribution,
+    fn(Pair(out_feed_vkh, out_amount)) {
+      let maybe_allowed_feed_vkh =
+        nodes
+          |> list.find(
+              fn(Pair(allowed_feed_vkh, _)) { allowed_feed_vkh == out_feed_vkh },
+            )
+          |> option.map(fn(Pair(allowed_feed_vkh, _)) { allowed_feed_vkh })
+      when maybe_allowed_feed_vkh is {
+        // Invalid payment VKH - not in the nodes list
+        None -> False
+        Some(existing_feed_vkh) -> {
+          // Determine expected reward based on whether this feed node was rewarded
+          let expected_reward =
+            if dict.has_key(rewarded_feed_dict, existing_feed_vkh) {
+              node_reward_price
+            } else {
+              0
             }
-          }
-        },
-      )
+          // Get input amount, defaulting to 0 if not present
+          let in_amount =
+            dict.from_ascending_pairs(in_distribution)
+              |> dict.get(out_feed_vkh)
+              |> option.or_else(0)
+          // 0 since it's a new node
+          // Check if the output amount matches expected
+          in_amount + expected_reward == out_amount
+        }
+      }
+    },
+  )
 }
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
@@ -612,7 +603,7 @@ pub fn check_pause_does_not_change_settings(
 pub fn find_node_by_signature(
   tx_signatories: List<VerificationKeyHash>,
   nodes: Nodes,
-) -> Option<PaymentVkh> {
+) -> Option<FeedVkh> {
   trace @"T25"
 
   let maybe_node =
@@ -621,26 +612,25 @@ pub fn find_node_by_signature(
       fn(Pair(_, payment_vkh)) { list.has(tx_signatories, payment_vkh) },
     )
 
-  maybe_node |> option.map(fn(Pair(_, payment_vkh)) { payment_vkh })
+  maybe_node |> option.map(fn(Pair(feed_vkh, _)) { feed_vkh })
 }
 
 pub fn check_node_received_reward(
   fee_token: Option<Asset>,
-  maybe_payment_vkh: Option<PaymentVkh>,
-  in_distribution: Pairs<PaymentVkh, Int>,
+  maybe_feed_vkh: Option<FeedVkh>,
+  in_distribution: RewardAccountDatum,
   in_value: Value,
   reward_output_accounts: List<(OracleDatum, Value)>,
 ) -> Bool {
   trace @"T26"
-  // Check if the payment VKH exists
-  when maybe_payment_vkh is {
+  // Check if the feed VKH exists
+  when maybe_feed_vkh is {
     None -> False
-    Some(payment_vkh) -> {
+    Some(feed_vkh) -> {
       // Find the reward amount directly in input distribution
-      let maybe_in_amount =
-        list.find(in_distribution, fn(Pair(fst, _)) { fst == payment_vkh })
-          |> option.map(fn(Pair(_, snd)) { snd })
-      when maybe_in_amount is {
+      let in_distribution_dict =
+        dict.from_ascending_pairs(in_distribution.nodes_to_rewards)
+      when dict.get(in_distribution_dict, feed_vkh) is {
         None -> False
         Some(required_reward) ->
           if required_reward <= 0 {
@@ -649,20 +639,19 @@ pub fn check_node_received_reward(
             // Find the matching output account
             list.any(
               reward_output_accounts,
-              fn(output_account) {
+              fn(reward_output_account) {
                 expect (
                   RewardAccount(RewardAccountDatum {
-                    nodes_to_rewards: out_distribution,
+                    nodes_to_rewards,
+                    last_update_time,
                   }),
                   out_value,
-                ) = output_account
-                // Check that payment_vkh does NOT exist in out_distribution
-                let payment_vkh_exists_in_out =
-                  list.any(
-                    out_distribution,
-                    fn(Pair(fst, _)) { fst == payment_vkh },
-                  )
-                if payment_vkh_exists_in_out {
+                ) = reward_output_account
+                let out_distribution_dict =
+                  dict.from_ascending_pairs(nodes_to_rewards)
+                // Ensure that feed_vkh does NOT exist in out_distribution.
+                // The node must withdraw all rewards and remove it from the out_distribution.
+                if dict.has_key(out_distribution_dict, feed_vkh) {
                   False
                 } else {
                   // Calculate actual reward received
@@ -673,16 +662,10 @@ pub fn check_node_received_reward(
                       out_value,
                     )
                       |> fn(v) { -v }
-                  // Simply filter out the rewarded node from input and compare the resulting lists
-                  let in_without_payment_vkh =
-                    list.filter(
-                      in_distribution,
-                      fn(Pair(fst, _)) { fst != payment_vkh },
-                    )
-                  let other_entries_match =
-                    in_without_payment_vkh == out_distribution
-                  // Final verification
-                  other_entries_match && required_reward == actual_reward
+                  // Remove the rewarded node from the input and compare the resulting lists.
+                  // Ensure the required reward matches the actual reward.
+                  // The last time update must remain unchanged during this transaction.
+                  dict.delete(in_distribution_dict, feed_vkh) == out_distribution_dict && required_reward == actual_reward && last_update_time == in_distribution.last_update_time
                 }
               },
             )
@@ -695,7 +678,7 @@ pub fn check_node_received_reward(
 pub fn check_platform_received_reward(
   fee_token: Option<Asset>,
   utxo_size_safety_buffer: Int,
-  reward_distribution: Pairs<PaymentVkh, Int>,
+  in_account_datum: RewardAccountDatum,
   in_value: Value,
   reward_output_accounts: List<(OracleDatum, Value)>,
 ) -> Bool {
@@ -704,7 +687,7 @@ pub fn check_platform_received_reward(
   // Calculate total rewards to be distributed to nodes
   let nodes_rewards =
     list.foldr(
-      reward_distribution,
+      in_account_datum.nodes_to_rewards,
       0,
       fn(Pair(_, reward), total) { reward + total },
     )
@@ -721,9 +704,10 @@ pub fn check_platform_received_reward(
         let (oracle_datum, _) = output_account
         expect RewardAccount(RewardAccountDatum {
           nodes_to_rewards: out_distribution,
+          last_update_time: last_time,
         }) = oracle_datum
         // Verify datum hasn't changed
-        out_distribution == reward_distribution
+        out_distribution == in_account_datum.nodes_to_rewards && last_time == in_account_datum.last_update_time
       },
     )
 
@@ -843,7 +827,7 @@ fn do_get_length_and_check_strict_order(
 }
 
 pub fn validate_dismissing_period(
-  aggregation: Aggregation,
+  last_update_time: PosixTime,
   tx_validity_range: ValidityRange,
   reward_dismissing_period_length: PosixTimeDiff,
 ) -> Bool {
@@ -851,6 +835,6 @@ pub fn validate_dismissing_period(
 
   interval.is_entirely_after(
     tx_validity_range,
-    aggregation.message.timestamp + reward_dismissing_period_length,
+    last_update_time + reward_dismissing_period_length,
   )
 }

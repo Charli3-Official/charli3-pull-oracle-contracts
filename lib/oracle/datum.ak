@@ -97,7 +97,8 @@ pub type OracleConfiguration {
 pub type AggregateMessage {
   node_feeds_sorted_by_feed: Pairs<FeedVkh, NodeFeed>,
   node_feeds_count: Int,
-  timestamp: PosixTime,
+  /// Message creation time
+  last_update_time: PosixTime,
 }
 
 /// Mutable oracle settings
@@ -128,11 +129,13 @@ pub type OracleSettingsDatum {
   pause_period_started_at: Option<PosixTime>,
 }
 
-/// Reward distribution datum
+/// Reward distribution data
 pub type RewardAccountDatum {
   /// Maps oracle node payment verification keys to their reward amounts.
   /// Each entry represents an individual node's accumulated rewards that can be claimed.
-  nodes_to_rewards: Pairs<PaymentVkh, Int>,
+  nodes_to_rewards: Pairs<FeedVkh, Int>,
+  /// The last time when rewards were distributed or UTxO was spent/updated
+  last_update_time: PosixTime,
 }
 
 // TODO consider removing PaymentVkh: that way operator uses FeedVkh to authorize collecting node rewards
