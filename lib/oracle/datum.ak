@@ -2,6 +2,7 @@ use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
+use cardano/transaction.{OutputReference}
 use ext/aiken/math/rational.{Percent, Permille}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
@@ -71,6 +72,20 @@ pub type Aggregation {
   message: AggregateMessage,
   node_reward_price: Int,
   rewards_amount_paid: Int,
+}
+
+/// Immutable NFT settings for oracle usage.
+/// Rationale for immutability:
+/// * utxo_ref - Ensures a unique policy ID for each oracle's NFT, preventing conflicts.
+/// * oracle_conf - Associates the NFT with a fixed oracle configuration, ensuring consistency.
+/// * oracle_script_hash - Links the NFT to a specific oracle script, maintaining a secure relationship.
+pub type NftsConfiguration {
+  /// A reference to the UTXO, guaranteeing a unique policy ID for the oracle's NFTs.
+  utxo_ref: OutputReference,
+  /// Defines parameters that the oracle will adhere to when using this validator.
+  oracle_conf: OracleConfiguration,
+  /// The hash of the oracle script ensuring a verifiable relationship between
+  oracle_script_hash: ScriptHash,
 }
 
 /// Immutable oracle settings.
