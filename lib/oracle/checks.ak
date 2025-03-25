@@ -18,7 +18,7 @@ use oracle/datum.{
   OracleConfiguration, OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
   PriceData, RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
 }
-use oracle/redeemer.{OdvAggregate, OracleRedeemer}
+use oracle/redeemer.{AddNodes, OdvAggregate, OracleRedeemer}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -487,32 +487,28 @@ pub fn check_reward_distribution(
   list.all(
     out_distribution,
     fn(Pair(out_feed_vkh, out_amount)) {
-      let maybe_allowed_feed_vkh =
-        nodes
-          |> list.find(
-              fn(Pair(allowed_feed_vkh, _)) { allowed_feed_vkh == out_feed_vkh },
-            )
-          |> option.map(fn(Pair(allowed_feed_vkh, _)) { allowed_feed_vkh })
-      when maybe_allowed_feed_vkh is {
+      let allowed_feed_vkh =
+        dict.from_ascending_pairs(nodes)
+          |> dict.has_key(out_feed_vkh)
+      if !allowed_feed_vkh {
         // Invalid payment VKH - not in the nodes list
-        None -> False
-        Some(existing_feed_vkh) -> {
-          // Determine expected reward based on whether this feed node was rewarded
-          let expected_reward =
-            if dict.has_key(rewarded_feed_dict, existing_feed_vkh) {
-              node_reward_price
-            } else {
-              0
-            }
-          // Get input amount, defaulting to 0 if not present
-          let in_amount =
-            dict.from_ascending_pairs(in_distribution)
-              |> dict.get(out_feed_vkh)
-              |> option.or_else(0)
-          // 0 since it's a new node
-          // Check if the output amount matches expected
-          in_amount + expected_reward == out_amount
-        }
+        False
+      } else {
+        // Determine expected reward based on whether this feed node was rewarded
+        let expected_reward =
+          if dict.has_key(rewarded_feed_dict, out_feed_vkh) {
+            node_reward_price
+          } else {
+            0
+          }
+        // Get input amount, defaulting to 0 if not present
+        let in_amount =
+          dict.from_ascending_pairs(in_distribution)
+            |> dict.get(out_feed_vkh)
+            |> option.or_else(0)
+        // 0 since it's a new node
+        // Check if the output amount matches expected
+        in_amount + expected_reward == out_amount
       }
     },
   )
@@ -703,11 +699,11 @@ pub fn check_platform_received_reward(
       fn(output_account) {
         let (oracle_datum, _) = output_account
         expect RewardAccount(RewardAccountDatum {
-          nodes_to_rewards: out_distribution,
-          last_update_time: last_time,
+          nodes_to_rewards,
+          last_update_time,
         }) = oracle_datum
         // Verify datum hasn't changed
-        out_distribution == in_account_datum.nodes_to_rewards && last_time == in_account_datum.last_update_time
+        nodes_to_rewards == in_account_datum.nodes_to_rewards && last_update_time == in_account_datum.last_update_time
       },
     )
 
@@ -728,27 +724,6 @@ pub fn check_platform_received_reward(
     }
 
   must_save_nodes_rewards && actual_reward > 0
-}
-
-pub fn check_added_nodes(
-  in_settings: OracleSettingsDatum,
-  out_settings: OracleSettingsDatum,
-) -> Bool {
-  trace @"T28"
-
-  let (deleted_nodes, added_nodes) =
-    list.foldl(out_settings.nodes, (in_settings.nodes, []), push_added_node)
-
-  let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
-  let must_not_break_multisig =
-    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= list.length(
-      out_settings.nodes,
-    )
-  let must_not_delete_nodes = deleted_nodes == []
-  let must_add_some_nodes = added_nodes != []
-
-  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_delete_nodes && must_add_some_nodes
 }
 
 fn push_deleted_node(
@@ -783,24 +758,39 @@ fn push_added_node(
   }
 }
 
-pub fn check_deleted_nodes(
+pub fn check_nodes_update(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
+  redeemer: OracleRedeemer,
 ) -> Bool {
-  trace @"T29"
+  trace @"T28"
 
   let (deleted_nodes, added_nodes) =
-    list.foldl(in_settings.nodes, ([], out_settings.nodes), push_deleted_node)
+    when redeemer is {
+      AddNodes ->
+        list.foldl(out_settings.nodes, (in_settings.nodes, []), push_added_node)
+      _ ->
+        list.foldl(
+          in_settings.nodes,
+          ([], out_settings.nodes),
+          push_deleted_node,
+        )
+    }
+
   let must_keep_other_settings_unchanged =
     in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
+
   let must_not_break_multisig =
     out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
       pairs.keys(out_settings.nodes),
     )
-  let must_not_add_nodes = added_nodes == []
-  let must_delete_some_nodes = deleted_nodes != []
 
-  must_keep_other_settings_unchanged && must_not_break_multisig && must_not_add_nodes && must_delete_some_nodes
+  when redeemer is {
+    AddNodes ->
+      must_keep_other_settings_unchanged && must_not_break_multisig && deleted_nodes == [] && added_nodes != []
+    _ ->
+      must_keep_other_settings_unchanged && must_not_break_multisig && deleted_nodes != [] && added_nodes == []
+  }
 }
 
 fn get_length_and_check_strict_order(node_ids_sorted: List<FeedVkh>) -> Int {

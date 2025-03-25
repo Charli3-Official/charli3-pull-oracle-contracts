@@ -129,7 +129,7 @@ pub type OracleSettingsDatum {
   pause_period_started_at: Option<PosixTime>,
 }
 
-/// Reward distribution data
+/// Reward distribution datum
 pub type RewardAccountDatum {
   /// Maps oracle node payment verification keys to their reward amounts.
   /// Each entry represents an individual node's accumulated rewards that can be claimed.

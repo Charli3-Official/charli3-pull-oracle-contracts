@@ -19,7 +19,7 @@ use config
 use ext/cardano/value.{Asset}
 use oracle/checks.{
   calculate_asset_net_change_with_default, calculate_minimum_fee_amount,
-  check_added_nodes, check_deleted_nodes, check_node_received_reward,
+  check_node_received_reward, check_nodes_update,
   check_pause_does_not_change_settings, check_platform_received_reward,
   check_reward_distribution, check_settings_sanity,
   check_utxo_size_safety_buffer, conserves_utxo_value, convert_reward_prices,
@@ -322,7 +322,8 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             validity_range,
           )
 
-        let must_have_current_time_as_timestamp = current_time == time_creation
+        let must_have_current_time_as_timestamp =
+          current_time == time_creation && current_time == out_account_datum.last_update_time
         let must_expire_in_liveness_period =
           time_expiration == current_time + core_datum.aggregation_liveness_period
 
@@ -499,7 +500,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
           in_value,
           out_value,
-        ) && check_added_nodes(in_core_datum, out_core_datum)
+        ) && check_nodes_update(in_core_datum, out_core_datum, AddNodes)
       }
       // :: DelNodes
       (DelNodes, OracleSettings(in_core_datum)) -> {
@@ -514,12 +515,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        let deleted_nodes = check_deleted_nodes(in_core_datum, out_core_datum)
-
         auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
           in_value,
           out_value,
-        ) && deleted_nodes
+        ) && check_nodes_update(in_core_datum, out_core_datum, DelNodes)
       }
       // :: ScaleDown
       (
