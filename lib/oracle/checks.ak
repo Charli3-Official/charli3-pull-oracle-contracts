@@ -516,33 +516,30 @@ pub fn check_reward_distribution(
 
 pub fn validate_message_form(message: AggregateMessage) -> Bool {
   trace @"T21"
-
-  let node_feeds = pairs.values(message.node_feeds_sorted_by_feed)
-
-  let length = get_length_and_check_order(node_feeds)
-
-  length == message.node_feeds_count
+  go_check_order_and_count(
+    pairs.values(message.node_feeds_sorted_by_feed),
+    0,
+    None,
+  ) == message.node_feeds_count
 }
 
-fn get_length_and_check_order(node_feeds_sorted: List<NodeFeed>) -> Int {
-  when node_feeds_sorted is {
-    [] -> 0
-    [x, ..xs] -> do_get_length_and_check_order(xs, 1, x)
-  }
-}
-
-fn do_get_length_and_check_order(
-  node_feeds_sorted: List<NodeFeed>,
-  n: Int,
-  prev: NodeFeed,
+fn go_check_order_and_count(
+  node_feeds: List<NodeFeed>,
+  count: Int,
+  prev_opt: Option<NodeFeed>,
 ) -> Int {
-  when node_feeds_sorted is {
-    [] -> n
-    [x, ..xs] ->
-      if prev <= x {
-        do_get_length_and_check_order(xs, n + 1, x)
-      } else {
-        fail @"E5"
+  when node_feeds is {
+    [] -> count
+    [curr, ..rest] ->
+      // Check ordering only if we have a previous value
+      when prev_opt is {
+        Some(prev) ->
+          if prev <= curr {
+            go_check_order_and_count(rest, count + 1, Some(curr))
+          } else {
+            fail @"E5"
+          }
+        None -> go_check_order_and_count(rest, count + 1, Some(curr))
       }
   }
 }
