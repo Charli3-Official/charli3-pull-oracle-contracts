@@ -108,8 +108,6 @@ pub type OracleConfiguration {
 pub type AggregateMessage {
   node_feeds_sorted_by_feed: Pairs<FeedVkh, NodeFeed>,
   node_feeds_count: Int,
-  /// Message creation time
-  last_update_time: PosixTime,
 }
 
 /// Mutable oracle settings
