@@ -89,10 +89,10 @@ pub type OracleConfiguration {
   fee_token: Option<Asset>,
 }
 
-pub type AggregateMessage {
-  node_feeds_sorted_by_feed: Pairs<FeedVkh, NodeFeed>,
-  node_feeds_count: Int,
-}
+/// Node id mapped to the corresponding node feed
+/// WARNING AggregateMessage mapping should be sorted ascendingly by NodeFeed, to use it with aikens dict.from_ascending_pairs
+pub type AggregateMessage =
+  Pairs<FeedVkh, NodeFeed>
 
 /// Mutable oracle settings
 pub type OracleSettingsDatum {
@@ -126,6 +126,7 @@ pub type OracleSettingsDatum {
 pub type RewardAccountDatum {
   /// Maps oracle node payment verification keys to their reward amounts.
   /// Each entry represents an individual node's accumulated rewards that can be claimed.
+  /// WARNING nodes_to_rewards mapping should be sorted ascendingly by FeedVkh, to use it with aikens dict.from_ascending_pairs
   nodes_to_rewards: Pairs<FeedVkh, Int>,
   /// The last time when rewards were distributed or UTxO was spent/updated
   last_update_time: PosixTime,

@@ -436,7 +436,8 @@ pub fn check_utxo_size_safety_buffer(
 }
 
 pub fn check_reward_distribution(
-  message: AggregateMessage,
+  node_feeds_sorted_by_feed: AggregateMessage,
+  node_feeds_count: Int,
   median: OracleFeed,
   node_reward_price: Int,
   in_distribution: Pairs<FeedVkh, Int>,
@@ -450,8 +451,8 @@ pub fn check_reward_distribution(
   let rewarded_feed_nodes =
     consensus_by_iqr_and_divergency(
       median,
-      message.node_feeds_sorted_by_feed,
-      message.node_feeds_count,
+      node_feeds_sorted_by_feed,
+      node_feeds_count,
       iqr_fence_multiplier,
       median_divergency_factor,
     )
@@ -493,13 +494,11 @@ pub fn check_reward_distribution(
   )
 }
 
-pub fn validate_message_form(message: AggregateMessage) -> Bool {
+pub fn validate_message_and_count_nodes(
+  node_feeds_sorted_by_feed: AggregateMessage,
+) -> Int {
   trace @"T21"
-  go_check_order_and_count(
-    pairs.values(message.node_feeds_sorted_by_feed),
-    0,
-    None,
-  ) == message.node_feeds_count
+  go_check_order_and_count(pairs.values(node_feeds_sorted_by_feed), 0, None)
 }
 
 fn go_check_order_and_count(

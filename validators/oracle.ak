@@ -28,7 +28,8 @@ use oracle/checks.{
   is_aggstate_expired, returns_empty_account_outputs,
   returns_empty_aggstate_outputs, spends_one_account_utxo_for_aggregation,
   spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
-  validate_dismissing_period, validate_message_form, validate_settings_form,
+  validate_dismissing_period, validate_message_and_count_nodes,
+  validate_settings_form,
 }
 use oracle/consensus
 use oracle/datum.{
@@ -336,10 +337,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         let must_not_be_paused = is_oracle_paused(core_datum) |> not
 
+        let node_feeds_count = validate_message_and_count_nodes(message)
         let median =
-          message.node_feeds_sorted_by_feed
+          message
             |> pairs.values
-            |> consensus.median(message.node_feeds_count)
+            |> consensus.median(node_feeds_count)
         let must_have_correct_median = median == price
 
         let fees_transferred =
@@ -357,11 +359,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           )
 
         let minimum_fee_amount =
-          calculate_minimum_fee_amount(reward_prices, message.node_feeds_count)
+          calculate_minimum_fee_amount(reward_prices, node_feeds_count)
         let must_transfer_oracle_fees = fees_transferred >= minimum_fee_amount
 
-        validate_message_form(message) && check_nodes_multisig(
-          message.node_feeds_sorted_by_feed,
+        check_nodes_multisig(
+          message,
           extra_signatories,
           core_datum.nodes,
           core_datum.required_node_signatures_count,
@@ -370,6 +372,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           out_value,
         ) && check_reward_distribution(
           message,
+          node_feeds_count,
           median,
           reward_prices.node_fee,
           in_account_datum.nodes_to_rewards,

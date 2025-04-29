@@ -126,7 +126,7 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 * T18 - convert_reward_prices;
 * T19 - oracle_fees_were_transferred;
 * T20 - check_reward_distribution;
-* T21 - validate_message_form;
+* T21 - validate_message_and_count_nodes;
 * T22 - check_settings_sanity;
 * T23 - conserves_utxo_value;
 * T24 - check_closing_does_not_change_settings;
