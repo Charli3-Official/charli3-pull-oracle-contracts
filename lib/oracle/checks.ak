@@ -488,7 +488,7 @@ pub fn check_reward_distribution(
             |> option.or_else(0)
         // 0 since it's a new node
         // Check if the output amount matches expected
-        in_amount + expected_reward == out_amount
+        in_amount + expected_reward == out_amount && out_amount > 0
       }
     },
   )
