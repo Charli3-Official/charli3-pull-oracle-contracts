@@ -58,22 +58,6 @@ pub type OracleDatum {
   RewardAccount(RewardAccountDatum)
 }
 
-/// RewardTransport utxo can be in two states:
-/// 1. NoRewards - waiting for user to submit tx with OdvAggregate redeemer;
-/// 2. RewardConsensusPending - waiting to calculate aggregation reward distribution
-///    and transfer user provided fees into RewardAccount utxo.
-pub type RewardTransportDatum {
-  NoRewards
-  RewardConsensusPending(Aggregation)
-}
-
-pub type Aggregation {
-  oracle_feed: OracleFeed,
-  message: AggregateMessage,
-  node_reward_price: Int,
-  rewards_amount_paid: Int,
-}
-
 /// Immutable NFT settings for oracle usage.
 /// Rationale for immutability:
 /// * utxo_ref - Ensures a unique policy ID for each oracle's NFT, preventing conflicts.

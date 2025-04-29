@@ -14,7 +14,7 @@ use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
 use oracle/consensus.{consensus_by_iqr_and_divergency}
 use oracle/datum.{
-  AggState, AggregateMessage, Aggregation, FeedVkh, GenericData, NodeFeed, Nodes,
+  AggState, AggregateMessage, FeedVkh, GenericData, NodeFeed, Nodes,
   OracleConfiguration, OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
   PriceData, RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
 }
@@ -433,27 +433,6 @@ pub fn check_utxo_size_safety_buffer(
   let out_lovelace = assets.lovelace_of(out_value)
 
   out_lovelace >= utxo_size_safety_buffer
-}
-
-pub fn oracle_fees_were_transferred(
-  fee_token: Option<Asset>,
-  aggregations: List<Aggregation>,
-  in_value: Value,
-  out_value: Value,
-  utxo_size_safety_buffer: Int,
-) -> Bool {
-  trace @"T19"
-
-  let actual_fee =
-    calculate_asset_net_change_with_default(fee_token, in_value, out_value)
-  let required_fee =
-    list.foldr(
-      aggregations,
-      0,
-      fn(aggregation, acc) { acc + aggregation.rewards_amount_paid },
-    )
-
-  check_utxo_size_safety_buffer(utxo_size_safety_buffer, out_value) && actual_fee >= required_fee
 }
 
 pub fn check_reward_distribution(
