@@ -18,7 +18,10 @@ use oracle/datum.{
   OracleConfiguration, OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
   PriceData, RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
 }
-use oracle/redeemer.{AddNodes, DismissRewards, OdvAggregate, OracleRedeemer}
+use oracle/redeemer.{
+  AddNodes, DismissRewards, OdvAggregate, OracleRedeemer, RedeemRewards,
+  RewardRedeemer,
+}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -255,52 +258,64 @@ pub fn count_dismissed_reward_accounts(
   list.length(acc_inputs)
 }
 
-pub fn find_in_reward_accounts(
+pub fn check_reward_accounts_in_to_out_mapping(
   tx_inputs: List<Input>,
+  tx_outputs: List<Output>,
   tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
   script_hash: ScriptHash,
   protocol_token: Asset,
-  redeemer: OracleRedeemer,
-) -> Int {
+  reward_redeemer: RewardRedeemer,
+) -> Bool {
   trace @"T15"
 
-  let inputs =
+  let acc_inputs =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
-
-  let as_data: Data = redeemer
-  let refs = list.map(inputs, fn(i) { i.output_reference })
-  let must_have_correct_redeemers =
-    list.all(
-      refs,
-      fn(ref) {
+  let out_refs =
+    list.map(
+      acc_inputs,
+      fn(i) {
+        let ref = i.output_reference
         expect Some(r) = pairs.get_first(tx_redeemers, tx.Spend(ref))
-        r == as_data
+        expect redeemer: OracleRedeemer = r
+        expect RedeemRewards { collector, corresponding_out_ix } = redeemer
+        expect collector == reward_redeemer
+        corresponding_out_ix
       },
     )
-  expect must_have_correct_redeemers
-  let extractor =
-    fn(input: Input, acc: List<RewardAccountDatum>) -> List<RewardAccountDatum> {
-      expect tx.InlineDatum(datum) = input.output.datum
-      expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(reward_account_datum) = oracle_datum
-      // Check if this datum is already in the accumulator
-      let exists =
-        list.any(
-          acc,
-          fn(existing_datum) { existing_datum == reward_account_datum },
-        )
-      if exists {
-        // Skip duplicates
-        acc
-      } else {
-        // Add unique datum to accumulator
-        [reward_account_datum, ..acc]
+  let acc_inputs_count = get_length_and_check_strict_order(out_refs)
+
+  let acc_outputs =
+    find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
+
+  acc_inputs_count == list.length(acc_outputs)
+}
+
+pub fn get_length_and_check_strict_order(ints_sorted: List<Int>) -> Int {
+  trace @"T21"
+
+  go_get_length_and_check_strict_order(ints_sorted, 0, None)
+}
+
+fn go_get_length_and_check_strict_order(
+  ints_sorted: List<Int>,
+  count: Int,
+  prev_opt: Option<Int>,
+) -> Int {
+  when ints_sorted is {
+    [] -> count
+    [curr, ..rest] ->
+      // Check ordering only if we have a previous value
+      when prev_opt is {
+        Some(prev) ->
+          if prev < curr {
+            go_get_length_and_check_strict_order(rest, count + 1, Some(curr))
+          } else {
+            fail @"E5"
+          }
+        None ->
+          go_get_length_and_check_strict_order(rest, count + 1, Some(curr))
       }
-    }
-  // Get unique reward accounts
-  let unique_accounts = list.foldr(inputs, [], extractor)
-  // Return the count of unique accounts
-  list.length(unique_accounts)
+  }
 }
 
 pub fn does_not_produce_own_nft_outputs(
@@ -580,7 +595,7 @@ pub fn check_pause_does_not_change_settings(
 pub fn find_node_by_signature(
   tx_signatories: List<VerificationKeyHash>,
   nodes: Nodes,
-) -> Option<FeedVkh> {
+) -> FeedVkh {
   trace @"T25"
 
   let maybe_node =
@@ -589,66 +604,47 @@ pub fn find_node_by_signature(
       fn(Pair(_, payment_vkh)) { list.has(tx_signatories, payment_vkh) },
     )
 
-  maybe_node |> option.map(fn(Pair(feed_vkh, _)) { feed_vkh })
+  expect Some(Pair(feed_vkh, _)) = maybe_node
+  feed_vkh
 }
 
 pub fn check_node_received_reward(
   fee_token: Option<Asset>,
-  maybe_feed_vkh: Option<FeedVkh>,
+  node_id: FeedVkh,
   in_distribution: RewardAccountDatum,
   in_value: Value,
-  reward_output_accounts: List<(OracleDatum, Value)>,
+  reward_account_output: Output,
 ) -> Bool {
   trace @"T26"
+
   // Check if the feed VKH exists
-  when maybe_feed_vkh is {
-    None -> False
-    Some(feed_vkh) -> {
-      // Find the reward amount directly in input distribution
-      let in_distribution_dict =
-        dict.from_ascending_pairs(in_distribution.nodes_to_rewards)
-      when dict.get(in_distribution_dict, feed_vkh) is {
-        None -> False
-        Some(required_reward) ->
-          if required_reward <= 0 {
-            False
-          } else {
-            // Find the matching output account
-            list.any(
-              reward_output_accounts,
-              fn(reward_output_account) {
-                expect (
-                  RewardAccount(RewardAccountDatum {
-                    nodes_to_rewards,
-                    last_update_time,
-                  }),
-                  out_value,
-                ) = reward_output_account
-                let out_distribution_dict =
-                  dict.from_ascending_pairs(nodes_to_rewards)
-                // Ensure that feed_vkh does NOT exist in out_distribution.
-                // The node must withdraw all rewards and remove it from the out_distribution.
-                if dict.has_key(out_distribution_dict, feed_vkh) {
-                  False
-                } else {
-                  // Calculate actual reward received
-                  let actual_reward =
-                    calculate_asset_net_change_with_default(
-                      fee_token,
-                      in_value,
-                      out_value,
-                    )
-                      |> fn(v) { -v }
-                  // Remove the rewarded node from the input and compare the resulting lists.
-                  // Ensure the required reward matches the actual reward.
-                  // The last time update must remain unchanged during this transaction.
-                  dict.delete(in_distribution_dict, feed_vkh) == out_distribution_dict && required_reward == actual_reward && last_update_time == in_distribution.last_update_time
-                }
-              },
-            )
-          }
-      }
-    }
+  // Find the reward amount directly in input distribution
+  let in_distribution_dict =
+    dict.from_ascending_pairs(in_distribution.nodes_to_rewards)
+  expect Some(required_reward) = dict.get(in_distribution_dict, node_id)
+  expect required_reward > 0
+
+  // Read and validate reward account output
+  expect tx.InlineDatum(datum) = reward_account_output.datum
+  expect oracle_datum: OracleDatum = datum
+  expect RewardAccount(RewardAccountDatum { nodes_to_rewards, last_update_time }) =
+    oracle_datum
+  let out_value = reward_account_output.value
+
+  let out_distribution_dict = dict.from_ascending_pairs(nodes_to_rewards)
+  // Ensure that node_id does NOT exist in out_distribution.
+  // The node must withdraw all rewards and remove it from the out_distribution.
+  if dict.has_key(out_distribution_dict, node_id) {
+    False
+  } else {
+    // Calculate actual reward received
+    let actual_reward =
+      calculate_asset_net_change_with_default(fee_token, in_value, out_value)
+        |> fn(v) { -v }
+    // Remove the rewarded node from the input and compare the resulting lists.
+    // Ensure the required reward matches the actual reward.
+    // The last time update must remain unchanged during this transaction.
+    dict.delete(in_distribution_dict, node_id) == out_distribution_dict && required_reward == actual_reward && last_update_time == in_distribution.last_update_time
   }
 }
 
@@ -657,7 +653,7 @@ pub fn check_platform_received_reward(
   utxo_size_safety_buffer: Int,
   in_account_datum: RewardAccountDatum,
   in_value: Value,
-  reward_output_accounts: List<(OracleDatum, Value)>,
+  reward_account_output: Output,
 ) -> Bool {
   trace @"T27"
 
@@ -672,21 +668,14 @@ pub fn check_platform_received_reward(
   let in_total_rewards =
     calculate_asset_quantity_with_default(in_value, fee_token)
 
-  // The output rewards should be in the reward output accounts
-  // Find output with matching datum (no changes allowed)
-  expect Some((_, out_value)) =
-    list.find(
-      reward_output_accounts,
-      fn(output_account) {
-        let (oracle_datum, _) = output_account
-        expect RewardAccount(RewardAccountDatum {
-          nodes_to_rewards,
-          last_update_time,
-        }) = oracle_datum
-        // Verify datum hasn't changed
-        nodes_to_rewards == in_account_datum.nodes_to_rewards && last_update_time == in_account_datum.last_update_time
-      },
-    )
+  // Read and validate reward account output
+  expect tx.InlineDatum(datum) = reward_account_output.datum
+  expect oracle_datum: OracleDatum = datum
+  expect RewardAccount(RewardAccountDatum { nodes_to_rewards, last_update_time }) =
+    oracle_datum
+  expect
+    nodes_to_rewards == in_account_datum.nodes_to_rewards && last_update_time == in_account_datum.last_update_time
+  let out_value = reward_account_output.value
 
   let out_total_rewards =
     calculate_asset_quantity_with_default(out_value, fee_token)
@@ -762,7 +751,7 @@ pub fn check_nodes_update(
     in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
 
   let must_not_break_multisig =
-    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_strict_order(
+    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_feed_vkh_order(
       pairs.keys(out_settings.nodes),
     )
 
@@ -774,14 +763,14 @@ pub fn check_nodes_update(
   }
 }
 
-fn get_length_and_check_strict_order(node_ids_sorted: List<FeedVkh>) -> Int {
+fn get_length_and_check_feed_vkh_order(node_ids_sorted: List<FeedVkh>) -> Int {
   when node_ids_sorted is {
     [] -> 0
-    [x, ..xs] -> do_get_length_and_check_strict_order(xs, 1, x)
+    [x, ..xs] -> do_get_length_and_check_feed_vkh_order(xs, 1, x)
   }
 }
 
-fn do_get_length_and_check_strict_order(
+fn do_get_length_and_check_feed_vkh_order(
   node_ids_sorted: List<FeedVkh>,
   n: Int,
   prev: FeedVkh,
@@ -790,7 +779,7 @@ fn do_get_length_and_check_strict_order(
     [] -> n
     [x, ..xs] ->
       if builtin.less_than_bytearray(prev, x) {
-        do_get_length_and_check_strict_order(xs, n + 1, x)
+        do_get_length_and_check_feed_vkh_order(xs, n + 1, x)
       } else {
         fail @"E6"
       }

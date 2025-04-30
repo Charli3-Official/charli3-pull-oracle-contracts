@@ -25,8 +25,7 @@ pub type MintingRedeemer {
 pub type OracleRedeemer {
   OdvAggregate(AggregateMessage)
   OdvAggregateMsg
-  NodeCollect
-  PlatformCollect
+  RedeemRewards { collector: RewardRedeemer, corresponding_out_ix: Int }
   UpdateSettings
   AddNodes
   DelNodes
@@ -35,4 +34,11 @@ pub type OracleRedeemer {
   PauseOracle
   ResumeOracle
   RemoveOracle
+}
+
+/// Distinguishes between different redeemer types who can collect oracle fees.
+/// See RedeemRewards constructor, which also points to corresponding output index.
+pub type RewardRedeemer {
+  NodeCollect
+  PlatformCollect
 }
