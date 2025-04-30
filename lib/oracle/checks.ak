@@ -18,7 +18,7 @@ use oracle/datum.{
   OracleConfiguration, OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
   PriceData, RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
 }
-use oracle/redeemer.{AddNodes, OdvAggregate, OracleRedeemer}
+use oracle/redeemer.{AddNodes, DismissRewards, OdvAggregate, OracleRedeemer}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -229,6 +229,32 @@ pub fn find_in_datum(
   oracle_datum
 }
 
+pub fn count_dismissed_reward_accounts(
+  tx_inputs: List<Input>,
+  tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
+  script_hash: ScriptHash,
+  protocol_token: Asset,
+) -> Int {
+  trace @"T15"
+
+  let acc_inputs =
+    find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
+
+  let as_data: Data = DismissRewards
+  let refs = list.map(acc_inputs, fn(i) { i.output_reference })
+  let must_have_correct_redeemers =
+    list.all(
+      refs,
+      fn(ref) {
+        expect Some(r) = pairs.get_first(tx_redeemers, tx.Spend(ref))
+        r == as_data
+      },
+    )
+  expect must_have_correct_redeemers
+
+  list.length(acc_inputs)
+}
+
 pub fn find_in_reward_accounts(
   tx_inputs: List<Input>,
   tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
@@ -275,26 +301,6 @@ pub fn find_in_reward_accounts(
   let unique_accounts = list.foldr(inputs, [], extractor)
   // Return the count of unique accounts
   list.length(unique_accounts)
-}
-
-pub fn find_out_reward_accounts(
-  tx_outputs: List<Output>,
-  script_hash: ScriptHash,
-  protocol_token: Asset,
-) -> Int {
-  trace @"T15"
-
-  let outputs =
-    find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
-
-  let extractor =
-    fn(output: Output, acc: Int) -> Int {
-      expect tx.InlineDatum(datum) = output.datum
-      expect oracle_datum: OracleDatum = datum
-      expect RewardAccount(RewardAccountDatum { .. }) = oracle_datum
-      acc + 1
-    }
-  list.foldr(outputs, 0, extractor)
 }
 
 pub fn does_not_produce_own_nft_outputs(

@@ -22,8 +22,8 @@ use oracle/checks.{
   check_pause_does_not_change_settings, check_platform_received_reward,
   check_reward_distribution, check_settings_sanity,
   check_utxo_size_safety_buffer, conserves_utxo_value, convert_reward_prices,
-  does_not_produce_own_nft_outputs, find_in_reward_accounts,
-  find_node_by_signature, find_out_datum_and_value,
+  count_dismissed_reward_accounts, does_not_produce_own_nft_outputs,
+  find_in_reward_accounts, find_node_by_signature, find_out_datum_and_value,
   find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
   is_aggstate_expired, returns_empty_account_outputs,
   returns_empty_aggstate_outputs, spends_one_account_utxo_for_aggregation,
@@ -590,12 +590,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
         let total_input_accounts =
-          find_in_reward_accounts(
+          count_dismissed_reward_accounts(
             inputs,
             redeemers,
             own_hash,
             reward_acc_nft,
-            DismissRewards,
           )
 
         let must_return_empty_reward_acc_utxos =
