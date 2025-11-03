@@ -1,4 +1,4 @@
-use oracle/datum.{AggregateMessage}
+use core/datum.{AggregateMessage}
 
 /// Types of actions for Oracle NFTs (protocol tokens)
 /// * MintToken  - Oracle start: one time mint for CoreSettings and RewardAccount; any number of mints for RewardTransport and AggState
@@ -14,25 +14,35 @@ pub type MintingRedeemer {
 /// * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain
 /// * NodeCollect - oracle node collects rewards
 /// * PlatformCollect - oracle platform collects rewards
-/// * UpdateSettings - oracle platform changes consensus, timing or fee settings
-/// * AddNodes - oracle platform adds new nodes
-/// * DelNodes - oracle platform deletes nodes
+/// * ManageSettings - oracle platform updates configuration:
+///   - UpdateSettings changes consensus, timing or fee settings
+///   - AddNodes adds new operators
+///   - DelNodes removes operators
 /// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
 /// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
-/// * PauseOracle - oracle platform starts pause period, when nodes can still calculate disregarded rewards
-/// * ResumeOracle - redeemer for cancelling oracle pause, so that platform can suspend oracle operation only temporarily
+/// * PauseControl - oracle platform toggles pause state:
+///   - PauseOracle starts pause period so nodes can finalise pending rewards
+///   - ResumeOracle cancels pause, resuming normal operation
 /// * RemoveOracle - oracle pause period ends and platform destroys all UTxOs and all NFTs
+pub type SettingsRedeemer {
+  UpdateSettings
+  AddNodes
+  DelNodes
+}
+
+pub type PauseRedeemer {
+  PauseOracle
+  ResumeOracle
+}
+
 pub type OracleRedeemer {
   OdvAggregate(AggregateMessage)
   OdvAggregateMsg
   RedeemRewards { collector: RewardRedeemer, corresponding_out_ix: Int }
-  UpdateSettings
-  AddNodes
-  DelNodes
+  ManageSettings(SettingsRedeemer)
+  PauseControl(PauseRedeemer)
   ScaleDown
   DismissRewards
-  PauseOracle
-  ResumeOracle
   RemoveOracle
 }
 

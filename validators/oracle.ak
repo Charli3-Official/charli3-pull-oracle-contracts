@@ -15,8 +15,7 @@ use cardano/script_context.{ScriptContext}
 use cardano/transaction.{OutputReference, Transaction}
 use cardano/transaction as tx
 use config
-use ext/cardano/value.{Asset}
-use oracle/checks.{
+use core/checks.{
   calculate_asset_net_change_with_default, calculate_minimum_fee_amount,
   check_node_received_reward, check_nodes_update,
   check_pause_does_not_change_settings, check_platform_received_reward,
@@ -31,19 +30,20 @@ use oracle/checks.{
   validate_dismissing_period, validate_message_and_count_nodes,
   validate_settings_form,
 }
-use oracle/consensus
-use oracle/datum.{
+use core/consensus
+use core/datum.{
   AggState, GenericData, NftsConfiguration, OracleConfiguration, OracleDatum,
   OracleSettings, OracleSettingsDatum, RewardAccount, RewardAccountDatum,
   is_oracle_paused,
 }
-use oracle/multisig.{check_nodes_multisig}
-use oracle/redeemer.{
-  AddNodes, BurnToken, DelNodes, DismissRewards, MintToken, MintingRedeemer,
-  NodeCollect, OdvAggregate, OdvAggregateMsg, OracleRedeemer, PauseOracle,
-  PlatformCollect, RedeemRewards, RemoveOracle, ResumeOracle, ScaleDown,
-  ScaleToken, UpdateSettings,
+use core/multisig.{check_nodes_multisig}
+use core/redeemer.{
+  AddNodes, BurnToken, DelNodes, DismissRewards, ManageSettings, MintToken,
+  MintingRedeemer, NodeCollect, OdvAggregate, OdvAggregateMsg, OracleRedeemer,
+  PauseControl, PauseOracle, PlatformCollect, RedeemRewards, RemoveOracle,
+  ResumeOracle, ScaleDown, ScaleToken, UpdateSettings,
 }
+use ext/cardano/value.{Asset}
 use services/nft_based_auth.{auth_by_nft}
 use services/protocol_token.{find_own_protocol_policy_id}
 use services/time.{get_current_time}
@@ -364,6 +364,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
         check_nodes_multisig(
           message,
+          node_feeds_count,
           extra_signatories,
           core_datum.nodes,
           core_datum.required_node_signatures_count,
@@ -382,7 +383,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           core_datum.median_divergency_factor,
         ) && must_spend_only_one_aggstate_input && must_have_current_time_as_timestamp && must_expire_in_liveness_period && must_not_be_paused && must_have_correct_median && must_transfer_oracle_fees
       }
-
       // :: RedeemRewards
       (
         RedeemRewards { collector, corresponding_out_ix },
@@ -435,12 +435,13 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
               in_account_datum,
               in_value,
               reward_acc_output,
+              core_datum.utxo_size_safety_buffer,
             )
         }
       }
 
-      // :: UpdateSettings
-      (UpdateSettings, OracleSettings(in_core_datum)) -> {
+      // :: ManageSettings
+      (ManageSettings(action), OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
@@ -452,46 +453,18 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
-          in_value,
-          out_value,
-        ) && check_settings_sanity(oracle_conf, in_core_datum, out_core_datum)
-      }
-      // :: AddNodes
-      (AddNodes, OracleSettings(in_core_datum)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
+        let shared_checks =
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
+            in_value,
+            out_value,
+          )
 
-        expect [(OracleSettings(out_core_datum), out_value)] =
-          find_out_datum_and_value(outputs, own_hash, core_nft)
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
-          in_value,
-          out_value,
-        ) && check_nodes_update(in_core_datum, out_core_datum, AddNodes)
-      }
-      // :: DelNodes
-      (DelNodes, OracleSettings(in_core_datum)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-
-        expect [(OracleSettings(out_core_datum), out_value)] =
-          find_out_datum_and_value(outputs, own_hash, core_nft)
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
-          in_value,
-          out_value,
-        ) && check_nodes_update(in_core_datum, out_core_datum, DelNodes)
+        shared_checks && when action is {
+          UpdateSettings ->
+            check_settings_sanity(oracle_conf, in_core_datum, out_core_datum)
+          AddNodes -> check_nodes_update(in_core_datum, out_core_datum, action)
+          DelNodes -> check_nodes_update(in_core_datum, out_core_datum, action)
+        }
       }
       // :: ScaleDown
       (
@@ -575,8 +548,8 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           oracle_conf.reward_dismissing_period_length,
         )
       }
-      // :: PauseOracle
-      (PauseOracle, OracleSettings(in_core_datum)) -> {
+      // :: PauseControl
+      (PauseControl(action), OracleSettings(in_core_datum)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.core_settings_token_name)
         let core_nft =
@@ -585,45 +558,39 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             name: config.core_settings_token_name,
           }
 
-        let must_not_be_paused_already = is_oracle_paused(in_core_datum) |> not
-
         expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        let current_time =
-          get_current_time(
-            in_core_datum.time_uncertainty_platform,
-            validity_range,
+        let shared_checks =
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
+            in_value,
+            out_value,
+          ) && check_pause_does_not_change_settings(
+            in_core_datum,
+            out_core_datum,
           )
-        let must_start_pause_period =
-          out_core_datum.pause_period_started_at == Some(current_time)
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
-          in_value,
-          out_value,
-        ) && check_pause_does_not_change_settings(in_core_datum, out_core_datum) && must_not_be_paused_already && must_start_pause_period
-      }
-      // :: ResumeOracle
-      (ResumeOracle, OracleSettings(in_core_datum)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
+        shared_checks && when action is {
+          PauseOracle -> {
+            let must_not_be_paused_already =
+              is_oracle_paused(in_core_datum) |> not
+            let current_time =
+              get_current_time(
+                in_core_datum.time_uncertainty_platform,
+                validity_range,
+              )
+            let must_start_pause_period =
+              out_core_datum.pause_period_started_at == Some(current_time)
+
+            must_not_be_paused_already && must_start_pause_period
           }
+          ResumeOracle -> {
+            let must_be_paused = is_oracle_paused(in_core_datum)
+            let must_resume_oracle = is_oracle_paused(out_core_datum) |> not
 
-        let must_be_paused = is_oracle_paused(in_core_datum)
-
-        expect [(OracleSettings(out_core_datum), out_value)] =
-          find_out_datum_and_value(outputs, own_hash, core_nft)
-
-        let must_resume_oracle = is_oracle_paused(out_core_datum) |> not
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
-          in_value,
-          out_value,
-        ) && check_pause_does_not_change_settings(in_core_datum, out_core_datum) && must_be_paused && must_resume_oracle
+            must_be_paused && must_resume_oracle
+          }
+        }
       }
       // :: RemoveOracle
       (RemoveOracle, RewardAccount(RewardAccountDatum { .. })) -> {

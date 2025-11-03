@@ -124,7 +124,7 @@ pub type OracleSettingsDatum {
 
 /// Reward distribution datum
 pub type RewardAccountDatum {
-  /// Maps oracle node payment verification keys to their reward amounts.
+  /// Maps oracle node feed verification keys to their reward amounts.
   /// Each entry represents an individual node's accumulated rewards that can be claimed.
   /// WARNING nodes_to_rewards mapping should be sorted ascendingly by FeedVkh, to use it with aikens dict.from_ascending_pairs
   nodes_to_rewards: Pairs<FeedVkh, Int>,
@@ -132,21 +132,11 @@ pub type RewardAccountDatum {
   last_update_time: PosixTime,
 }
 
-// TODO consider removing PaymentVkh: that way operator uses FeedVkh to authorize collecting node rewards
-// and pays tx fees from other address which is not known to the validator
-/// An oracle node has two keys:
-/// 1. FeedVkh - for verification of node feed inside the AggregateMessage.
-///    Node operator does not store any kind of funds on this key, it's only for signing.
-/// 2. PaymentVkh - exists only for node operator convenience:
-///    so that he can pay tx fees and collect node rewards using one vkh.
-/// WARNING nodes mapping should be sorted ascendingly by FeedVkh, to use it with aikens dict.from_ascending_pairs
+/// WARNING nodes list should be sorted ascendingly by FeedVkh
 pub type Nodes =
-  Pairs<FeedVkh, PaymentVkh>
+  List<FeedVkh>
 
 pub type FeedVkh =
-  VerificationKeyHash
-
-pub type PaymentVkh =
   VerificationKeyHash
 
 pub type FeeConfig {

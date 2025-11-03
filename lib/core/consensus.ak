@@ -3,8 +3,8 @@ use aiken/collection/list
 use aiken/collection/pairs
 use aiken/math/rational
 use config
+use core/datum.{FeedVkh, NodeFeed, OracleFeed}
 use ext/aiken/math/rational.{Percent, Permille, per_mille} as ext
-use oracle/datum.{FeedVkh, NodeFeed, OracleFeed}
 use services/iqr.{iqr_fence, quantile}
 
 pub fn median(

@@ -2,26 +2,26 @@ use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/collection/pairs
-use aiken/crypto.{ScriptHash, VerificationKeyHash}
+use aiken/crypto.{ScriptHash}
 use aiken/interval
 use aiken/math/rational
 use aiken/option.{is_some}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{Input,
   Output, Redeemer, ScriptPurpose, ValidityRange} as tx
+use core/consensus.{consensus_by_iqr_and_divergency}
+use core/datum.{
+  AggState, AggregateMessage, FeedVkh, GenericData, NodeFeed, Nodes,
+  OracleConfiguration, OracleDatum, OracleFeed, OracleSettingsDatum, PriceData,
+  RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
+}
+use core/redeemer.{
+  AddNodes, DelNodes, DismissRewards, OdvAggregate, OracleRedeemer,
+  RedeemRewards, RewardRedeemer, SettingsRedeemer, UpdateSettings,
+}
 use ext/aiken/math/rational.{Percent, Permille, coin_precision} as ext
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
-use oracle/consensus.{consensus_by_iqr_and_divergency}
-use oracle/datum.{
-  AggState, AggregateMessage, FeedVkh, GenericData, NodeFeed, Nodes,
-  OracleConfiguration, OracleDatum, OracleFeed, OracleSettingsDatum, PaymentVkh,
-  PriceData, RewardAccount, RewardAccountDatum, RewardPrices, get_price_data,
-}
-use oracle/redeemer.{
-  AddNodes, DismissRewards, OdvAggregate, OracleRedeemer, RedeemRewards,
-  RewardRedeemer,
-}
 use services/protocol_token.{
   find_script_inputs_by_token, find_script_outputs_by_token,
   find_script_outputs_by_token_allowing_asset,
@@ -468,7 +468,6 @@ pub fn check_reward_distribution(
   median_divergency_factor: Permille,
 ) -> Bool {
   trace @"T20"
-  // Compute rewarded feed nodes first, as this is needed for validation
   let rewarded_feed_nodes =
     consensus_by_iqr_and_divergency(
       median,
@@ -477,42 +476,66 @@ pub fn check_reward_distribution(
       iqr_fence_multiplier,
       median_divergency_factor,
     )
-  // Create a set of rewarded feed VKHs - using a map for O(n) lookups
   let rewarded_feed_dict =
     list.foldr(
       rewarded_feed_nodes,
       dict.empty,
       fn(feed_vkh, acc) { dict.insert(acc, feed_vkh, True) },
     )
-  // Process all records in a single pass to avoid creating of intermediate data structures
-  list.all(
-    out_distribution,
-    fn(Pair(out_feed_vkh, out_amount)) {
-      let allowed_feed_vkh =
-        dict.from_ascending_pairs(nodes)
-          |> dict.has_key(out_feed_vkh)
-      if !allowed_feed_vkh {
-        // Invalid payment VKH - not in the nodes list
-        False
-      } else {
-        // Determine expected reward based on whether this feed node was rewarded
-        let expected_reward =
-          if dict.has_key(rewarded_feed_dict, out_feed_vkh) {
-            node_reward_price
-          } else {
-            0
+  let in_distribution_dict = dict.from_ascending_pairs(in_distribution)
+
+  let (is_valid, remaining_rewarded, remaining_inputs, _) =
+    list.foldl(
+      out_distribution,
+      (True, rewarded_feed_dict, in_distribution_dict, nodes),
+      fn(Pair(out_feed_vkh, out_amount), state) {
+        let (ok, acc_rewarded, acc_inputs, remaining_allowed) = state
+        if !ok {
+          state
+        } else {
+          when consume_allowed_feed(remaining_allowed, out_feed_vkh) is {
+            None -> (False, acc_rewarded, acc_inputs, remaining_allowed)
+            Some(next_allowed) -> {
+              let (base_amount, next_inputs) =
+                when dict.get(acc_inputs, out_feed_vkh) is {
+                  None -> (0, acc_inputs)
+                  Some(amount) ->
+                    (amount, dict.delete(acc_inputs, out_feed_vkh))
+                }
+              let (expected_reward, next_rewarded) =
+                if dict.has_key(acc_rewarded, out_feed_vkh) {
+                  (node_reward_price, dict.delete(acc_rewarded, out_feed_vkh))
+                } else {
+                  (0, acc_rewarded)
+                }
+              let expected_amount = base_amount + expected_reward
+
+              if expected_amount == out_amount && out_amount > 0 {
+                (True, next_rewarded, next_inputs, next_allowed)
+              } else {
+                (False, acc_rewarded, acc_inputs, remaining_allowed)
+              }
+            }
           }
-        // Get input amount, defaulting to 0 if not present
-        let in_amount =
-          dict.from_ascending_pairs(in_distribution)
-            |> dict.get(out_feed_vkh)
-            |> option.or_else(0)
-        // 0 since it's a new node
-        // Check if the output amount matches expected
-        in_amount + expected_reward == out_amount && out_amount > 0
+        }
+      },
+    )
+
+  is_valid && dict.size(remaining_rewarded) == 0 && dict.size(remaining_inputs) == 0
+}
+
+fn consume_allowed_feed(nodes: Nodes, feed: FeedVkh) -> Option<Nodes> {
+  when nodes is {
+    [] -> None
+    [candidate, ..rest] ->
+      if builtin.less_than_bytearray(candidate, feed) {
+        consume_allowed_feed(rest, feed)
+      } else if candidate == feed {
+        Some(rest)
+      } else {
+        None
       }
-    },
-  )
+  }
 }
 
 pub fn validate_message_and_count_nodes(
@@ -592,20 +615,34 @@ pub fn check_pause_does_not_change_settings(
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.median_divergency_factor == out_core_datum.median_divergency_factor && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_uncertainty_platform == out_core_datum.time_uncertainty_platform && in_core_datum.time_uncertainty_aggregation == out_core_datum.time_uncertainty_aggregation
 }
 
-pub fn find_node_by_signature(
-  tx_signatories: List<VerificationKeyHash>,
-  nodes: Nodes,
-) -> FeedVkh {
+pub fn find_node_by_signature(tx_signatories: List<a>, nodes: List<a>) -> a {
   trace @"T25"
 
-  let maybe_node =
-    list.find(
-      nodes,
-      fn(Pair(_, payment_vkh)) { list.has(tx_signatories, payment_vkh) },
-    )
+  when tx_signatories is {
+    [signer] ->
+      list.find(nodes, fn(node_operator) { signer == node_operator })
+        |> option.or_else(fail)
+    _ -> fail
+  }
+}
 
-  expect Some(Pair(feed_vkh, _)) = maybe_node
-  feed_vkh
+fn remove_reward_entry(
+  entries: Pairs<FeedVkh, Int>,
+  target: FeedVkh,
+) -> Option<Pair<Int, Pairs<FeedVkh, Int>>> {
+  when entries is {
+    [] -> None
+    [Pair(node, amount), ..rest] ->
+      if node == target {
+        Some(Pair(amount, rest))
+      } else {
+        when remove_reward_entry(rest, target) is {
+          Some(Pair(found, remaining)) ->
+            Some(Pair(found, [Pair(node, amount), ..remaining]))
+          None -> None
+        }
+      }
+  }
 }
 
 pub fn check_node_received_reward(
@@ -614,14 +651,13 @@ pub fn check_node_received_reward(
   in_distribution: RewardAccountDatum,
   in_value: Value,
   reward_account_output: Output,
+  utxo_size_safety_buffer: Int,
 ) -> Bool {
   trace @"T26"
 
-  // Check if the feed VKH exists
-  // Find the reward amount directly in input distribution
-  let in_distribution_dict =
-    dict.from_ascending_pairs(in_distribution.nodes_to_rewards)
-  expect Some(required_reward) = dict.get(in_distribution_dict, node_id)
+  // Check if the feed VKH exists and capture the remaining distribution
+  expect Some(Pair(required_reward, expected_out_nodes)) =
+    remove_reward_entry(in_distribution.nodes_to_rewards, node_id)
   expect required_reward > 0
 
   // Read and validate reward account output
@@ -631,20 +667,24 @@ pub fn check_node_received_reward(
     oracle_datum
   let out_value = reward_account_output.value
 
-  let out_distribution_dict = dict.from_ascending_pairs(nodes_to_rewards)
-  // Ensure that node_id does NOT exist in out_distribution.
-  // The node must withdraw all rewards and remove it from the out_distribution.
-  if dict.has_key(out_distribution_dict, node_id) {
-    False
-  } else {
-    // Calculate actual reward received
-    let actual_reward =
-      calculate_asset_net_change_with_default(fee_token, in_value, out_value)
-        |> fn(v) { -v }
-    // Remove the rewarded node from the input and compare the resulting lists.
-    // Ensure the required reward matches the actual reward.
-    // The last time update must remain unchanged during this transaction.
-    dict.delete(in_distribution_dict, node_id) == out_distribution_dict && required_reward == actual_reward && last_update_time == in_distribution.last_update_time
+  // Calculate actual reward received
+  let actual_reward =
+    calculate_asset_net_change_with_default(fee_token, out_value, in_value)
+  let in_lovelace = assets.lovelace_of(in_value)
+  let out_lovelace = assets.lovelace_of(out_value)
+  let must_preserve_ada_buffer =
+    when fee_token is {
+      None -> out_lovelace >= utxo_size_safety_buffer
+      Some(_) ->
+        out_lovelace == in_lovelace && out_lovelace >= utxo_size_safety_buffer
+    }
+  // Ensure the required reward matches the actual reward, the node is removed,
+  // and the last update timestamp is preserved.
+  and {
+    must_preserve_ada_buffer,
+    nodes_to_rewards == expected_out_nodes,
+    required_reward == actual_reward,
+    last_update_time == in_distribution.last_update_time,
   }
 }
 
@@ -659,14 +699,11 @@ pub fn check_platform_received_reward(
 
   // Calculate total rewards to be distributed to nodes
   let nodes_rewards =
-    list.foldr(
+    list.foldl(
       in_account_datum.nodes_to_rewards,
       0,
       fn(Pair(_, reward), total) { reward + total },
     )
-
-  let in_total_rewards =
-    calculate_asset_quantity_with_default(in_value, fee_token)
 
   // Read and validate reward account output
   expect tx.InlineDatum(datum) = reward_account_output.datum
@@ -680,7 +717,8 @@ pub fn check_platform_received_reward(
   let out_total_rewards =
     calculate_asset_quantity_with_default(out_value, fee_token)
 
-  let actual_reward = in_total_rewards - out_total_rewards
+  let actual_reward =
+    calculate_asset_net_change_with_default(fee_token, out_value, in_value)
 
   // Check safety buffer requirements
   let must_save_nodes_rewards =
@@ -696,76 +734,60 @@ pub fn check_platform_received_reward(
   must_save_nodes_rewards && actual_reward > 0
 }
 
-fn push_deleted_node(
-  node: Pair<FeedVkh, PaymentVkh>,
-  acc: (Nodes, Nodes),
-) -> (Nodes, Nodes) {
-  let (result, out_nodes) = acc
-  when out_nodes is {
-    [] -> (list.push(result, node), [])
-    [x, ..xs] ->
-      if x == node {
-        (result, xs)
-      } else {
-        (list.push(result, node), out_nodes)
-      }
-  }
-}
-
-fn push_added_node(
-  node: Pair<FeedVkh, PaymentVkh>,
-  acc: (Nodes, Nodes),
-) -> (Nodes, Nodes) {
-  let (in_nodes, result) = acc
-  when in_nodes is {
-    [] -> ([], list.push(result, node))
-    [x, ..xs] ->
-      if x == node {
-        (xs, result)
-      } else {
-        (in_nodes, list.push(result, node))
-      }
-  }
-}
-
 pub fn check_nodes_update(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
-  redeemer: OracleRedeemer,
+  redeemer: SettingsRedeemer,
 ) -> Bool {
   trace @"T28"
-
-  let (deleted_nodes, added_nodes) =
+  let must_perform_redeemer_action = {
+    let deleted_nodes = difference_sorted(in_settings.nodes, out_settings.nodes)
+    let added_nodes = difference_sorted(out_settings.nodes, in_settings.nodes)
     when redeemer is {
-      AddNodes ->
-        list.foldl(out_settings.nodes, (in_settings.nodes, []), push_added_node)
-      _ ->
-        list.foldl(
-          in_settings.nodes,
-          ([], out_settings.nodes),
-          push_deleted_node,
-        )
+      AddNodes -> deleted_nodes == [] && added_nodes != []
+      DelNodes -> deleted_nodes != [] && added_nodes == []
+      UpdateSettings -> False
     }
+  }
 
-  let must_keep_other_settings_unchanged =
-    in_settings.fee_info == out_settings.fee_info && in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period && in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform && in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation && in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier && in_settings.median_divergency_factor == out_settings.median_divergency_factor && in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer && in_settings.pause_period_started_at == out_settings.pause_period_started_at
+  must_perform_redeemer_action && {
+    let must_not_break_multisig =
+      out_settings.required_node_signatures_count <= get_length_and_check_feed_vkh_order(
+        out_settings.nodes,
+      ) && out_settings.required_node_signatures_count > 0
 
-  let must_not_break_multisig =
-    out_settings.required_node_signatures_count > 0 && out_settings.required_node_signatures_count <= get_length_and_check_feed_vkh_order(
-      pairs.keys(out_settings.nodes),
-    )
+    must_not_break_multisig && and {
+      //  must_keep_other_settings_unchanged
+      in_settings.fee_info == out_settings.fee_info,
+      in_settings.aggregation_liveness_period == out_settings.aggregation_liveness_period,
+      in_settings.time_uncertainty_platform == out_settings.time_uncertainty_platform,
+      in_settings.time_uncertainty_aggregation == out_settings.time_uncertainty_aggregation,
+      in_settings.iqr_fence_multiplier == out_settings.iqr_fence_multiplier,
+      in_settings.median_divergency_factor == out_settings.median_divergency_factor,
+      in_settings.utxo_size_safety_buffer == out_settings.utxo_size_safety_buffer,
+      in_settings.pause_period_started_at == out_settings.pause_period_started_at,
+    }
+  }
+}
 
-  when redeemer is {
-    AddNodes ->
-      must_keep_other_settings_unchanged && must_not_break_multisig && deleted_nodes == [] && added_nodes != []
-    _ ->
-      must_keep_other_settings_unchanged && must_not_break_multisig && deleted_nodes != [] && added_nodes == []
+fn difference_sorted(left: Nodes, right: Nodes) -> Nodes {
+  when (left, right) is {
+    ([], _) -> []
+    ([x, ..xs], []) -> [x, ..difference_sorted(xs, [])]
+    ([x, ..xs], [y, ..ys]) ->
+      if builtin.less_than_bytearray(x, y) {
+        [x, ..difference_sorted(xs, [y, ..ys])]
+      } else if x == y {
+        difference_sorted(xs, ys)
+      } else {
+        difference_sorted([x, ..xs], ys)
+      }
   }
 }
 
 fn get_length_and_check_feed_vkh_order(node_ids_sorted: List<FeedVkh>) -> Int {
   when node_ids_sorted is {
-    [] -> 0
+    [] -> fail @"Empty value not supported"
     [x, ..xs] -> do_get_length_and_check_feed_vkh_order(xs, 1, x)
   }
 }
