@@ -598,39 +598,37 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect [(OracleSettings(out_core_datum), out_value)] =
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
-        let shared_checks =
-          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value_strict(
-            in_value,
-            out_value,
-          ) && check_pause_does_not_change_settings(
-            in_core_datum,
-            out_core_datum,
-          )
+        and {
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
+          conserves_utxo_value_strict(in_value, out_value),
+          check_pause_does_not_change_settings(in_core_datum, out_core_datum),
+          when action is {
+            PauseOracle -> {
+              let must_not_be_paused_already =
+                is_oracle_paused(in_core_datum) |> not
+              let current_time =
+                get_current_time(
+                  in_core_datum.time_uncertainty_platform,
+                  validity_range,
+                )
+              let must_start_pause_period =
+                out_core_datum.pause_period_started_at == Some(current_time)
 
-        shared_checks && when action is {
-          PauseOracle -> {
-            let must_not_be_paused_already =
-              is_oracle_paused(in_core_datum) |> not
-            let current_time =
-              get_current_time(
-                in_core_datum.time_uncertainty_platform,
-                validity_range,
-              )
-            let must_start_pause_period =
-              out_core_datum.pause_period_started_at == Some(current_time)
+              must_not_be_paused_already && must_start_pause_period
+            }
+            ResumeOracle -> {
+              let must_be_paused = is_oracle_paused(in_core_datum)
+              let must_resume_oracle = is_oracle_paused(out_core_datum) |> not
 
-            must_not_be_paused_already && must_start_pause_period
-          }
-          ResumeOracle -> {
-            let must_be_paused = is_oracle_paused(in_core_datum)
-            let must_resume_oracle = is_oracle_paused(out_core_datum) |> not
-
-            must_be_paused && must_resume_oracle
-          }
+              must_be_paused && must_resume_oracle
+            }
+          },
         }
       }
-      // :: RemoveOracle
-      (RemoveOracle, RewardAccount(RewardAccountDatum { .. })) -> {
+      (
+        RemoveOracle,
+        OracleSettings(OracleSettingsDatum { pause_period_started_at, .. }),
+      ) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(
             in_value,
@@ -651,60 +649,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             redeemers,
           )
 
-        // nodes which are interested in collecting the rewards should do so during pause period
-        must_spend_core_settings_utxo
-      }
-      (RemoveOracle, AggState(price_data)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.aggstate_token_name)
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-
-        let must_spend_core_settings_utxo =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            RemoveOracle,
-            core_nft,
-            inputs,
-            redeemers,
-          )
-
-        is_aggstate_expired(price_data, validity_range) && must_spend_core_settings_utxo
-      }
-      (
-        RemoveOracle,
-        OracleSettings(OracleSettingsDatum { pause_period_started_at, .. }),
-      ) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
-        let reward_acc_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.reward_account_token_name,
-          }
-        let aggstate_nft =
-          Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
-
-        let must_spend_reward_account_utxo =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            RemoveOracle,
-            reward_acc_nft,
-            inputs,
-            redeemers,
-          )
-        let must_spend_aggstate_utxo =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            RemoveOracle,
-            aggstate_nft,
-            inputs,
-            redeemers,
-          )
-
         let is_time_to_be_removed =
           pause_period_started_at
             |> option.map(
@@ -720,8 +664,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
           does_not_produce_own_nft_outputs(outputs, nft_policy_id),
           is_time_to_be_removed,
-          must_spend_reward_account_utxo,
-          must_spend_aggstate_utxo,
+          must_spend_core_settings_utxo,
         }
       }
       // ::
