@@ -82,7 +82,7 @@ pub fn spends_one_account_utxo_for_aggregation(
   tx_inputs: List<Input>,
   tx_redeemers: Pairs<ScriptPurpose, Redeemer>,
 ) -> Bool {
-  trace @"T88"
+  trace @"T9"
 
   expect [input] = find_script_inputs_by_token(tx_inputs, script_hash, acc_nft)
   expect Some(redeemer) =
@@ -100,7 +100,7 @@ pub fn returns_empty_account_outputs(
   tx_outputs: List<Output>,
   utxo_size_safety_buffer: Int,
 ) -> Bool {
-  trace @"T9"
+  trace @"T10"
 
   let outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, reward_account_nft)
@@ -127,7 +127,7 @@ pub fn returns_empty_aggstate_outputs(
   utxo_count: Int,
   tx_outputs: List<Output>,
 ) -> Bool {
-  trace @"T10"
+  trace @"T11"
   let outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, aggstate_nft)
   let extractor =
@@ -146,7 +146,7 @@ pub fn find_out_datum_and_value(
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -> List<(OracleDatum, Value)> {
-  trace @"T11"
+  trace @"T12"
 
   let script_outputs =
     find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
@@ -166,7 +166,7 @@ pub fn find_out_datum_and_value_with_allowing_asset(
   protocol_token: Asset,
   allowed_asset: Option<Asset>,
 ) -> List<(OracleDatum, Value)> {
-  trace @"T12"
+  trace @"T13"
 
   when allowed_asset is {
     None -> find_out_datum_and_value(tx_outputs, script_hash, protocol_token)
@@ -195,7 +195,7 @@ pub fn find_referenced_datum(
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -> OracleDatum {
-  trace @"T13"
+  trace @"T14"
 
   expect [script_in] =
     find_script_inputs_by_token(
@@ -216,7 +216,7 @@ pub fn find_in_datum(
   redeemer: OracleRedeemer,
   protocol_token: Asset,
 ) -> OracleDatum {
-  trace @"T14"
+  trace @"T15"
 
   expect [script_in] =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
@@ -238,7 +238,7 @@ pub fn count_dismissed_reward_accounts(
   script_hash: ScriptHash,
   protocol_token: Asset,
 ) -> Int {
-  trace @"T15"
+  trace @"T16"
 
   let acc_inputs =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
@@ -266,7 +266,7 @@ pub fn check_reward_accounts_in_to_out_mapping(
   protocol_token: Asset,
   reward_redeemer: RewardRedeemer,
 ) -> Bool {
-  trace @"T15"
+  trace @"T17"
 
   let acc_inputs =
     find_script_inputs_by_token(tx_inputs, script_hash, protocol_token)
@@ -291,7 +291,7 @@ pub fn check_reward_accounts_in_to_out_mapping(
 }
 
 pub fn get_length_and_check_strict_order(ints_sorted: List<Int>) -> Int {
-  trace @"T21"
+  trace @"T18"
 
   go_get_length_and_check_strict_order(ints_sorted, 0, None)
 }
@@ -322,7 +322,7 @@ pub fn does_not_produce_own_nft_outputs(
   tx_outputs: List<Output>,
   own_nft_policy_id: PolicyId,
 ) -> Bool {
-  trace @"T16"
+  trace @"T19"
 
   tx_outputs
     |> list.filter(
@@ -337,7 +337,7 @@ pub fn is_aggstate_expired(
   price_data: PriceData,
   tx_validity_range: ValidityRange,
 ) -> Bool {
-  trace @"T17"
+  trace @"T20"
   get_price_data(price_data, 2)
     |> option.map(
         fn(time_expiration) {
@@ -353,7 +353,7 @@ pub fn convert_reward_prices(
   rate_nft: Option<Asset>,
   reward_prices: RewardPrices,
 ) -> RewardPrices {
-  trace @"T18"
+  trace @"T21"
 
   when rate_nft is {
     None -> reward_prices
@@ -432,7 +432,7 @@ pub fn calculate_asset_quantity_with_default(
 }
 
 pub fn conserves_utxo_value_strict(in_value: Value, out_value: Value) -> Bool {
-  trace @"T23"
+  trace @"T22"
   in_value == out_value
 }
 
@@ -452,7 +452,7 @@ pub fn check_utxo_size_safety_buffer(
   utxo_size_safety_buffer: Int,
   out_value: Value,
 ) -> Bool {
-  trace @"T32"
+  trace @"T23"
 
   let out_lovelace = assets.lovelace_of(out_value)
 
@@ -470,7 +470,7 @@ pub fn check_reward_distribution(
   iqr_fence_multiplier: Percent,
   median_divergency_factor: Permille,
 ) -> Bool {
-  trace @"T20"
+  trace @"T24"
   let rewarded_feed_nodes =
     consensus_by_iqr_and_divergency(
       median,
@@ -544,7 +544,7 @@ fn consume_allowed_feed(nodes: Nodes, feed: FeedVkh) -> Option<Nodes> {
 pub fn validate_message_and_count_nodes(
   node_feeds_sorted_by_feed: AggregateMessage,
 ) -> Int {
-  trace @"T21"
+  trace @"T25"
   go_check_order_and_count(pairs.values(node_feeds_sorted_by_feed), 0, None)
 }
 
@@ -574,7 +574,7 @@ pub fn check_settings_sanity(
   in_settings: OracleSettingsDatum,
   out_settings: OracleSettingsDatum,
 ) -> Bool {
-  trace @"T22"
+  trace @"T26"
 
   in_settings.nodes == out_settings.nodes && in_settings.pause_period_started_at == out_settings.pause_period_started_at && validate_settings_form(
     oracle_conf,
@@ -586,7 +586,7 @@ pub fn validate_settings_form(
   oracle_conf: OracleConfiguration,
   oracle_settings: OracleSettingsDatum,
 ) -> Bool {
-  trace @"T30"
+  trace @"T27"
 
   let must_not_break_multisig =
     oracle_settings.required_node_signatures_count > 0 && oracle_settings.required_node_signatures_count <= list.length(
@@ -613,13 +613,13 @@ pub fn check_pause_does_not_change_settings(
   in_core_datum: OracleSettingsDatum,
   out_core_datum: OracleSettingsDatum,
 ) -> Bool {
-  trace @"T24"
+  trace @"T28"
 
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.median_divergency_factor == out_core_datum.median_divergency_factor && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_uncertainty_platform == out_core_datum.time_uncertainty_platform && in_core_datum.time_uncertainty_aggregation == out_core_datum.time_uncertainty_aggregation
 }
 
 pub fn find_node_by_signature(tx_signatories: List<a>, nodes: List<a>) -> a {
-  trace @"T25"
+  trace @"T29"
 
   when tx_signatories is {
     [vkh1, vkh2] ->
@@ -658,7 +658,7 @@ pub fn check_node_received_reward(
   reward_account_output: Output,
   utxo_size_safety_buffer: Int,
 ) -> Bool {
-  trace @"T26"
+  trace @"T30"
 
   // Check if the feed VKH exists and capture the remaining distribution
   expect Some(Pair(required_reward, expected_out_nodes)) =
@@ -700,7 +700,7 @@ pub fn check_platform_received_reward(
   in_value: Value,
   reward_account_output: Output,
 ) -> Bool {
-  trace @"T27"
+  trace @"T31"
 
   // Calculate total rewards to be distributed to nodes
   let nodes_rewards =
@@ -744,7 +744,7 @@ pub fn check_nodes_update(
   out_settings: OracleSettingsDatum,
   redeemer: SettingsRedeemer,
 ) -> Bool {
-  trace @"T28"
+  trace @"T32"
   let must_perform_redeemer_action = {
     let deleted_nodes = difference_sorted(in_settings.nodes, out_settings.nodes)
     let added_nodes = difference_sorted(out_settings.nodes, in_settings.nodes)
@@ -792,7 +792,7 @@ fn difference_sorted(left: Nodes, right: Nodes) -> Nodes {
 
 fn get_length_and_check_feed_vkh_order(node_ids_sorted: List<FeedVkh>) -> Int {
   when node_ids_sorted is {
-    [] -> fail @"Empty value not supported"
+    [] -> fail @"E7"
     [x, ..xs] -> do_get_length_and_check_feed_vkh_order(xs, 1, x)
   }
 }
