@@ -685,12 +685,22 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             policy_id: nft_policy_id,
             name: config.reward_account_token_name,
           }
+        let aggstate_nft =
+          Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
 
         let must_spend_reward_account_utxo =
           spends_one_script_utxo_with_nft(
             own_hash,
             RemoveOracle,
             reward_acc_nft,
+            inputs,
+            redeemers,
+          )
+        let must_spend_aggstate_utxo =
+          spends_one_script_utxo_with_nft(
+            own_hash,
+            RemoveOracle,
+            aggstate_nft,
             inputs,
             redeemers,
           )
@@ -711,6 +721,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           does_not_produce_own_nft_outputs(outputs, nft_policy_id),
           is_time_to_be_removed,
           must_spend_reward_account_utxo,
+          must_spend_aggstate_utxo,
         }
       }
       // ::
