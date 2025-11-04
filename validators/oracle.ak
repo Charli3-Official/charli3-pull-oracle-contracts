@@ -100,11 +100,18 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
             m,
             outputs,
           )
-
-        auth_by_nft(nfts_config.oracle_conf.platform_auth_nft, inputs, outputs) && validate_settings_form(
-          nfts_config.oracle_conf,
-          out_core_datum,
-        ) && must_mint_some_reward_account && must_mint_same_amount_aggstate && all_reward_accounts_empty && all_aggstate_empty
+        and {
+          auth_by_nft(
+            nfts_config.oracle_conf.platform_auth_nft,
+            inputs,
+            outputs,
+          ),
+          validate_settings_form(nfts_config.oracle_conf, out_core_datum),
+          must_mint_some_reward_account,
+          must_mint_same_amount_aggstate,
+          all_reward_accounts_empty,
+          all_aggstate_empty,
+        }
       }
       ScaleToken -> {
         expect None = minted_assets |> dict.get(config.core_settings_token_name)
@@ -141,11 +148,17 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
 
           let must_not_be_paused = is_oracle_paused(core_datum) |> not
 
-          auth_by_nft(
-            nfts_config.oracle_conf.platform_auth_nft,
-            inputs,
-            outputs,
-          ) && must_not_be_paused && must_mint_same_amount_aggstate && all_reward_accounts_empty && all_aggstate_empty
+          and {
+            auth_by_nft(
+              nfts_config.oracle_conf.platform_auth_nft,
+              inputs,
+              outputs,
+            ),
+            must_not_be_paused,
+            must_mint_same_amount_aggstate,
+            all_reward_accounts_empty,
+            all_aggstate_empty,
+          }
         } else {
           trace @"T2"
 
@@ -213,7 +226,13 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
             redeemers,
           )
 
-        must_spend_core_settings_input && must_not_mint && must_burn_same_amount_aggstate && must_spend_reward_acc_inputs && must_spend_aggstate_inputs
+        and {
+          must_spend_core_settings_input,
+          must_not_mint,
+          must_burn_same_amount_aggstate,
+          must_spend_reward_acc_inputs,
+          must_spend_aggstate_inputs,
+        }
       }
     }
   }
@@ -364,26 +383,36 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           calculate_minimum_fee_amount(reward_prices, node_feeds_count)
         let must_transfer_oracle_fees = fees_transferred >= minimum_fee_amount
 
-        check_nodes_multisig(
-          message,
-          node_feeds_count,
-          extra_signatories,
-          core_datum.nodes,
-          core_datum.required_node_signatures_count,
-        ) && check_utxo_size_safety_buffer(
-          core_datum.utxo_size_safety_buffer,
-          out_value,
-        ) && check_reward_distribution(
-          message,
-          node_feeds_count,
-          median,
-          reward_prices.node_fee,
-          in_account_datum.nodes_to_rewards,
-          out_account_datum.nodes_to_rewards,
-          core_datum.nodes,
-          core_datum.iqr_fence_multiplier,
-          core_datum.median_divergency_factor,
-        ) && must_spend_only_one_aggstate_input && must_have_current_time_as_timestamp && must_expire_in_liveness_period && must_not_be_paused && must_have_correct_median && must_transfer_oracle_fees
+        and {
+          check_nodes_multisig(
+            message,
+            node_feeds_count,
+            extra_signatories,
+            core_datum.nodes,
+            core_datum.required_node_signatures_count,
+          ),
+          check_utxo_size_safety_buffer(
+            core_datum.utxo_size_safety_buffer,
+            out_value,
+          ),
+          check_reward_distribution(
+            message,
+            node_feeds_count,
+            median,
+            reward_prices.node_fee,
+            in_account_datum.nodes_to_rewards,
+            out_account_datum.nodes_to_rewards,
+            core_datum.nodes,
+            core_datum.iqr_fence_multiplier,
+            core_datum.median_divergency_factor,
+          ),
+          must_spend_only_one_aggstate_input,
+          must_have_current_time_as_timestamp,
+          must_expire_in_liveness_period,
+          must_not_be_paused,
+          must_have_correct_median,
+          must_transfer_oracle_fees,
+        }
       }
       // :: RedeemRewards
       (
@@ -490,19 +519,21 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
               )
           }
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
-          outputs,
-          nft_policy_id,
-        ) && must_be_empty_or_expired
+        and {
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
+          does_not_produce_own_nft_outputs(outputs, nft_policy_id),
+          must_be_empty_or_expired,
+        }
       }
       (ScaleDown, AggState(price_data)) -> {
         let nft_policy_id =
           find_own_protocol_policy_id(in_value, config.aggstate_token_name)
 
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
-          outputs,
-          nft_policy_id,
-        ) && is_aggstate_expired(price_data, validity_range)
+        and {
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
+          does_not_produce_own_nft_outputs(outputs, nft_policy_id),
+          is_aggstate_expired(price_data, validity_range),
+        }
       }
       // :: DismissRewards
       (
@@ -544,12 +575,15 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             outputs,
             core_datum.utxo_size_safety_buffer,
           )
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && must_return_empty_reward_acc_utxos && validate_dismissing_period(
-          last_update_time,
-          validity_range,
-          oracle_conf.reward_dismissing_period_length,
-        )
+        and {
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
+          must_return_empty_reward_acc_utxos,
+          validate_dismissing_period(
+            last_update_time,
+            validity_range,
+            oracle_conf.reward_dismissing_period_length,
+          ),
+        }
       }
       // :: PauseControl
       (PauseControl(action), OracleSettings(in_core_datum)) -> {
@@ -672,11 +706,12 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
                 },
               )
             |> option.or_else(False)
-
-        auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && does_not_produce_own_nft_outputs(
-          outputs,
-          nft_policy_id,
-        ) && is_time_to_be_removed && must_spend_reward_account_utxo
+        and {
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
+          does_not_produce_own_nft_outputs(outputs, nft_policy_id),
+          is_time_to_be_removed,
+          must_spend_reward_account_utxo,
+        }
       }
       // ::
       _other -> fail @"E3"
