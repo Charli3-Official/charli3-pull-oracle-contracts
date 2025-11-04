@@ -462,10 +462,11 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         shared_checks && when action is {
           UpdateSettings ->
             check_settings_sanity(oracle_conf, in_core_datum, out_core_datum)
-          AddNodes -> check_nodes_update(in_core_datum, out_core_datum, action)
-          DelNodes -> check_nodes_update(in_core_datum, out_core_datum, action)
+          AddNodes | DelNodes ->
+            check_nodes_update(in_core_datum, out_core_datum, action)
         }
       }
+
       // :: ScaleDown
       (
         ScaleDown,

@@ -17,7 +17,7 @@ use core/datum.{
 }
 use core/redeemer.{
   AddNodes, DelNodes, DismissRewards, OdvAggregate, OracleRedeemer,
-  RedeemRewards, RewardRedeemer, SettingsRedeemer, UpdateSettings,
+  RedeemRewards, RewardRedeemer, SettingsRedeemer,
 }
 use ext/aiken/math/rational.{Percent, Permille, coin_precision} as ext
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
@@ -619,9 +619,11 @@ pub fn find_node_by_signature(tx_signatories: List<a>, nodes: List<a>) -> a {
   trace @"T25"
 
   when tx_signatories is {
-    [signer] ->
-      list.find(nodes, fn(node_operator) { signer == node_operator })
-        |> option.or_else(fail)
+    [vkh1, vkh2] ->
+      when list.find(nodes, fn(node) { node == vkh1 || node == vkh2 }) is {
+        Some(node) -> node
+        None -> fail
+      }
     _ -> fail
   }
 }
@@ -746,7 +748,7 @@ pub fn check_nodes_update(
     when redeemer is {
       AddNodes -> deleted_nodes == [] && added_nodes != []
       DelNodes -> deleted_nodes != [] && added_nodes == []
-      UpdateSettings -> False
+      _ -> False
     }
   }
 
