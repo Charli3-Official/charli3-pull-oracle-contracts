@@ -431,9 +431,12 @@ pub fn calculate_asset_quantity_with_default(
   }
 }
 
-pub fn conserves_utxo_value(in_value: Value, out_value: Value) -> Bool {
+pub fn conserves_utxo_value_strict(in_value: Value, out_value: Value) -> Bool {
   trace @"T23"
+  in_value == out_value
+}
 
+pub fn conserves_utxo_value(in_value: Value, out_value: Value) -> Bool {
   let in_tokens = assets.without_lovelace(in_value)
   let out_tokens = assets.without_lovelace(out_value)
   let must_conserve_token_value = in_tokens == out_tokens

@@ -21,10 +21,11 @@ use core/checks.{
   check_pause_does_not_change_settings, check_platform_received_reward,
   check_reward_accounts_in_to_out_mapping, check_reward_distribution,
   check_settings_sanity, check_utxo_size_safety_buffer, conserves_utxo_value,
-  convert_reward_prices, count_dismissed_reward_accounts,
-  does_not_produce_own_nft_outputs, find_node_by_signature,
-  find_out_datum_and_value, find_out_datum_and_value_with_allowing_asset,
-  find_referenced_datum, is_aggstate_expired, returns_empty_account_outputs,
+  conserves_utxo_value_strict, convert_reward_prices,
+  count_dismissed_reward_accounts, does_not_produce_own_nft_outputs,
+  find_node_by_signature, find_out_datum_and_value,
+  find_out_datum_and_value_with_allowing_asset, find_referenced_datum,
+  is_aggstate_expired, returns_empty_account_outputs,
   returns_empty_aggstate_outputs, spends_one_account_utxo_for_aggregation,
   spends_one_script_utxo_with_nft, spends_protocol_nft_inputs,
   validate_dismissing_period, validate_message_and_count_nodes,
@@ -271,7 +272,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         expect [(AggState(_), out_value)] =
           find_out_datum_and_value(outputs, own_hash, aggstate_nft)
 
-        is_aggstate_expired(price_data, validity_range) && conserves_utxo_value(
+        is_aggstate_expired(price_data, validity_range) && conserves_utxo_value_strict(
           in_value,
           out_value,
         ) && must_spend_reward_account_utxo
@@ -319,6 +320,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           (
             AggState(GenericData{price_map: [
               Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
+              ..
             ]}),
             _out_value,
           ),
@@ -563,7 +565,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           find_out_datum_and_value(outputs, own_hash, core_nft)
 
         let shared_checks =
-          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value(
+          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs) && conserves_utxo_value_strict(
             in_value,
             out_value,
           ) && check_pause_does_not_change_settings(
