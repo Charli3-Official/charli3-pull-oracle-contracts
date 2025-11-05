@@ -239,6 +239,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
       Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
     let core_nft =
       Asset { policy_id: nft_policy_id, name: config.core_settings_token_name }
+
     when (redeemer, in_datum) is {
       // :: OdvAggregate
       (OdvAggregateMsg, AggState(price_data)) -> {
@@ -256,15 +257,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         }
       }
       (OdvAggregate(message), RewardAccount(in_account_datum)) -> {
-        let must_spend_only_one_aggstate_input =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            OdvAggregateMsg,
-            aggstate_nft,
-            inputs,
-            redeemers,
-          )
-
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
@@ -276,42 +268,35 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             oracle_conf.fee_token,
           )
 
-        expect [
-          (
-            AggState(GenericData{price_map: [
-              Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
-              ..
-            ]}),
-            _out_value,
-          ),
-        ] = find_out_datum_and_value(outputs, own_hash, aggstate_nft)
-
-        let current_time =
-          get_current_time(
-            core_datum.time_uncertainty_aggregation,
-            validity_range,
-          )
-
-        let must_have_current_time_as_timestamp =
-          current_time == time_creation && current_time == out_account_datum.last_update_time
-        let must_expire_in_liveness_period =
-          time_expiration == current_time + core_datum.aggregation_liveness_period
-
-        let must_not_be_paused = is_oracle_paused(core_datum) |> not
-
         let node_feeds_count = validate_message_and_count_nodes(message)
         let median =
           message
             |> pairs.values
             |> consensus.median(node_feeds_count)
-        let must_have_correct_median = median == price
 
-        let fees_transferred =
-          calculate_asset_net_change_with_default(
-            oracle_conf.fee_token,
-            in_value,
-            out_value,
-          )
+        let must_have_correct_datum = {
+          expect [
+            (
+              AggState(GenericData{price_map: [
+                Pair(0, price), Pair(1, time_creation), Pair(2, time_expiration),
+                ..
+              ]}),
+              _out_value,
+            ),
+          ] = find_out_datum_and_value(outputs, own_hash, aggstate_nft)
+          let current_time =
+            get_current_time(
+              core_datum.time_uncertainty_aggregation,
+              validity_range,
+            )
+          and {
+            current_time == time_creation,
+            current_time == out_account_datum.last_update_time,
+            time_expiration == current_time + core_datum.aggregation_liveness_period,
+            median == price,
+          }
+        }
+
         let reward_prices =
           convert_reward_prices(
             reference_inputs,
@@ -320,11 +305,13 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             core_datum.fee_info.reward_prices,
           )
 
-        let minimum_fee_amount =
-          calculate_minimum_fee_amount(reward_prices, node_feeds_count)
-        let must_transfer_oracle_fees = fees_transferred >= minimum_fee_amount
-
         and {
+          is_oracle_paused(core_datum) |> not,
+          calculate_asset_net_change_with_default(
+            oracle_conf.fee_token,
+            in_value,
+            out_value,
+          ) >= calculate_minimum_fee_amount(reward_prices, node_feeds_count),
           check_nodes_multisig(
             message,
             node_feeds_count,
@@ -347,12 +334,14 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             core_datum.iqr_fence_multiplier,
             core_datum.median_divergency_factor,
           ),
-          must_spend_only_one_aggstate_input,
-          must_have_current_time_as_timestamp,
-          must_expire_in_liveness_period,
-          must_not_be_paused,
-          must_have_correct_median,
-          must_transfer_oracle_fees,
+          spends_one_script_utxo_with_nft(
+            own_hash,
+            OdvAggregateMsg,
+            aggstate_nft,
+            inputs,
+            redeemers,
+          ),
+          must_have_correct_datum,
         }
       }
       // :: RedeemRewards
