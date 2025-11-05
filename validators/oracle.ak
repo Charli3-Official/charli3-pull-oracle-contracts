@@ -7,7 +7,6 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/collection/pairs
 use aiken/interval
-use aiken/math.{abs}
 use aiken/option
 use cardano/address
 use cardano/assets.{PolicyId}
@@ -66,11 +65,13 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
       MintToken -> {
         expect Some(1) =
           minted_assets |> dict.get(config.core_settings_token_name)
-        expect Some(n) =
+        expect Some(delta_reward) =
           minted_assets |> dict.get(config.reward_account_token_name)
-        expect Some(m) = minted_assets |> dict.get(config.aggstate_token_name)
-        let must_mint_some_reward_account = n > 0
-        let must_mint_same_amount_aggstate = m == n
+        expect Some(delta_aggstate) =
+          minted_assets |> dict.get(config.aggstate_token_name)
+
+        let must_mint_some_reward_tokens = delta_reward > 0
+        let must_mint_some_aggstate_tokens = delta_aggstate > 0
 
         expect Some(_input) =
           list.find(
@@ -89,7 +90,7 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
           returns_empty_account_outputs(
             nfts_config.oracle_script_hash,
             reward_acc_nft,
-            n,
+            delta_reward,
             outputs,
             out_core_datum.utxo_size_safety_buffer,
           )
@@ -97,7 +98,7 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
           returns_empty_aggstate_outputs(
             nfts_config.oracle_script_hash,
             aggstate_nft,
-            m,
+            delta_aggstate,
             outputs,
           )
         and {
@@ -107,132 +108,104 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
             outputs,
           ),
           validate_settings_form(nfts_config.oracle_conf, out_core_datum),
-          must_mint_some_reward_account,
-          must_mint_same_amount_aggstate,
+          must_mint_some_reward_tokens,
+          must_mint_some_aggstate_tokens,
           all_reward_accounts_empty,
           all_aggstate_empty,
         }
       }
       ScaleToken -> {
         expect None = minted_assets |> dict.get(config.core_settings_token_name)
-        expect Some(n) =
-          minted_assets |> dict.get(config.reward_account_token_name)
-        expect Some(m) = minted_assets |> dict.get(config.aggstate_token_name)
-        let must_mint_same_amount_aggstate = m == n
-
-        if n > 0 {
-          trace @"T1"
-
-          expect OracleSettings(core_datum) =
-            find_referenced_datum(
-              reference_inputs,
-              nfts_config.oracle_script_hash,
-              core_nft,
-            )
-
-          let all_reward_accounts_empty =
-            returns_empty_account_outputs(
-              nfts_config.oracle_script_hash,
-              reward_acc_nft,
-              n,
-              outputs,
-              core_datum.utxo_size_safety_buffer,
-            )
-          let all_aggstate_empty =
-            returns_empty_aggstate_outputs(
-              nfts_config.oracle_script_hash,
-              aggstate_nft,
-              m,
-              outputs,
-            )
-
-          let must_not_be_paused = is_oracle_paused(core_datum) |> not
-
-          and {
-            auth_by_nft(
-              nfts_config.oracle_conf.platform_auth_nft,
-              inputs,
-              outputs,
-            ),
-            must_not_be_paused,
-            must_mint_same_amount_aggstate,
-            all_reward_accounts_empty,
-            all_aggstate_empty,
+        let reward_check =
+          if dict.has_key(minted_assets, config.reward_account_token_name) {
+            expect Some(delta_reward) =
+              minted_assets |> dict.get(config.reward_account_token_name)
+            if delta_reward > 0 {
+              expect OracleSettings(core_datum) =
+                find_referenced_datum(
+                  reference_inputs,
+                  nfts_config.oracle_script_hash,
+                  core_nft,
+                )
+              and {
+                auth_by_nft(
+                  nfts_config.oracle_conf.platform_auth_nft,
+                  inputs,
+                  outputs,
+                ),
+                is_oracle_paused(core_datum) |> not,
+                returns_empty_account_outputs(
+                  nfts_config.oracle_script_hash,
+                  reward_acc_nft,
+                  delta_reward,
+                  outputs,
+                  core_datum.utxo_size_safety_buffer,
+                ),
+              }
+            } else {
+              spends_protocol_nft_inputs(
+                nfts_config.oracle_script_hash,
+                ScaleDown,
+                reward_acc_nft,
+                -delta_reward,
+                inputs,
+                redeemers,
+              )
+            }
+          } else {
+            True
           }
-        } else {
-          trace @"T2"
-
-          let must_spend_reward_acc_inputs =
-            spends_protocol_nft_inputs(
-              nfts_config.oracle_script_hash,
-              ScaleDown,
-              reward_acc_nft,
-              abs(n),
-              inputs,
-              redeemers,
-            )
-          let must_spend_aggstate_inputs =
-            spends_protocol_nft_inputs(
-              nfts_config.oracle_script_hash,
-              ScaleDown,
-              aggstate_nft,
-              abs(m),
-              inputs,
-              redeemers,
-            )
-
-          must_spend_reward_acc_inputs && must_spend_aggstate_inputs
-        }
+        let aggstate_check =
+          if dict.has_key(minted_assets, config.aggstate_token_name) {
+            expect Some(delta_aggstate) =
+              minted_assets |> dict.get(config.aggstate_token_name)
+            if delta_aggstate > 0 {
+              expect OracleSettings(core_datum) =
+                find_referenced_datum(
+                  reference_inputs,
+                  nfts_config.oracle_script_hash,
+                  core_nft,
+                )
+              and {
+                auth_by_nft(
+                  nfts_config.oracle_conf.platform_auth_nft,
+                  inputs,
+                  outputs,
+                ),
+                is_oracle_paused(core_datum) |> not,
+                returns_empty_aggstate_outputs(
+                  nfts_config.oracle_script_hash,
+                  aggstate_nft,
+                  delta_aggstate,
+                  outputs,
+                ),
+              }
+            } else {
+              spends_protocol_nft_inputs(
+                nfts_config.oracle_script_hash,
+                ScaleDown,
+                aggstate_nft,
+                -delta_aggstate,
+                inputs,
+                redeemers,
+              )
+            }
+          } else {
+            True
+          }
+        reward_check && aggstate_check
       }
       BurnToken -> {
         expect Some(-1) =
           minted_assets |> dict.get(config.core_settings_token_name)
-        let n =
-          minted_assets
-            |> dict.get(config.reward_account_token_name)
-            |> option.or_else(0)
-        let m =
-          minted_assets
-            |> dict.get(config.aggstate_token_name)
-            |> option.or_else(0)
-        let must_not_mint = n <= 0
-        let must_burn_same_amount_aggstate = m == n
 
-        let must_spend_core_settings_input =
-          spends_one_script_utxo_with_nft(
-            nfts_config.oracle_script_hash,
-            RemoveOracle,
-            core_nft,
-            inputs,
-            redeemers,
-          )
-
-        let must_spend_reward_acc_inputs =
-          spends_protocol_nft_inputs(
-            nfts_config.oracle_script_hash,
-            RemoveOracle,
-            reward_acc_nft,
-            abs(n),
-            inputs,
-            redeemers,
-          )
-        let must_spend_aggstate_inputs =
-          spends_protocol_nft_inputs(
-            nfts_config.oracle_script_hash,
-            RemoveOracle,
-            aggstate_nft,
-            abs(m),
-            inputs,
-            redeemers,
-          )
-
-        and {
-          must_spend_core_settings_input,
-          must_not_mint,
-          must_burn_same_amount_aggstate,
-          must_spend_reward_acc_inputs,
-          must_spend_aggstate_inputs,
-        }
+        spends_one_script_utxo_with_nft(
+          nfts_config.oracle_script_hash,
+          RemoveOracle,
+          core_nft,
+          inputs,
+          redeemers,
+        )
       }
     }
   }
@@ -266,6 +239,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
       own_input.output.address.payment_credential
 
     let in_value = own_input.output.value
+
     let nft_policy_id =
       find_own_protocol_policy_id(in_value, config.aggstate_token_name)
     let reward_account_nft =
@@ -548,15 +522,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         RemoveOracle,
         OracleSettings(OracleSettingsDatum { pause_period_started_at, .. }),
       ) -> {
-        let must_spend_core_settings_utxo =
-          spends_one_script_utxo_with_nft(
-            own_hash,
-            RemoveOracle,
-            core_nft,
-            inputs,
-            redeemers,
-          )
-
         let is_time_to_be_removed =
           pause_period_started_at
             |> option.map(
@@ -572,7 +537,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
           does_not_produce_own_nft_outputs(outputs, nft_policy_id),
           is_time_to_be_removed,
-          must_spend_core_settings_utxo,
         }
       }
       // ::
