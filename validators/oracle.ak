@@ -69,16 +69,11 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
           minted_assets |> dict.get(config.reward_account_token_name)
         expect Some(delta_aggstate) =
           minted_assets |> dict.get(config.aggstate_token_name)
-
-        let must_mint_some_reward_tokens = delta_reward > 0
-        let must_mint_some_aggstate_tokens = delta_aggstate > 0
-
         expect Some(_input) =
           list.find(
             inputs,
             fn(input) { input.output_reference == nfts_config.utxo_ref },
           )
-
         expect [(OracleSettings(out_core_datum), _)] =
           find_out_datum_and_value(
             outputs,
@@ -86,32 +81,28 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
             core_nft,
           )
 
-        let all_reward_accounts_empty =
+        and {
+          delta_reward > 0,
+          delta_aggstate > 0,
           returns_empty_account_outputs(
             nfts_config.oracle_script_hash,
             reward_acc_nft,
             delta_reward,
             outputs,
             out_core_datum.utxo_size_safety_buffer,
-          )
-        let all_aggstate_empty =
+          ),
           returns_empty_aggstate_outputs(
             nfts_config.oracle_script_hash,
             aggstate_nft,
             delta_aggstate,
             outputs,
-          )
-        and {
+          ),
           auth_by_nft(
             nfts_config.oracle_conf.platform_auth_nft,
             inputs,
             outputs,
           ),
           validate_settings_form(nfts_config.oracle_conf, out_core_datum),
-          must_mint_some_reward_tokens,
-          must_mint_some_aggstate_tokens,
-          all_reward_accounts_empty,
-          all_aggstate_empty,
         }
       }
       ScaleToken -> {
@@ -251,21 +242,18 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
     when (redeemer, in_datum) is {
       // :: OdvAggregate
       (OdvAggregateMsg, AggState(price_data)) -> {
-        let must_spend_reward_account_utxo =
+        expect [(AggState(_), out_value)] =
+          find_out_datum_and_value(outputs, own_hash, aggstate_nft)
+        and {
           spends_one_account_utxo_for_aggregation(
             own_hash,
             reward_account_nft,
             inputs,
             redeemers,
-          )
-
-        expect [(AggState(_), out_value)] =
-          find_out_datum_and_value(outputs, own_hash, aggstate_nft)
-
-        is_aggstate_expired(price_data, validity_range) && conserves_utxo_value_strict(
-          in_value,
-          out_value,
-        ) && must_spend_reward_account_utxo
+          ),
+          is_aggstate_expired(price_data, validity_range),
+          conserves_utxo_value_strict(in_value, out_value),
+        }
       }
       (OdvAggregate(message), RewardAccount(in_account_datum)) -> {
         let must_spend_only_one_aggstate_input =
@@ -467,18 +455,15 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             own_hash,
             reward_account_nft,
           )
-
-        let must_return_empty_reward_acc_utxos =
+        and {
           returns_empty_account_outputs(
             own_hash,
             reward_account_nft,
             total_input_accounts,
             outputs,
             core_datum.utxo_size_safety_buffer,
-          )
-        and {
+          ),
           auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
-          must_return_empty_reward_acc_utxos,
           validate_dismissing_period(
             last_update_time,
             validity_range,
