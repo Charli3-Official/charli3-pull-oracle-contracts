@@ -40,8 +40,8 @@ use core/multisig.{check_nodes_multisig}
 use core/redeemer.{
   AddNodes, BurnToken, DelNodes, DismissRewards, ManageSettings, MintToken,
   MintingRedeemer, NodeCollect, OdvAggregate, OdvAggregateMsg, OracleRedeemer,
-  PauseControl, PauseOracle, PlatformCollect, RedeemRewards, RemoveOracle,
-  ResumeOracle, ScaleDown, ScaleToken, UpdateSettings,
+  PauseOracle, PlatformCollect, RedeemRewards, RemoveOracle, ResumeOracle,
+  ScaleDown, ScaleToken, UpdateSettings,
 }
 use ext/cardano/value.{Asset}
 use services/nft_based_auth.{auth_by_nft}
@@ -192,7 +192,7 @@ validator oracle_nfts(nfts_config: NftsConfiguration) {
 
         spends_one_script_utxo_with_nft(
           nfts_config.oracle_script_hash,
-          RemoveOracle,
+          ManageSettings(RemoveOracle),
           core_nft,
           inputs,
           redeemers,
@@ -384,23 +384,82 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             )
         }
       }
-
       // :: ManageSettings
-      (ManageSettings(action), OracleSettings(in_core_datum)) -> {
-        expect [(OracleSettings(out_core_datum), out_value)] =
-          find_out_datum_and_value(outputs, own_hash, core_nft)
-
-        and {
-          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
-          conserves_utxo_value(in_value, out_value),
-          when action is {
-            UpdateSettings ->
-              check_settings_sanity(oracle_conf, in_core_datum, out_core_datum)
-            AddNodes | DelNodes ->
-              check_nodes_update(in_core_datum, out_core_datum, action)
-          },
+      (ManageSettings(action), OracleSettings(in_core_datum)) ->
+        when action is {
+          RemoveOracle -> {
+            let is_time_to_be_removed =
+              in_core_datum.pause_period_started_at
+                |> option.map(
+                    fn(t) {
+                      interval.is_entirely_after(
+                        validity_range,
+                        t + oracle_conf.pause_period_length,
+                      )
+                    },
+                  )
+                |> option.or_else(False)
+            and {
+              auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
+              does_not_produce_own_nft_outputs(outputs, nft_policy_id),
+              is_time_to_be_removed,
+            }
+          }
+          _ -> {
+            expect [(OracleSettings(out_core_datum), out_value)] =
+              find_out_datum_and_value(outputs, own_hash, core_nft)
+            let is_authorised =
+              auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs)
+            let conserves_value = conserves_utxo_value(in_value, out_value)
+            when action is {
+              UpdateSettings -> and {
+                  is_authorised,
+                  conserves_value,
+                  check_settings_sanity(
+                    oracle_conf,
+                    in_core_datum,
+                    out_core_datum,
+                  ),
+                }
+              AddNodes -> and {
+                  is_authorised,
+                  conserves_value,
+                  check_nodes_update(in_core_datum, out_core_datum, AddNodes),
+                }
+              DelNodes -> and {
+                  is_authorised,
+                  conserves_value,
+                  check_nodes_update(in_core_datum, out_core_datum, DelNodes),
+                }
+              PauseOracle -> and {
+                  is_authorised,
+                  conserves_utxo_value_strict(in_value, out_value),
+                  check_pause_does_not_change_settings(
+                    in_core_datum,
+                    out_core_datum,
+                  ),
+                  not(is_oracle_paused(in_core_datum)),
+                  out_core_datum.pause_period_started_at == Some(
+                    get_current_time(
+                      in_core_datum.time_uncertainty_platform,
+                      validity_range,
+                    ),
+                  ),
+                }
+              ResumeOracle -> and {
+                  is_authorised,
+                  conserves_utxo_value_strict(in_value, out_value),
+                  check_pause_does_not_change_settings(
+                    in_core_datum,
+                    out_core_datum,
+                  ),
+                  is_oracle_paused(in_core_datum),
+                  not(is_oracle_paused(out_core_datum)),
+                }
+              _ -> fail
+            }
+          }
         }
-      }
 
       // :: ScaleDown
       (
@@ -458,59 +517,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             validity_range,
             oracle_conf.reward_dismissing_period_length,
           ),
-        }
-      }
-      // :: PauseControl
-      (PauseControl(action), OracleSettings(in_core_datum)) -> {
-        expect [(OracleSettings(out_core_datum), out_value)] =
-          find_out_datum_and_value(outputs, own_hash, core_nft)
-
-        and {
-          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
-          conserves_utxo_value_strict(in_value, out_value),
-          check_pause_does_not_change_settings(in_core_datum, out_core_datum),
-          when action is {
-            PauseOracle -> {
-              let must_not_be_paused_already =
-                is_oracle_paused(in_core_datum) |> not
-              let current_time =
-                get_current_time(
-                  in_core_datum.time_uncertainty_platform,
-                  validity_range,
-                )
-              let must_start_pause_period =
-                out_core_datum.pause_period_started_at == Some(current_time)
-
-              must_not_be_paused_already && must_start_pause_period
-            }
-            ResumeOracle -> {
-              let must_be_paused = is_oracle_paused(in_core_datum)
-              let must_resume_oracle = is_oracle_paused(out_core_datum) |> not
-
-              must_be_paused && must_resume_oracle
-            }
-          },
-        }
-      }
-      (
-        RemoveOracle,
-        OracleSettings(OracleSettingsDatum { pause_period_started_at, .. }),
-      ) -> {
-        let is_time_to_be_removed =
-          pause_period_started_at
-            |> option.map(
-                fn(pause_start) {
-                  interval.is_entirely_after(
-                    validity_range,
-                    pause_start + oracle_conf.pause_period_length,
-                  )
-                },
-              )
-            |> option.or_else(False)
-        and {
-          auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
-          does_not_produce_own_nft_outputs(outputs, nft_policy_id),
-          is_time_to_be_removed,
         }
       }
       // ::

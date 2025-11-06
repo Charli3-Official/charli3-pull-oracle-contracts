@@ -14,25 +14,22 @@ pub type MintingRedeemer {
 /// * OdvAggregate - user sends on demand validation request together with oracle nodes message collected off-chain
 /// * NodeCollect - oracle node collects rewards
 /// * PlatformCollect - oracle platform collects rewards
-/// * ManageSettings - oracle platform updates configuration:
+/// * ManageSettings - oracle platform updates configuration or lifecycle:
 ///   - UpdateSettings changes consensus, timing or fee settings
 ///   - AddNodes adds new operators
 ///   - DelNodes removes operators
-/// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
-/// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
-/// * PauseControl - oracle platform toggles pause state:
 ///   - PauseOracle starts pause period so nodes can finalise pending rewards
 ///   - ResumeOracle cancels pause, resuming normal operation
-/// * RemoveOracle - oracle pause period ends and platform destroys all UTxOs and all NFTs
+///   - RemoveOracle destroys the remaining oracle state after pause window elapses
+/// * ScaleDown - oracle platform burns RewardTransport and AggState NFTs, destroying corresponding UTxOs
+/// * DismissRewards - oracle platform turns RewardTransport UTxOs with pending rewards calculations into NoRewards
 pub type SettingsRedeemer {
   UpdateSettings
   AddNodes
   DelNodes
-}
-
-pub type PauseRedeemer {
   PauseOracle
   ResumeOracle
+  RemoveOracle
 }
 
 pub type OracleRedeemer {
@@ -40,10 +37,8 @@ pub type OracleRedeemer {
   OdvAggregateMsg
   RedeemRewards { collector: RewardRedeemer, corresponding_out_ix: Int }
   ManageSettings(SettingsRedeemer)
-  PauseControl(PauseRedeemer)
   ScaleDown
   DismissRewards
-  RemoveOracle
 }
 
 /// Distinguishes between different redeemer types who can collect oracle fees.
