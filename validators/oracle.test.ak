@@ -1,7 +1,7 @@
 use aiken/collection/dict
 use aiken/crypto.{ScriptHash}
 use cardano/address
-use cardano/assets as assets
+use cardano/assets.{AssetName, PolicyId} as assets
 use cardano/transaction.{Input, Output, OutputReference, Transaction}
 use cardano/transaction as tx
 use config
@@ -14,7 +14,7 @@ use core/datum.{
   OracleConfiguration, OracleSettings, OracleSettingsDatum, RewardAccount,
   RewardAccountDatum, RewardPrices,
 }
-use core/redeemer.{MintToken}
+use core/redeemer.{ManageSettings, MintToken, UpdateSettings}
 use ext/cardano/value.{Asset}
 use oracle
 use services/nft_based_auth.{auth_by_nft}
@@ -57,6 +57,23 @@ const mock_conf =
     fee_token: None,
   }
 
+const mock_fee_token_policy_id: PolicyId = "C3 policy id"
+
+const mock_fee_token_name: AssetName = "C3"
+
+const mock_conf_with_token =
+  OracleConfiguration {
+    platform_auth_nft: platform_policy_id,
+    pause_period_length: pause_period,
+    reward_dismissing_period_length: pause_period,
+    fee_token: Some(
+      Asset { policy_id: mock_fee_token_policy_id, name: mock_fee_token_name },
+    ),
+  }
+
+const mock_rate_nft =
+  Asset { policy_id: "C3/USD policy id", name: config.aggstate_token_name }
+
 const mock_settings =
   OracleSettingsDatum {
     nodes: [feed_vkh],
@@ -84,12 +101,21 @@ const mock_nfts =
     oracle_script_hash,
   }
 
-const platform_output =
+const platform_nft_output =
   Output {
     address: address.from_script(platform_script_hash),
     value: assets.from_asset(platform_policy_id, platform_nft_name, 1),
     datum: tx.NoDatum,
     reference_script: None,
+  }
+
+const platform_nft_input =
+  tx.Input {
+    output_reference: OutputReference {
+      transaction_id: "some platform tx",
+      output_index: 0,
+    },
+    output: platform_nft_output,
   }
 
 const reward_account_output =
@@ -115,14 +141,13 @@ const aggstate_output =
     reference_script: None,
   }
 
+const mock_core_settings_token_value =
+  assets.from_asset(oracle_policy_id, config.core_settings_token_name, 1)
+
 const core_settings_output =
   Output {
     address: address.from_script(oracle_script_hash),
-    value: assets.from_asset(
-      oracle_policy_id,
-      config.core_settings_token_name,
-      1,
-    ),
+    value: mock_core_settings_token_value,
     datum: tx.InlineDatum(OracleSettings(mock_settings)),
     reference_script: None,
   }
@@ -154,7 +179,7 @@ test successful_oracle_start() {
 
   let oracle_outputs =
     [
-      platform_output, core_settings_output, reward_account_output,
+      platform_nft_output, core_settings_output, reward_account_output,
       aggstate_output,
     ]
 
@@ -179,7 +204,7 @@ test successful_oracle_start() {
     find_out_datum_and_value(oracle_outputs, oracle_script_hash, core_nft)
 
   let platform_input =
-    Input { output_reference: mock_nfts.utxo_ref, output: platform_output }
+    Input { output_reference: mock_nfts.utxo_ref, output: platform_nft_output }
 
   expect
     auth_by_nft(mock_conf.platform_auth_nft, [platform_input], oracle_outputs)
@@ -194,4 +219,53 @@ test successful_oracle_start() {
 
   expect
     oracle.oracle_nfts.mint(mock_nfts, MintToken, oracle_policy_id, start_tx)
+}
+
+test successful_update_settings() {
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before update settings tx",
+      output_index: 0,
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: core_settings_output,
+    }
+  let core_settings_after =
+    OracleSettingsDatum {
+      ..mock_settings,
+      aggregation_liveness_period: 3_000_000,
+      iqr_fence_multiplier: 170,
+      fee_info: FeeConfig {
+        rate_nft: Some(mock_rate_nft),
+        reward_prices: RewardPrices {
+          node_fee: node_fee / 10,
+          platform_fee: platform_fee / 10,
+        },
+      },
+    }
+  let core_settings_output =
+    tx.Output {
+      address: address.from_script(oracle_script_hash),
+      value: mock_core_settings_token_value,
+      datum: tx.InlineDatum(OracleSettings(core_settings_after)),
+      reference_script: None,
+    }
+
+  let update_settings_redeemer: Data = ManageSettings(UpdateSettings)
+  let update_settings_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), update_settings_redeemer)],
+      outputs: [core_settings_output, platform_nft_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_conf_with_token,
+    Some(OracleSettings(mock_settings)),
+    ManageSettings(UpdateSettings),
+    core_settings_ref,
+    update_settings_tx,
+  )
 }
