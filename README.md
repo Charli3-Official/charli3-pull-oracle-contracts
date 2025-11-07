@@ -82,7 +82,7 @@ root="$(pwd)" && ln -s "$root/hooks/pre-commit" "$root/.git/hooks/pre-commit"
 
 Find more on the [Aiken's user manual](https://aiken-lang.org).
 
-Simply install latest version of aiken (change version tag) `nix profile install github:aiken-lang/aiken/v1.1.9#aiken`.
+Simply install latest version of aiken (change version tag) `nix profile install github:aiken-lang/aiken/v1.1.16#aiken`.
 
 ## Validators trace messages and codes
 
@@ -93,50 +93,51 @@ Other option is to use short trace and error codes instead of messages, this doc
 
 ### Errors
 
-Direct failures that cause code to stop evaluation and return the error.
+Direct failures that stop evaluation.
 
-* E1 - validator supports only mint purpose;
-* E2 - validator supports only spend purpose;
-* E3 - Oracle Manager Script state transition not allowed;
-* E4 - median: empty list;
-* E5 - check node feeds ascending order;
-* E6 - check node ids (feed vkhs) ascending strict order.
+* E1 – `oracle_nfts` was invoked outside of a minting context.
+* E2 – `oracle_manager` validators expect `spend` purpose and reject anything else.
+* E3 – `oracle_manager` received an unsupported redeemer/state transition.
+* E4 – `consensus.median` was asked to operate on an empty list.
+* E5 – list elements expected in ascending order (used for feed/value ordering checks).
+* E6 – feed verification keys must be strictly ascending when iterating.
+* E7 – node list must be non-empty when validating feed order.
 
 ### Traces
 
 Trace message is added to the list (evaluation context) when evaluation comes to a particular code branch, it will be added on every evaluation failure as well as success.
 
-* T1 - scale up;
-* T2 - scale down;
-* T3 - find_own_protocol_policy_id;
-* T4 - get_current_time;
-* T5 - auth_by_nft;
-* T6 - check_nodes_multisig;
-* T7 - spends_protocol_nft_inputs;
-* T8 - spends_one_script_utxo_with_nft;
-* T9 - returns_empty_reward_outputs;
-* T10 - returns_empty_aggstate_outputs;
-* T11 - find_out_datum_and_value;
-* T12 - find_out_datum_and_value_with_allowing_asset;
-* T13 - find_referenced_datum;
-* T14 - find_in_datum;
-* T15 - find_in_aggregations;
-* T16 - does_not_produce_own_nft_outputs;
-* T17 - is_aggstate_expired;
-* T18 - convert_reward_prices;
-* T19 - oracle_fees_were_transferred;
-* T20 - check_reward_distribution;
-* T21 - validate_message_form;
-* T22 - check_settings_sanity;
-* T23 - conserves_utxo_value;
-* T24 - check_closing_does_not_change_settings;
-* T25 - find_node_index_by_signature;
-* T26 - check_node_received_reward;
-* T27 - check_platform_received_reward;
-* T28 - check_added_nodes;
-* T29 - check_deleted_nodes;
-* T30 - validate_settings_form;
-* T31 - check_nodes_final_rewards_paid;
-* T32 - check_utxo_size_safety_buffer;
-* T33 - validate_dismissing_period;
-* T34 - IQR equals zero.
+* T1 – `ScaleToken` mint path (adding fresh Reward/AggState UTxOs).
+* T2 – `ScaleToken` burn path (requiring the matching inputs to be consumed).
+* T3 – `find_own_protocol_policy_id` extracts the oracle policy id from inputs.
+* T4 – `get_current_time` derives the midpoint from the validity range.
+* T5 – `auth_by_nft` validates the platform NFT witness.
+* T6 – `check_nodes_multisig` verifies node signatures against settings.
+* T7 – `spends_protocol_nft_inputs` checks the number of spent oracle NFTs.
+* T8 – `spends_one_script_utxo_with_nft` enforces single NFT script input usage.
+* T9 – `spends_one_account_utxo_for_aggregation` validates aggregation account input.
+* T10 – `returns_empty_account_outputs` confirms new reward accounts are zeroed.
+* T11 – `returns_empty_aggstate_outputs` confirms new AggState outputs are empty.
+* T12 – `find_out_datum_and_value` fetches output datum/value by NFT.
+* T13 – `find_out_datum_and_value_with_allowing_asset` variant allowing extra asset.
+* T14 – `find_referenced_datum` loads datum from reference inputs.
+* T15 – `find_in_datum` retrieves inline datum from an input.
+* T16 – `count_dismissed_reward_accounts` counts reward inputs dismissed.
+* T17 – `check_reward_accounts_in_to_out_mapping` matches reward inputs to outputs.
+* T18 – `get_length_and_check_strict_order` ensures integer list ascending order.
+* T19 – `does_not_produce_own_nft_outputs` forbids minting extra protocol NFTs.
+* T20 – `is_aggstate_expired` checks aggregation window expiry.
+* T21 – `convert_reward_prices` converts fees using reference prices.
+* T22 – `conserves_utxo_value` enforces exact input/output value conservation.
+* T23 – `check_utxo_size_safety_buffer` keeps reward accounts above min ADA.
+* T24 – `check_reward_distribution` validates reward distribution maps.
+* T25 – `validate_message_and_count_nodes` checks median message ordering.
+* T26 – `check_settings_sanity` keeps invariant settings untouched.
+* T27 – `validate_settings_form` asserts settings format and token references.
+* T28 – `check_pause_does_not_change_settings` ensures pause toggles only the flag.
+* T29 – `find_node_by_signature` resolves the signing node.
+* T30 – `check_node_received_reward` validates node withdrawals.
+* T31 – `check_platform_received_reward` validates platform fee withdrawals.
+* T32 – `check_nodes_update` validates node list additions/removals.
+* T33 – `validate_dismissing_period` checks reward dismissal timeout.
+* T34 – interquartile range collapsed to zero (IQRFence degeneration).

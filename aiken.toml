@@ -1,6 +1,6 @@
 name = "charli3-official/odv-multisig-charli3-oracle-onchain"
 version = "0.0.0"
-compiler = "v1.1.9"
+compiler = "v1.1.19"
 plutus = "v3"
 license = "Apache-2.0"
 description = "Aiken contracts for project 'charli3-official/odv-multisig-charli3-oracle-onchain'"
@@ -12,12 +12,12 @@ platform = "github"
 
 [[dependencies]]
 name = "aiken-lang/stdlib"
-version = "v2.2.0"
+version = "v3.0.0"
 source = "github"
 
 [[dependencies]]
 name = "aiken-lang/fuzz"
-version = "v2.1.0"
+version = "v2.2.0"
 source = "github"
 
 [config.default]
@@ -25,11 +25,9 @@ iqr_applicability_threshold = 4
 aggstate_token_name = "C3AS"
 core_settings_token_name = "C3CS"
 reward_account_token_name = "C3RA"
-reward_transport_token_name = "C3RT"
 
 [config.testnet]
 iqr_applicability_threshold = 4
 aggstate_token_name = "C3AS" # "AggregationState"
 core_settings_token_name = "C3CS" # "CoreSettings"
 reward_account_token_name = "C3RA" # "RewardAccount"
-reward_transport_token_name = "C3RT" # "RewardTransport"

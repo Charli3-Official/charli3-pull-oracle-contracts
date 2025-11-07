@@ -2,6 +2,7 @@ use aiken/collection/pairs
 use aiken/crypto.{ScriptHash, VerificationKeyHash}
 use aiken/option
 use cardano/assets.{PolicyId}
+use cardano/transaction.{OutputReference}
 use ext/aiken/math/rational.{Percent, Permille}
 use ext/aiken/time.{PosixTime, PosixTimeDiff}
 use ext/cardano/value.{Asset}
@@ -27,7 +28,7 @@ pub type PriceData {
 
 /// Retrieves a price-related value from the PriceData structure using an index.
 pub fn get_price_data(price_data: PriceData, index: Int) -> Option<Int> {
-  expect GenericData(price_map) = price_data
+  expect GenericData { price_map } = price_data
   pairs.get_first(price_map, index)
 }
 
@@ -55,23 +56,20 @@ pub type OracleDatum {
   AggState(PriceData)
   OracleSettings(OracleSettingsDatum)
   RewardAccount(RewardAccountDatum)
-  RewardTransport(RewardTransportDatum)
 }
 
-/// RewardTransport utxo can be in two states:
-/// 1. NoRewards - waiting for user to submit tx with OdvAggregate redeemer;
-/// 2. RewardConsensusPending - waiting to calculate aggregation reward distribution
-///    and transfer user provided fees into RewardAccount utxo.
-pub type RewardTransportDatum {
-  NoRewards
-  RewardConsensusPending(Aggregation)
-}
-
-pub type Aggregation {
-  oracle_feed: OracleFeed,
-  message: AggregateMessage,
-  node_reward_price: Int,
-  rewards_amount_paid: Int,
+/// Immutable NFT settings for oracle usage.
+/// Rationale for immutability:
+/// * utxo_ref - Ensures a unique policy ID for each oracle's NFT, preventing conflicts.
+/// * oracle_conf - Associates the NFT with a fixed oracle configuration, ensuring consistency.
+/// * oracle_script_hash - Links the NFT to a specific oracle script, maintaining a secure relationship.
+pub type NftsConfiguration {
+  /// A reference to the UTXO, guaranteeing a unique policy ID for the oracle's NFTs.
+  utxo_ref: OutputReference,
+  /// Defines parameters that the oracle will adhere to when using this validator.
+  oracle_conf: OracleConfiguration,
+  /// The hash of the oracle script ensuring a verifiable relationship between
+  oracle_script_hash: ScriptHash,
 }
 
 /// Immutable oracle settings.
@@ -80,7 +78,6 @@ pub type Aggregation {
 /// * pause_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * reward_dismissing_period_length - oracle nodes will be sure that platform won't update this to a make very short interval
 /// * fee_token - oracle nodes will be sure that platform won't update reward currency
-/// * reward_escrow_script_hash - oracle nodes will be sure that the reward escrow script is fair
 pub type OracleConfiguration {
   /// platform is authorized by providing its input with specific NFT inside the transaction
   platform_auth_nft: PolicyId,
@@ -90,16 +87,12 @@ pub type OracleConfiguration {
   reward_dismissing_period_length: PosixTimeDiff,
   /// oracle fees are paid using this asset, if it's None then ada is used
   fee_token: Option<Asset>,
-  /// when oracle platform removes nodes it will do a final token reward payout to this address,
-  /// ada rewards are paid to nodes PaymentVkh, so escrow script hash can be set to ""
-  reward_escrow_script_hash: ScriptHash,
 }
 
-pub type AggregateMessage {
-  node_feeds_sorted_by_feed: Pairs<FeedVkh, NodeFeed>,
-  node_feeds_count: Int,
-  timestamp: PosixTime,
-}
+/// Node id mapped to the corresponding node feed
+/// WARNING AggregateMessage mapping should be sorted ascendingly by NodeFeed, to use it with aikens dict.from_ascending_pairs
+pub type AggregateMessage =
+  Pairs<FeedVkh, NodeFeed>
 
 /// Mutable oracle settings
 pub type OracleSettingsDatum {
@@ -131,26 +124,19 @@ pub type OracleSettingsDatum {
 
 /// Reward distribution datum
 pub type RewardAccountDatum {
-  /// we get oracle node id (FeedVkh) mapped to node reward amount
-  /// if we zip together Nodes keys (i.e. pairs first elements) and this list of reward amounts
-  nodes_to_rewards: List<Int>,
+  /// Maps oracle node feed verification keys to their reward amounts.
+  /// Each entry represents an individual node's accumulated rewards that can be claimed.
+  /// WARNING nodes_to_rewards mapping should be sorted ascendingly by FeedVkh, to use it with aikens dict.from_ascending_pairs
+  nodes_to_rewards: Pairs<FeedVkh, Int>,
+  /// The last time when rewards were distributed or UTxO was spent/updated
+  last_update_time: PosixTime,
 }
 
-// TODO consider removing PaymentVkh: that way operator uses FeedVkh to authorize collecting node rewards
-// and pays tx fees from other address which is not known to the validator
-/// An oracle node has two keys:
-/// 1. FeedVkh - for verification of node feed inside the AggregateMessage.
-///    Node operator does not store any kind of funds on this key, it's only for signing.
-/// 2. PaymentVkh - exists only for node operator convenience:
-///    so that he can pay tx fees and collect node rewards using one vkh.
-/// WARNING nodes mapping should be sorted ascendingly by FeedVkh, to use it with aikens dict.from_ascending_pairs
+/// WARNING nodes list should be sorted ascendingly by FeedVkh
 pub type Nodes =
-  Pairs<FeedVkh, PaymentVkh>
+  List<FeedVkh>
 
 pub type FeedVkh =
-  VerificationKeyHash
-
-pub type PaymentVkh =
   VerificationKeyHash
 
 pub type FeeConfig {
@@ -165,11 +151,4 @@ pub type RewardPrices {
 
 pub fn is_oracle_paused(settings: OracleSettingsDatum) -> Bool {
   option.is_some(settings.pause_period_started_at)
-}
-
-pub fn has_no_rewards(reward_transport: RewardTransportDatum) -> Bool {
-  when reward_transport is {
-    NoRewards -> True
-    RewardConsensusPending { .. } -> False
-  }
 }

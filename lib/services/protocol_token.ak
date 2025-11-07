@@ -103,21 +103,13 @@ pub fn check_own_protocol_token_allowing_asset(
   let tokens =
     output_value
       |> assets.without_lovelace
-      |> assets.flatten_with(skip_allowed_asset(_, _, _, allowed_asset))
+      |> assets.flatten
+      |> list.filter(
+          fn(triple) {
+            let (policy_id, _, _) = triple
+            policy_id != allowed_asset
+          },
+        )
 
   tokens == [(protocol_token.policy_id, protocol_token.name, 1)]
-}
-
-/// Skips allowed token: e.g. C3 fee payment token
-pub fn skip_allowed_asset(
-  policy_id: PolicyId,
-  name: AssetName,
-  amount: Int,
-  allowed_asset: PolicyId,
-) -> Option<(PolicyId, AssetName, Int)> {
-  if policy_id == allowed_asset {
-    None
-  } else {
-    Some((policy_id, name, amount))
-  }
 }
