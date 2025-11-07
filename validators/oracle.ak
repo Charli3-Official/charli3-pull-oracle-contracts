@@ -231,19 +231,25 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
     let in_value = own_input.output.value
 
+    let token_name =
+      when in_datum is {
+        AggState(_) -> config.aggstate_token_name
+        RewardAccount(_) -> config.reward_account_token_name
+        OracleSettings(_) -> config.core_settings_token_name
+      }
+
+    let nft_policy_id = find_own_protocol_policy_id(in_value, token_name)
+
+    let reward_account_nft =
+      Asset { policy_id: nft_policy_id, name: config.reward_account_token_name }
+    let aggstate_nft =
+      Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
+    let core_nft =
+      Asset { policy_id: nft_policy_id, name: config.core_settings_token_name }
+
     when (redeemer, in_datum) is {
       // :: OdvAggregate
       (OdvAggregateMsg, AggState(price_data)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.aggstate_token_name)
-        let reward_account_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.reward_account_token_name,
-          }
-        let aggstate_nft =
-          Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
-
         expect [(AggState(_), out_value)] =
           find_out_datum_and_value(outputs, own_hash, aggstate_nft)
         and {
@@ -258,24 +264,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         }
       }
       (OdvAggregate(message), RewardAccount(in_account_datum)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(
-            in_value,
-            config.reward_account_token_name,
-          )
-        let reward_account_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.reward_account_token_name,
-          }
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-        let aggstate_nft =
-          Asset { policy_id: nft_policy_id, name: config.aggstate_token_name }
-
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
@@ -368,22 +356,6 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         RedeemRewards { collector, corresponding_out_ix },
         RewardAccount(in_account_datum),
       ) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(
-            in_value,
-            config.reward_account_token_name,
-          )
-        let reward_account_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.reward_account_token_name,
-          }
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
@@ -420,15 +392,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
         }
       }
       // :: ManageSettings
-      (ManageSettings(action), OracleSettings(in_core_datum)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.core_settings_token_name)
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
-
+      (ManageSettings(action), OracleSettings(in_core_datum)) ->
         when action is {
           RemoveOracle -> {
             let is_time_to_be_removed =
@@ -503,19 +467,12 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             }
           }
         }
-      }
 
       // :: ScaleDown
       (
         ScaleDown,
         RewardAccount(RewardAccountDatum { nodes_to_rewards, last_update_time }),
       ) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(
-            in_value,
-            config.reward_account_token_name,
-          )
-
         let must_be_empty_or_expired =
           when nodes_to_rewards is {
             [] -> True
@@ -533,36 +490,16 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           must_be_empty_or_expired,
         }
       }
-      (ScaleDown, AggState(price_data)) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(in_value, config.aggstate_token_name)
-
-        and {
+      (ScaleDown, AggState(price_data)) -> and {
           auth_by_nft(oracle_conf.platform_auth_nft, inputs, outputs),
           does_not_produce_own_nft_outputs(outputs, nft_policy_id),
           is_aggstate_expired(price_data, validity_range),
         }
-      }
       // :: DismissRewards
       (
         DismissRewards,
         RewardAccount(RewardAccountDatum { last_update_time, .. }),
       ) -> {
-        let nft_policy_id =
-          find_own_protocol_policy_id(
-            in_value,
-            config.reward_account_token_name,
-          )
-        let reward_account_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.reward_account_token_name,
-          }
-        let core_nft =
-          Asset {
-            policy_id: nft_policy_id,
-            name: config.core_settings_token_name,
-          }
         expect OracleSettings(core_datum) =
           find_referenced_datum(reference_inputs, own_hash, core_nft)
 
