@@ -231,8 +231,15 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
 
     let in_value = own_input.output.value
 
-    let nft_policy_id =
-      find_own_protocol_policy_id(in_value, config.aggstate_token_name)
+    let token_name =
+      when in_datum is {
+        AggState(_) -> config.aggstate_token_name
+        RewardAccount(_) -> config.reward_account_token_name
+        OracleSettings(_) -> config.core_settings_token_name
+      }
+
+    let nft_policy_id = find_own_protocol_policy_id(in_value, token_name)
+
     let reward_account_nft =
       Asset { policy_id: nft_policy_id, name: config.reward_account_token_name }
     let aggstate_nft =
