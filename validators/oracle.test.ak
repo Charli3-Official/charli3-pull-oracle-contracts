@@ -179,10 +179,10 @@ const minted_value =
     |> assets.add(oracle_policy_id, config.aggstate_token_name, 1)
 
 const mock_precise_tx_validity_interval =
-  interval.between(1762860366128, 1762860366128 + platform_uncertainty)
+  interval.between(1732195907000, 1732195907000 + aggregation_uncertainty)
 
 const mock_current_time =
-  ( 1762860366128 + 1762860366128 + platform_uncertainty ) / 2
+  ( 1732195907000 + 1732195907000 + aggregation_uncertainty ) / 2
 
 test successful_oracle_start() {
   let minted_assets = minted_value |> assets.tokens(oracle_policy_id)
