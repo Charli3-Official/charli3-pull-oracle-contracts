@@ -65,11 +65,11 @@ test add_nodes_fails_when_unsorted() fail {
   check_nodes_update(before, after, AddNodes)
 }
 
-test add_nodes_fails_when_zero_signatories() {
+test add_nodes_fails_when_zero_signatories() fail {
   let before = mk_settings([node_a, node_b], 1)
   let after = mk_settings([node_a, node_b, node_c], 0)
 
-  !check_nodes_update(before, after, AddNodes)
+  check_nodes_update(before, after, AddNodes)
 }
 
 // ManageSettings :: DelNodes
@@ -80,11 +80,11 @@ test del_nodes_succeeds() {
   check_nodes_update(before, after, DelNodes)
 }
 
-test del_nodes_requires_removal() {
+test del_nodes_requires_removal() fail {
   let before = mk_settings([node_a, node_b], 1)
   let after = mk_settings([node_a, node_b], 1)
 
-  !check_nodes_update(before, after, DelNodes)
+  check_nodes_update(before, after, DelNodes)
 }
 
 // RewardRedeemer :: NodeCollect
@@ -128,7 +128,7 @@ test node_collect_succeeds_with_fee_token() {
   )
 }
 
-test node_collect_fails_when_lovelace_decreases() {
+test node_collect_fails_when_lovelace_decreases() fail {
   let utxo_size_safety_buffer = 5_000_000
   let in_distribution =
     RewardAccountDatum {
@@ -158,7 +158,7 @@ test node_collect_fails_when_lovelace_decreases() {
       reference_script: None,
     }
 
-  !check_node_received_reward(
+  check_node_received_reward(
     Some(fee_token_asset),
     node_a,
     in_distribution,
@@ -228,7 +228,7 @@ test reward_distribution_accepts_sorted_output() {
 // marking the state invalid and failing the predicate.
 // So any out-of-order entry breaks the check automatically.
 
-test reward_distribution_rejects_unsorted_output() {
+test reward_distribution_rejects_unsorted_output() fail {
   let node_reward_price = 5
   let node_feeds_sorted_by_feed: AggregateMessage =
     [Pair(node_a, 100), Pair(node_b, 100), Pair(node_c, 100)]
@@ -236,7 +236,7 @@ test reward_distribution_rejects_unsorted_output() {
   let out_distribution = [Pair(node_b, 15), Pair(node_a, 15), Pair(node_c, 15)]
   let nodes = [node_a, node_b, node_c]
 
-  !check_reward_distribution(
+  check_reward_distribution(
     node_feeds_sorted_by_feed,
     2,
     100,
@@ -257,12 +257,12 @@ test check_nodes_multisig_accepts_required_signers() {
   check_nodes_multisig(message, 2, signers, allowed_nodes, 2)
 }
 
-test check_nodes_multisig_rejects_unknown_node() {
+test check_nodes_multisig_rejects_unknown_node() fail {
   let message: AggregateMessage = [Pair(node_a, 100), Pair(node_c, 105)]
   let signers = [node_a, node_c]
   let allowed_nodes = [node_a, node_b]
 
-  !check_nodes_multisig(message, 2, signers, allowed_nodes, 2)
+  check_nodes_multisig(message, 2, signers, allowed_nodes, 2)
 }
 
 test reward_distribution_filters_outliers_with_iqr() {
