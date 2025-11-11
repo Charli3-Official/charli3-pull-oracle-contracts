@@ -1,6 +1,7 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/crypto.{ScriptHash}
+use aiken/interval
 use cardano/address
 use cardano/assets.{AssetName, PolicyId} as assets
 use cardano/transaction.{Input, Output, OutputReference, Transaction}
@@ -16,7 +17,8 @@ use core/datum.{
   RewardPrices,
 }
 use core/redeemer.{
-  AddNodes, DelNodes, ManageSettings, MintToken, UpdateSettings,
+  AddNodes, BurnToken, DelNodes, ManageSettings, MintToken, PauseOracle,
+  RemoveOracle, ResumeOracle, UpdateSettings,
 }
 use ext/cardano/value.{Asset}
 use oracle
@@ -115,7 +117,7 @@ const mock_nfts =
       transaction_id: #"f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff00112233445566778899aabbccddeeff",
       output_index: 0,
     },
-    oracle_conf: mock_conf,
+    oracle_conf: mock_conf_with_token,
     oracle_script_hash,
   }
 
@@ -175,6 +177,12 @@ const minted_value =
     |> assets.add(oracle_policy_id, config.core_settings_token_name, 1)
     |> assets.add(oracle_policy_id, config.reward_account_token_name, 1)
     |> assets.add(oracle_policy_id, config.aggstate_token_name, 1)
+
+const mock_precise_tx_validity_interval =
+  interval.between(1762860366128, 1762860366128 + platform_uncertainty)
+
+const mock_current_time =
+  ( 1762860366128 + 1762860366128 + platform_uncertainty ) / 2
 
 test successful_oracle_start() {
   let minted_assets = minted_value |> assets.tokens(oracle_policy_id)
@@ -388,5 +396,137 @@ test successful_del_nodes() {
     ManageSettings(DelNodes),
     core_settings_ref,
     del_nodes_tx,
+  )
+}
+
+test successful_oracle_pause() {
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before oracle pause tx",
+      output_index: 0,
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: core_settings_output,
+    }
+  let core_settings_after =
+    OracleSettingsDatum {
+      ..mock_settings,
+      pause_period_started_at: Some(mock_current_time),
+    }
+  let produced_core_settings_output =
+    tx.Output {
+      address: address.from_script(oracle_script_hash),
+      value: mock_core_settings_token_value,
+      datum: tx.InlineDatum(OracleSettings(core_settings_after)),
+      reference_script: None,
+    }
+
+  let oracle_pause_redeemer: Data = ManageSettings(PauseOracle)
+  let oracle_pause_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), oracle_pause_redeemer)],
+      outputs: [produced_core_settings_output, platform_nft_output],
+      validity_range: mock_precise_tx_validity_interval,
+    }
+  oracle.oracle_manager.spend(
+    mock_conf_with_token,
+    Some(OracleSettings(mock_settings)),
+    ManageSettings(PauseOracle),
+    core_settings_ref,
+    oracle_pause_tx,
+  )
+}
+
+test successful_resume_oracle() {
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before resume oracle tx",
+      output_index: 0,
+    }
+  let core_settings_before =
+    OracleSettingsDatum {
+      ..mock_settings,
+      pause_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: tx.Output {
+        address: address.from_script(oracle_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(OracleSettings(core_settings_before)),
+        reference_script: None,
+      },
+    }
+
+  let resume_oracle_redeemer: Data = ManageSettings(ResumeOracle)
+  let resume_oracle_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), resume_oracle_redeemer)],
+      outputs: [core_settings_output, platform_nft_output],
+    }
+  oracle.oracle_manager.spend(
+    mock_conf_with_token,
+    Some(OracleSettings(core_settings_before)),
+    ManageSettings(ResumeOracle),
+    core_settings_ref,
+    resume_oracle_tx,
+  )
+}
+
+test successful_remove_oracle() {
+  let remove_oracle_redeemer: Data = ManageSettings(RemoveOracle)
+  let burned_tokens_value =
+    assets.from_asset_list(
+      [Pair(oracle_policy_id, [Pair(config.core_settings_token_name, -1)])],
+    )
+
+  let core_settings_ref =
+    OutputReference {
+      transaction_id: "core settings before remove oracle tx",
+      output_index: 0,
+    }
+  let core_settings =
+    OracleSettingsDatum {
+      ..mock_settings,
+      pause_period_started_at: Some(mock_current_time),
+    }
+  let core_settings_input =
+    tx.Input {
+      output_reference: core_settings_ref,
+      output: tx.Output {
+        address: address.from_script(oracle_script_hash),
+        value: mock_core_settings_token_value,
+        datum: tx.InlineDatum(OracleSettings(core_settings)),
+        reference_script: None,
+      },
+    }
+
+  let remove_oracle_tx =
+    Transaction {
+      ..tx.placeholder,
+      inputs: [core_settings_input, platform_nft_input],
+      redeemers: [Pair(tx.Spend(core_settings_ref), remove_oracle_redeemer)],
+      outputs: [platform_nft_output],
+      mint: burned_tokens_value,
+      validity_range: interval.after(mock_current_time + 2 * pause_period),
+    }
+  oracle.oracle_nfts.mint(
+    mock_nfts,
+    BurnToken,
+    oracle_policy_id,
+    remove_oracle_tx,
+  ) && oracle.oracle_manager.spend(
+    mock_conf_with_token,
+    Some(OracleSettings(core_settings)),
+    ManageSettings(RemoveOracle),
+    core_settings_ref,
+    remove_oracle_tx,
   )
 }
