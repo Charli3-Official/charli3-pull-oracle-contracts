@@ -148,7 +148,8 @@ fn mk_reward_account_input(
   (ref, datum, input)
 }
 
-// Node collector spends the reward account, keeps it at output index 0, and pays itself at index 1.
+// Node collector spends the reward account,
+// keeps it at output index 0, and pays itself at index 1.
 // We supply two signatories so find_node_by_signature recognises the first node.
 test redeem_rewards_node_single_utxo_succeeds() {
   expect Some(node_1) = list.head(mock_nodes)
@@ -209,7 +210,8 @@ test redeem_rewards_node_single_utxo_succeeds() {
   )
 }
 
-// Platform collect returns the NFT to the platform output and takes its fee from the reward account.
+// Platform collect returns the NFT to the platform output
+// and takes its fee from the reward account.
 test redeem_rewards_platform_collect_succeeds() {
   expect Some(node_1) = list.head(mock_nodes)
   let (_, core_settings_input) =
@@ -510,7 +512,8 @@ test redeem_rewards_node_incorrect_index_fails() fail {
       extra_signatories: [node_1, other_signer],
     }
 
-  // Fails because index 1 points at the payout output; check_node_received_reward expects a reward account datum there.
+  // Fails because index 1 points at the payout output;
+  // check_node_received_reward expects a reward account datum there.
   oracle.oracle_manager.spend(
     mock_conf,
     Some(RewardAccount(reward_before)),
@@ -518,6 +521,166 @@ test redeem_rewards_node_incorrect_index_fails() fail {
     reward_ref,
     spend_tx,
   )
+}
+
+test redeem_rewards_node_retains_entry_fails() fail {
+  expect Some(node_1) = list.head(mock_nodes)
+  expect Some(node_2) = list.head(list.drop(mock_nodes, 1))
+
+  let (_, core_settings_input) =
+    mk_core_settings_input("core settings for retained entry")
+  let (reward_ref, reward_before, reward_input) =
+    mk_reward_account_input(
+      "node retain entry",
+      [Pair(node_1, 1_000_000), Pair(node_2, 750_000)],
+      500,
+      0,
+    )
+  let reward_output_after =
+    tx.Output {
+      address: address.from_script(oracle_script_hash),
+      value: assets.merge(
+        assets.from_asset(oracle_policy_id, config.reward_account_token_name, 1),
+        assets.from_lovelace(utxo_buffer),
+      ),
+      datum: tx.InlineDatum(
+        RewardAccount(
+          RewardAccountDatum {
+            nodes_to_rewards: [Pair(node_1, 1_000_000), Pair(node_2, 750_000)],
+            last_update_time: reward_before.last_update_time,
+          },
+        ),
+      ),
+      reference_script: None,
+    }
+  let node_payout_output =
+    tx.Output {
+      address: address.from_script(platform_script_hash),
+      value: assets.from_lovelace(1_000_000),
+      datum: tx.NoDatum,
+      reference_script: None,
+    }
+  let redeemer =
+    RedeemRewards { collector: NodeCollect, corresponding_out_ix: 0 }
+  let redeemer_data: Data = redeemer
+  let spend_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [core_settings_input],
+      inputs: [reward_input],
+      outputs: [reward_output_after, node_payout_output],
+      redeemers: [Pair(tx.Spend(reward_ref), redeemer_data)],
+      extra_signatories: [node_1, other_signer],
+    }
+
+  // Fails because the node remains in the reward account output,
+  // so check_node_received_reward detects unchanged distribution.
+  oracle.oracle_manager.spend(
+    mock_conf,
+    Some(RewardAccount(reward_before)),
+    redeemer,
+    reward_ref,
+    spend_tx,
+  )
+}
+
+test redeem_rewards_node_missing_entry_second_utxo_fails() fail {
+  expect Some(node_1) = list.head(mock_nodes)
+  expect Some(node_2) = list.head(list.drop(mock_nodes, 1))
+
+  let (_, core_settings_input) =
+    mk_core_settings_input("core settings for missing entry")
+
+  let (reward_ref1, reward_before1, reward_input1) =
+    mk_reward_account_input(
+      "node collect present",
+      [Pair(node_1, 800_000), Pair(node_2, 600_000)],
+      600,
+      0,
+    )
+  let reward_output_after1 =
+    tx.Output {
+      address: address.from_script(oracle_script_hash),
+      value: assets.merge(
+        assets.from_asset(oracle_policy_id, config.reward_account_token_name, 1),
+        assets.from_lovelace(utxo_buffer + 600_000),
+      ),
+      datum: tx.InlineDatum(
+        RewardAccount(
+          RewardAccountDatum {
+            nodes_to_rewards: [Pair(node_2, 600_000)],
+            last_update_time: reward_before1.last_update_time,
+          },
+        ),
+      ),
+      reference_script: None,
+    }
+
+  let (reward_ref2, reward_before2, reward_input2) =
+    mk_reward_account_input(
+      "node collect absent",
+      [Pair(node_2, 400_000)],
+      601,
+      0,
+    )
+  let reward_output_after2 =
+    tx.Output {
+      address: address.from_script(oracle_script_hash),
+      value: assets.merge(
+        assets.from_asset(oracle_policy_id, config.reward_account_token_name, 1),
+        assets.from_lovelace(utxo_buffer + 400_000),
+      ),
+      datum: tx.InlineDatum(RewardAccount(reward_before2)),
+      reference_script: None,
+    }
+
+  let node_total_payout =
+    tx.Output {
+      address: address.from_script(platform_script_hash),
+      value: assets.from_lovelace(800_000),
+      datum: tx.NoDatum,
+      reference_script: None,
+    }
+
+  let redeemer1 =
+    RedeemRewards { collector: NodeCollect, corresponding_out_ix: 0 }
+  let redeemer2 =
+    RedeemRewards { collector: NodeCollect, corresponding_out_ix: 1 }
+  let redeemer_data1: Data = redeemer1
+  let redeemer_data2: Data = redeemer2
+
+  let spend_tx =
+    Transaction {
+      ..tx.placeholder,
+      reference_inputs: [core_settings_input],
+      inputs: [reward_input1, reward_input2],
+      outputs: [reward_output_after1, reward_output_after2, node_total_payout],
+      redeemers: [
+        Pair(tx.Spend(reward_ref1), redeemer_data1),
+        Pair(tx.Spend(reward_ref2), redeemer_data2),
+      ],
+      extra_signatories: [node_1, other_signer],
+    }
+
+  // Fails because the second reward account never contained the node's key,
+  // so find_node_by_signature/check_node_received_reward aborts.
+  let first_utxo =
+    oracle.oracle_manager.spend(
+      mock_conf,
+      Some(RewardAccount(reward_before1)),
+      redeemer1,
+      reward_ref1,
+      spend_tx,
+    )
+  let second_utxo =
+    oracle.oracle_manager.spend(
+      mock_conf,
+      Some(RewardAccount(reward_before2)),
+      redeemer2,
+      reward_ref2,
+      spend_tx,
+    )
+  first_utxo && second_utxo
 }
 
 test redeem_rewards_platform_multiple_utxos_succeeds() {
@@ -575,7 +738,8 @@ test redeem_rewards_platform_multiple_utxos_succeeds() {
   let redeemer_data1: Data = redeemer1
   let redeemer_data2: Data = redeemer2
 
-  // Both redeemers point to their reward-account outputs (indices 0 and 1) while the combined fee lands at index 3.
+  // Both redeemers point to their reward-account outputs (indices 0 and 1)
+  // while the combined fee lands at index 3.
   let spend_tx =
     Transaction {
       ..tx.placeholder,
