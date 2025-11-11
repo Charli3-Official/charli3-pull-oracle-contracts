@@ -10,8 +10,8 @@ use core/datum.{
   AggregateMessage, FeeConfig, FeedVkh, Nodes, OracleSettingsDatum,
   RewardAccount, RewardAccountDatum, RewardPrices,
 }
-use core/redeemer.{AddNodes, DelNodes}
 use core/multisig.{check_nodes_multisig}
+use core/redeemer.{AddNodes, DelNodes}
 use ext/cardano/value.{Asset}
 
 fn mk_settings(nodes: Nodes, sigs: Int) -> OracleSettingsDatum {
@@ -268,7 +268,10 @@ test check_nodes_multisig_rejects_unknown_node() {
 test reward_distribution_filters_outliers_with_iqr() {
   let node_reward_price = 5
   let node_feeds_sorted_by_feed: AggregateMessage =
-    [Pair(node_a, 100), Pair(node_b, 101), Pair(node_c, 102), Pair(node_d, 1000)]
+    [
+      Pair(node_a, 100), Pair(node_b, 101), Pair(node_c, 102),
+      Pair(node_d, 1000),
+    ]
   let in_distribution =
     [Pair(node_a, 10), Pair(node_b, 10), Pair(node_c, 10), Pair(node_d, 10)]
   let out_distribution =
@@ -290,5 +293,10 @@ test reward_distribution_filters_outliers_with_iqr() {
 
 test get_length_and_check_strict_order_succeds() {
   let inst_sorted = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  expect 12 == get_length_and_check_strict_order(inst_sorted)
+}
+
+test get_length_and_check_strict_order_fails() fail {
+  let inst_sorted = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11]
   expect 12 == get_length_and_check_strict_order(inst_sorted)
 }
