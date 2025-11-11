@@ -15,9 +15,7 @@ use core/datum.{
   OracleSettings, OracleSettingsDatum, RewardAccount, RewardAccountDatum,
   RewardPrices,
 }
-use core/redeemer.{
-  AddNodes, DelNodes, ManageSettings, MintToken, UpdateSettings,
-}
+use core/redeemer.{AddNodes, DelNodes, ManageSettings, MintToken, UpdateSettings}
 use ext/cardano/value.{Asset}
 use oracle
 use services/nft_based_auth.{auth_by_nft}
@@ -390,3 +388,4 @@ test successful_del_nodes() {
     del_nodes_tx,
   )
 }
+

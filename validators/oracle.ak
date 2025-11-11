@@ -383,7 +383,10 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
           NodeCollect ->
             check_node_received_reward(
               oracle_conf.fee_token,
-              find_node_by_signature(extra_signatories, core_datum.nodes),
+              find_node_by_signature(
+                extra_signatories,
+                in_account_datum.nodes_to_rewards,
+              ),
               in_account_datum,
               in_value,
               reward_acc_output,
