@@ -618,13 +618,17 @@ pub fn check_pause_does_not_change_settings(
   in_core_datum.nodes == out_core_datum.nodes && in_core_datum.utxo_size_safety_buffer == out_core_datum.utxo_size_safety_buffer && in_core_datum.iqr_fence_multiplier == out_core_datum.iqr_fence_multiplier && in_core_datum.median_divergency_factor == out_core_datum.median_divergency_factor && in_core_datum.fee_info == out_core_datum.fee_info && in_core_datum.aggregation_liveness_period == out_core_datum.aggregation_liveness_period && in_core_datum.time_uncertainty_platform == out_core_datum.time_uncertainty_platform && in_core_datum.time_uncertainty_aggregation == out_core_datum.time_uncertainty_aggregation
 }
 
-pub fn find_node_by_signature(tx_signatories: List<a>, nodes: List<a>) -> a {
+pub fn find_node_by_signature(
+  tx_signatories: List<a>,
+  nodes_to_rewards: Pairs<a, b>,
+) -> a {
   trace @"T29"
-
   when tx_signatories is {
     [vkh1, vkh2] ->
-      when list.find(nodes, fn(node) { node == vkh1 || node == vkh2 }) is {
-        Some(node) -> node
+      when
+        list.find(nodes_to_rewards, fn(Pair(k, _)) { k == vkh1 || k == vkh2 })
+      is {
+        Some(Pair(k, _)) -> k
         None -> fail
       }
     _ -> fail
