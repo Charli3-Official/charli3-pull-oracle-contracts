@@ -1,13 +1,14 @@
+use aiken/collection/list
 use aiken/crypto.{ScriptHash}
 use cardano/address
 use cardano/assets
-use cardano/transaction.{Output, OutputReference, Transaction}
+use cardano/transaction.{Input, Output, OutputReference, Transaction}
 use cardano/transaction as tx
 use config
 use core/datum.{
   AggState, FeeConfig, GenericData, NftsConfiguration, OracleConfiguration,
-  OracleSettings, OracleSettingsDatum, RewardAccount, RewardAccountDatum,
-  RewardPrices,
+  OracleDatum, OracleSettings, OracleSettingsDatum, RewardAccount,
+  RewardAccountDatum, RewardPrices,
 }
 use core/redeemer.{ScaleDown, ScaleToken}
 use oracle
@@ -137,58 +138,228 @@ fn mk_aggstate_output(price_map: List<Pair<Int, Int>>) -> Output {
   }
 }
 
-test scale_token_mint_succeeds() {
-  let minted_value =
-    assets.zero
-      |> assets.add(oracle_policy_id, config.reward_account_token_name, 1)
-      |> assets.add(oracle_policy_id, config.aggstate_token_name, 1)
+fn add_token(value, count: Int, name: assets.AssetName) {
+  when count is {
+    0 -> value
+    _ -> assets.add(value, oracle_policy_id, name, count)
+  }
+}
 
-  let reward_output = mk_reward_output(utxo_buffer)
-  let aggstate_output = mk_aggstate_output([])
+fn build_mint_value(reward_count: Int, agg_count: Int) {
+  let with_rewards =
+    add_token(assets.zero, reward_count, config.reward_account_token_name)
+  add_token(with_rewards, agg_count, config.aggstate_token_name)
+}
 
-  let tx =
-    Transaction {
-      ..tx.placeholder,
-      inputs: [platform_nft_input],
-      reference_inputs: [core_settings_input],
-      outputs: [platform_nft_output, reward_output, aggstate_output],
-      mint: minted_value,
-    }
+fn build_reward_outputs(count: Int) -> List<Output> {
+  when count is {
+    0 -> []
+    _ -> [mk_reward_output(utxo_buffer), ..build_reward_outputs(count - 1)]
+  }
+}
 
+fn build_agg_outputs(count: Int) -> List<Output> {
+  when count is {
+    0 -> []
+    _ -> [mk_aggstate_output([]), ..build_agg_outputs(count - 1)]
+  }
+}
+
+fn concat_lists(lhs: List<a>, rhs: List<a>) -> List<a> {
+  when lhs is {
+    [] -> rhs
+    [head, ..tail] -> [head, ..concat_lists(tail, rhs)]
+  }
+}
+
+fn build_outputs(reward_count: Int, agg_count: Int) -> List<Output> {
+  let reward_outputs = build_reward_outputs(reward_count)
+  let agg_outputs = build_agg_outputs(agg_count)
+  concat_lists([platform_nft_output], concat_lists(reward_outputs, agg_outputs))
+}
+
+fn build_scale_token_tx(reward_count: Int, agg_count: Int) -> Transaction {
+  let minted_value = build_mint_value(reward_count, agg_count)
+  let outputs = build_outputs(reward_count, agg_count)
+
+  Transaction {
+    ..tx.placeholder,
+    inputs: [platform_nft_input],
+    reference_inputs: [core_settings_input],
+    outputs,
+    mint: minted_value,
+  }
+}
+
+fn assert_scale_token(reward_count: Int, agg_count: Int) -> Bool {
+  let tx = build_scale_token_tx(reward_count, agg_count)
   oracle.oracle_nfts.mint(mock_nfts, ScaleToken, oracle_policy_id, tx)
 }
 
-test scale_down_burn_succeeds() {
-  let minted_value =
-    assets.zero
-      |> assets.add(oracle_policy_id, config.reward_account_token_name, -1)
-  let reward_ref =
-    OutputReference { transaction_id: "reward account burn", output_index: 0 }
-  let reward_input =
-    tx.Input {
-      output_reference: reward_ref,
-      output: mk_reward_output(utxo_buffer),
+test scale_token_mint_one_reward_one_aggstate_succeeds() {
+  assert_scale_token(1, 1)
+}
+
+test scale_token_mint_one_reward_succeeds() {
+  assert_scale_token(1, 0)
+}
+
+test scale_token_mint_one_aggstate_succeeds() {
+  assert_scale_token(0, 1)
+}
+
+test scale_token_one_reward_three_aggstate_succeeds() {
+  assert_scale_token(1, 3)
+}
+
+test scale_token_three_reward_one_aggstate_succeeds() {
+  assert_scale_token(3, 1)
+}
+
+test scale_token_mint_three_aggstate_succeeds() {
+  assert_scale_token(0, 3)
+}
+
+test scale_token_mint_three_reward_succeeds() {
+  assert_scale_token(3, 0)
+}
+
+fn burn_inputs(
+  count: Int,
+  name: assets.AssetName,
+  index_offset: Int,
+) -> List<(OutputReference, Input)> {
+  when count is {
+    0 -> []
+    _ -> {
+      let next_index = index_offset + count
+      let ref =
+        OutputReference {
+          transaction_id: #"f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff00112233445566778899aabbccddeeff",
+          output_index: next_index,
+        }
+      let output =
+        if name == config.reward_account_token_name {
+          mk_reward_output(utxo_buffer)
+        } else {
+          mk_aggstate_output([])
+        }
+      let input = tx.Input { output_reference: ref, output }
+
+      [(ref, input), ..burn_inputs(count - 1, name, index_offset)]
     }
-  let redeemer_data: Data = ScaleDown
+  }
+}
+
+fn build_burn_value(reward_count: Int, agg_count: Int) {
+  let with_rewards =
+    add_token(assets.zero, -reward_count, config.reward_account_token_name)
+  add_token(with_rewards, -agg_count, config.aggstate_token_name)
+}
+
+fn validate_burn_inputs(
+  inputs: List<(OutputReference, Input)>,
+  datum_value: OracleDatum,
+  tx: Transaction,
+) -> Bool {
+  list.foldl(
+    inputs,
+    True,
+    fn(tuple, acc) {
+      let (ref, _input) = tuple
+      acc && oracle.oracle_manager.spend(
+        mock_conf,
+        Some(datum_value),
+        ScaleDown,
+        ref,
+        tx,
+      )
+    },
+  )
+}
+
+fn assert_scale_down(reward_count: Int, agg_count: Int) -> Bool {
+  let reward_inputs =
+    burn_inputs(reward_count, config.reward_account_token_name, 0)
+  let agg_inputs =
+    burn_inputs(agg_count, config.aggstate_token_name, reward_count)
+  let all_inputs = concat_lists(reward_inputs, agg_inputs)
+
+  let references =
+    list.map(
+      all_inputs,
+      fn(tuple) {
+        let (ref, _) = tuple
+        ref
+      },
+    )
+  let inputs =
+    list.map(
+      all_inputs,
+      fn(tuple) {
+        let (_, input) = tuple
+        input
+      },
+    )
+
+  let redeemers =
+    list.map(
+      references,
+      fn(ref) {
+        let redeemer_data: Data = ScaleDown
+        Pair(tx.Spend(ref), redeemer_data)
+      },
+    )
+
   let tx =
     Transaction {
       ..tx.placeholder,
       reference_inputs: [core_settings_input],
-      inputs: [reward_input, platform_nft_input],
+      inputs: concat_lists(inputs, [platform_nft_input]),
       outputs: [platform_nft_output],
-      redeemers: [Pair(tx.Spend(reward_ref), redeemer_data)],
-      mint: minted_value,
+      redeemers,
+      mint: build_burn_value(reward_count, agg_count),
     }
 
-  oracle.oracle_manager.spend(
-    mock_conf,
-    Some(
-      RewardAccount(
-        RewardAccountDatum { nodes_to_rewards: [], last_update_time: 0 },
-      ),
-    ),
-    ScaleDown,
-    reward_ref,
+  let reward_datum =
+    RewardAccount(
+      RewardAccountDatum { nodes_to_rewards: [], last_update_time: 0 },
+    )
+  let aggstate_datum = AggState(GenericData { price_map: [] })
+
+  let rewards_ok = validate_burn_inputs(reward_inputs, reward_datum, tx)
+  let aggstates_ok = validate_burn_inputs(agg_inputs, aggstate_datum, tx)
+
+  let manager_ok = rewards_ok && aggstates_ok
+
+  manager_ok && oracle.oracle_nfts.mint(
+    mock_nfts,
+    ScaleToken,
+    oracle_policy_id,
     tx,
-  ) && oracle.oracle_nfts.mint(mock_nfts, ScaleToken, oracle_policy_id, tx)
+  )
+}
+
+test scale_down_burn_one_reward_succeeds() {
+  assert_scale_down(1, 0)
+}
+
+test scale_down_burn_one_aggstate_succeeds() {
+  assert_scale_down(0, 1)
+}
+
+test scale_down_burn_one_reward_one_aggstate_succeeds() {
+  assert_scale_down(1, 1)
+}
+
+test scale_down_burn_three_rewards_succeeds() {
+  assert_scale_down(3, 0)
+}
+
+test scale_down_burn_three_aggstates_succeeds() {
+  assert_scale_down(0, 3)
+}
+
+test scale_down_burn_three_rewards_one_aggstate_succeeds() {
+  assert_scale_down(3, 1)
 }
