@@ -1,7 +1,7 @@
 use aiken/crypto.{ScriptHash}
 use cardano/address
 use cardano/assets
-use cardano/transaction.{Input, Output, OutputReference, Transaction}
+use cardano/transaction.{Output, OutputReference, Transaction}
 use cardano/transaction as tx
 use config
 use core/datum.{
@@ -145,28 +145,13 @@ test scale_token_mint_succeeds() {
 
   let reward_output = mk_reward_output(utxo_buffer)
   let aggstate_output = mk_aggstate_output([])
-  let policy_anchor_input =
-    tx.Input {
-      output_reference: mock_nfts.utxo_ref,
-      output: tx.Output {
-        address: address.from_script(platform_script_hash),
-        value: assets.from_lovelace(2_000_000),
-        datum: tx.NoDatum,
-        reference_script: None,
-      },
-    }
 
   let tx =
     Transaction {
       ..tx.placeholder,
-      inputs: [platform_nft_input, policy_anchor_input],
+      inputs: [platform_nft_input],
       reference_inputs: [core_settings_input],
-      outputs: [
-        platform_nft_output,
-        core_settings_input.output,
-        reward_output,
-        aggstate_output,
-      ],
+      outputs: [platform_nft_output, reward_output, aggstate_output],
       mint: minted_value,
     }
 
@@ -174,6 +159,9 @@ test scale_token_mint_succeeds() {
 }
 
 test scale_down_burn_succeeds() {
+  let minted_value =
+    assets.zero
+      |> assets.add(oracle_policy_id, config.reward_account_token_name, -1)
   let reward_ref =
     OutputReference { transaction_id: "reward account burn", output_index: 0 }
   let reward_input =
@@ -189,6 +177,7 @@ test scale_down_burn_succeeds() {
       inputs: [reward_input, platform_nft_input],
       outputs: [platform_nft_output],
       redeemers: [Pair(tx.Spend(reward_ref), redeemer_data)],
+      mint: minted_value,
     }
 
   oracle.oracle_manager.spend(
@@ -201,5 +190,5 @@ test scale_down_burn_succeeds() {
     ScaleDown,
     reward_ref,
     tx,
-  )
+  ) && oracle.oracle_nfts.mint(mock_nfts, ScaleToken, oracle_policy_id, tx)
 }
