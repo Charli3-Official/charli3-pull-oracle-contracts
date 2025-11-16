@@ -223,10 +223,11 @@ test reward_distribution_accepts_sorted_output() {
 }
 
 // check_reward_distribution rejects unsorted out_distributions.
-// During the fold, consume_allowed_feed walks the sorted list of nodes in ascending FeedVkh order.
-// If the next output feed isn’t the smallest remaining key, it returns None,
-// marking the state invalid and failing the predicate.
-// So any out-of-order entry breaks the check automatically.
+// During the fold, consume_allowed_feed expects to find each out_distribution VKH
+// in the remaining allowed_nodes list (which is sorted by VKH in ascending order).
+// If out_distribution is not sorted by VKH, consume_allowed_feed will fail because
+// it cannot find a VKH that comes before an already-consumed smaller VKH.
+// This ensures out_distribution must be sorted by VKH in ascending order.
 
 test reward_distribution_rejects_unsorted_output() fail {
   let node_reward_price = 5
@@ -437,11 +438,30 @@ test reward_distribution_with_30_nodes() fail {
 }
 
 // Test with 30 nodes - CORRECTLY ORDERED VERSION
-// This test demonstrates the proper ordering requirements for check_reward_distribution:
-// 1. node_feeds_sorted_by_feed: Sorted by feed value, with VKHs in ascending order within each feed group
-// 2. nodes: Sorted by VKH in ascending order
-// 3. in_distribution: Sorted by VKH in ascending order
-// 4. out_distribution: Sorted by VKH in ascending order
+// This test demonstrates the proper ordering requirements:
+//
+// ORDERING REQUIREMENTS:
+// 1. node_feeds_sorted_by_feed (oracle message / AggregateMessage):
+//    - MUST be sorted by NodeFeed (feed value) in ascending order
+//    - VKH order within same feed value does NOT matter (check_nodes_multisig handles unsorted VKHs)
+//    - This ordering is validated by validate_message_and_count_nodes
+//
+// 2. allowed_nodes:
+//    - MUST be sorted by VKH (FeedVkh) in ascending order
+//    - This is enforced by check_nodes_update when adding/deleting nodes
+//    - check_nodes_multisig uses consume_allowed which searches the entire list (VKH order independent)
+//
+// 3. in_distribution:
+//    - MUST be sorted by VKH (FeedVkh) in ascending order
+//    - Used by check_reward_distribution with consume_allowed_feed
+//
+// 4. out_distribution:
+//    - MUST be sorted by VKH (FeedVkh) in ascending order
+//    - check_reward_distribution enforces this via consume_allowed_feed
+//    - If unsorted, consume_allowed_feed will fail (see reward_distribution_rejects_unsorted_output test)
+//
+// NOTE: In this test, VKHs are also sorted within each feed group for clarity,
+// but this is NOT required for check_nodes_multisig to work correctly.
 test reward_distribution_with_30_nodes_properly_sorted() {
   // Define all 30 node VKHs (same as before)
   let node_0: FeedVkh =
@@ -505,23 +525,11 @@ test reward_distribution_with_30_nodes_properly_sorted() {
   let node_29: FeedVkh =
     #"70955e68b2f733dffff93376b4ea768766fb86b374fad56fc362a076"
 
-  // Node feeds sorted by FEED VALUE first, then by VKH within each feed group
-  // Feed 100: node_12(4b...) < node_8(8d...)
-  // Feed 102: node_1
-  // Feed 105: node_19
-  // Feed 106: node_16(78...) < node_22(fd...)
-  // Feed 107: node_26(71...) < node_14(d0...) < node_21(ee...)
-  // Feed 109: node_4
-  // Feed 110: node_9
-  // Feed 111: node_15(5b...) < node_29(70...)
-  // Feed 112: node_13(39...) < node_7(44...) < node_17(4a...) < node_5(a4...) < node_11(c8...)
-  // Feed 113: node_0(58...) < node_25(7c...)
-  // Feed 114: node_27
-  // Feed 115: node_20(03...) < node_10(de...)
-  // Feed 116: node_23
-  // Feed 117: node_24(5a...) < node_3(71...) < node_28(ca...)
-  // Feed 118: node_2
-  // Feed 119: node_6(c6...) < node_18(f8...)
+  // Node feeds sorted ONLY by FEED VALUE (ascending order)
+  // VKHs are also sorted within each feed group in this example for clarity,
+  // but check_nodes_multisig does NOT require VKHs to be sorted within feed groups.
+  // Feeds: 100, 100, 102, 105, 106, 106, 107, 107, 107, 109, 110, 111, 111,
+  //        112, 112, 112, 112, 112, 113, 113, 114, 115, 115, 116, 117, 117, 117, 118, 119, 119
   let node_feeds_sorted_by_feed: AggregateMessage =
     [
       Pair(node_12, 100), Pair(node_8, 100), Pair(node_1, 102),
@@ -536,8 +544,8 @@ test reward_distribution_with_30_nodes_properly_sorted() {
       Pair(node_2, 118), Pair(node_6, 119), Pair(node_18, 119),
     ]
 
-  // Nodes list sorted ONLY by VKH in ascending order
-  // 03... < 07... < 39... < 44... < 4a... < 4b... < 58... < 5a... < 5b... < 70... < 71(12...) < 71(76...) < 78... < 7c(72...) < 7c(b6...) < 8d... < a4... < bc... < c1... < c6... < c8... < ca... < d0... < d1... < de... < e2... < ee... < f4... < f8... < fd...
+  // allowed_nodes: MUST be sorted by VKH in ascending order
+  // This is enforced by check_nodes_update via get_length_and_check_feed_vkh_order
   let nodes =
     [
       node_20, node_9, node_13, node_7, node_17, node_12, node_0, node_24,
@@ -546,7 +554,8 @@ test reward_distribution_with_30_nodes_properly_sorted() {
       node_10, node_27, node_21, node_2, node_18, node_22,
     ]
 
-  // in_distribution and out_distribution: sorted by VKH in ascending order
+  // in_distribution: MUST be sorted by VKH in ascending order
+  // Used by check_reward_distribution
   let in_distribution =
     [
       Pair(node_20, 10), Pair(node_9, 10), Pair(node_13, 10), Pair(node_7, 10),
@@ -559,6 +568,8 @@ test reward_distribution_with_30_nodes_properly_sorted() {
       Pair(node_18, 10), Pair(node_22, 10),
     ]
 
+  // out_distribution: MUST be sorted by VKH in ascending order
+  // check_reward_distribution enforces this via consume_allowed_feed
   // With median_divergency_factor=200 (20%), median=112:
   // Lower fence: 112 * (1 - 0.20) = 89.6 -> 90
   // Upper fence: 112 * (1 + 0.20) = 134.4 -> 134

@@ -56,12 +56,13 @@ fn consume_allowed(allowed_nodes: Nodes, feed_vkh: FeedVkh) -> Option<Nodes> {
   when allowed_nodes is {
     [] -> None
     [allowed, ..rest] ->
-      if builtin.less_than_bytearray(allowed, feed_vkh) {
-        consume_allowed(rest, feed_vkh)
-      } else if allowed == feed_vkh {
+      if allowed == feed_vkh {
         Some(rest)
       } else {
-        None
+        when consume_allowed(rest, feed_vkh) is {
+          None -> None
+          Some(tail) -> Some([allowed, ..tail])
+        }
       }
   }
 }
