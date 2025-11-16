@@ -1,4 +1,3 @@
-use aiken/builtin
 use aiken/crypto.{VerificationKeyHash}
 use core/datum.{AggregateMessage, FeedVkh, Nodes}
 
