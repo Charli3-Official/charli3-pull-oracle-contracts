@@ -633,19 +633,12 @@ pub fn check_pause_does_not_change_settings(
 
 pub fn find_node_by_signature(
   tx_signatories: List<a>,
-  nodes_to_rewards: Pairs<a, b>,
+  nodes_to_rewards: List<Pair<a, b>>,
 ) -> a {
-  trace @"T29"
-  when tx_signatories is {
-    [vkh1, vkh2] ->
-      when
-        list.find(nodes_to_rewards, fn(Pair(k, _)) { k == vkh1 || k == vkh2 })
-      is {
-        Some(Pair(k, _)) -> k
-        None -> fail
-      }
-    _ -> fail
-  }
+  trace @"T29: Finding node by signature"
+  expect [first, ..] = tx_signatories
+  expect Some(_) = list.find(nodes_to_rewards, fn(pair) { pair.1st == first })
+  first
 }
 
 fn remove_reward_entry(
