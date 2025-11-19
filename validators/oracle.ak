@@ -367,6 +367,7 @@ validator oracle_manager(oracle_conf: OracleConfiguration) {
             own_hash,
             reward_account_nft,
             collector,
+            oracle_conf.fee_token,
           )
 
         expect Some(reward_acc_output) = list.at(outputs, corresponding_out_ix)

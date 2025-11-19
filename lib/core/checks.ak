@@ -265,6 +265,7 @@ pub fn check_reward_accounts_in_to_out_mapping(
   script_hash: ScriptHash,
   protocol_token: Asset,
   reward_redeemer: RewardRedeemer,
+  allowed_asset: Option<Asset>,
 ) -> Bool {
   trace @"T17"
 
@@ -284,10 +285,22 @@ pub fn check_reward_accounts_in_to_out_mapping(
     )
   let acc_inputs_count = get_length_and_check_strict_order(out_refs)
 
-  let acc_outputs =
-    find_script_outputs_by_token(tx_outputs, script_hash, protocol_token)
+  when allowed_asset is {
+    None ->
+      acc_inputs_count == list.length(
+        find_script_outputs_by_token(tx_outputs, script_hash, protocol_token),
+      )
 
-  acc_inputs_count == list.length(acc_outputs)
+    Some(asset) ->
+      acc_inputs_count == list.length(
+        find_script_outputs_by_token_allowing_asset(
+          tx_outputs,
+          script_hash,
+          asset.policy_id,
+          protocol_token,
+        ),
+      )
+  }
 }
 
 pub fn get_length_and_check_strict_order(ints_sorted: List<Int>) -> Int {
