@@ -635,7 +635,7 @@ pub fn find_node_by_signature(
   tx_signatories: List<a>,
   nodes_to_rewards: List<Pair<a, b>>,
 ) -> a {
-  trace @"T29: Finding node by signature"
+  trace @"T29"
   expect [first, ..] = tx_signatories
   expect Some(_) = list.find(nodes_to_rewards, fn(pair) { pair.1st == first })
   first
