@@ -1,4 +1,4 @@
-# odv-multisig-charli3-oracle-onchain
+# Charli3 Multisig Pull Oracle On-chain
 
 Design and architecture for Charli3 ODV multisig oracle are described in this [doc](https://charli3io.atlassian.net/wiki/spaces/CHARLI3/pages/407502849/ODV+Multisig+Oracle). Flowcharts that were used in confluence document are uploaded to `docs-media` folder. See also presentation [slides](https://docs.google.com/presentation/d/1xGFmgowJRyg4N8WpRLgPo1wIYawi8ueyj04bHnZjhLs/edit?usp=sharing) where that idea was first described.
 
@@ -77,6 +77,20 @@ This command is run on every commit if you install the git hook by running:
 ```bash
 root="$(pwd)" && ln -s "$root/hooks/pre-commit" "$root/.git/hooks/pre-commit"
 ```
+
+## License
+
+This repository is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+We chose AGPL for the on-chain protocol components to ensure that improvements and modifications to the core protocol remain transparent and benefit the entire ecosystem, including node operators, developers, and token holders.
+
+Off-chain tooling, SDKs, and supporting services may be licensed under different terms. Please refer to individual repository LICENSE files for details.
+
+See [LICENSE](LICENSE) for the full license text.
+
+## Official Deployments
+
+Charli3 maintains and supports only official deployments that use the $C3 token and unmodified protocol economics.
 
 ### Resources
 
