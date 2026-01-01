@@ -78,20 +78,6 @@ This command is run on every commit if you install the git hook by running:
 root="$(pwd)" && ln -s "$root/hooks/pre-commit" "$root/.git/hooks/pre-commit"
 ```
 
-## License
-
-This repository is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
-
-We chose AGPL for the on-chain protocol components to ensure that improvements and modifications to the core protocol remain transparent and benefit the entire ecosystem, including node operators, developers, and token holders.
-
-Off-chain tooling, SDKs, and supporting services may be licensed under different terms. Please refer to individual repository LICENSE files for details.
-
-See [LICENSE](LICENSE) for the full license text.
-
-## Official Deployments
-
-Charli3 maintains and supports only official deployments that use the $C3 token and unmodified protocol economics.
-
 ### Resources
 
 Find more on the [Aiken's user manual](https://aiken-lang.org).
@@ -155,3 +141,18 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 * T32 – `check_nodes_update` validates node list additions/removals.
 * T33 – `validate_dismissing_period` checks reward dismissal timeout.
 * T34 – interquartile range collapsed to zero (IQRFence degeneration).
+
+
+## License
+
+This repository is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+We chose AGPL for the on-chain protocol components to ensure that improvements and modifications to the core protocol remain transparent and benefit the entire ecosystem, including node operators, developers, and token holders.
+
+Off-chain tooling, SDKs, and supporting services may be licensed under different terms. Please refer to individual repository LICENSE files for details.
+
+See [LICENSE](LICENSE) for the full license text.
+
+## Official Deployments
+
+Charli3 maintains and supports only official deployments that use the $C3 token and unmodified protocol economics.
