@@ -147,9 +147,16 @@ Trace message is added to the list (evaluation context) when evaluation comes to
 
 This repository is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
-We chose AGPL for the on-chain protocol components to ensure that improvements and modifications to the core protocol remain transparent and benefit the entire ecosystem, including node operators, developers, and token holders.
+License Rationale
 
-Off-chain tooling, SDKs, and supporting services may be licensed under different terms. Please refer to individual repository LICENSE files for details.
+Charli3 uses a combination of OSI-approved open-source licenses, primarily AGPL-3.0 and MIT, depending on the role of each repository within the ecosystem.
+Repositories that implement core or protocol-critical logic are licensed under AGPL-3.0 to ensure that improvements and modifications remain transparent and benefit the entire ecosystem, including node operators, developers, and token holders, while maintaining full OSI compliance. This may include both on-chain and select off-chain components where protocol logic and token usage are integral.
+
+Repositories focused on tooling, SDKs, and supporting components are typically licensed under the MIT License to promote broad adoption, flexibility, and ease of integration.
+
+AGPL-3.0 is applied where reciprocal openness is important to protect shared protocol infrastructure, while MIT is used where permissiveness and developer flexibility are the primary goals.
+
+Please refer to each repository’s LICENSE file for the specific terms that apply.
 
 See [LICENSE](LICENSE) for the full license text.
 
